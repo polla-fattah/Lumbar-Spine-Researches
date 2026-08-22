@@ -27051,3 +27051,40 @@ trailer
 startxref
 3391027
 %%EOF
+1 0 obj
+<<
+/CreationDate (D\07220251109060433\05301\04700\047)
+/Creator (Adobe InDesign 18\0563 \050Windows\051)
+/CrossMarkDomains#5B1#5D (springer\056com)
+/CrossMarkDomains#5B2#5D (springerlink\056com)
+/CrossmarkDomainExclusive (true)
+/CrossmarkMajorVersionDate (2010\05504\05523)
+/ModDate (D\07220251110150904\05301\04700\047)
+/Producer (Adobe PDF Library 17\0560\073 modified using iText\256 5\0565\05613\0564 \2512000\0552024 iText Group NV \050SPRINGER SBM\073 licensed version\051)
+/Trapped /False
+/doi (10\0561038\057s41598\055025\05520721\0553)
+/Subject (Enhanced U\055Net for lumbar spine segmentation adding an Inception module for multi\055scale feature extraction and a dual\055output mechanism that improves gradient flow and training stability\056 Trained on the SPIDER dataset and compared against U\055Net\054 ResUNet\054 Attention U\055Net and TransUNet\054 it beat all four\054 with better boundary delineation and handling of class imbalance\056 A loss\055function comparison identified Dice loss as most effective\054 yielding mIoU 0\0568974\054 accuracy 0\0569742\054 precision 0\0569417\054 recall 0\0569470 and F1 0\0569444\056 Initially binary\054 the approach was extended to multiclass segmentation separating vertebrae\054 IVDs and spinal canal\056 Recent benchmarked lumbar anatomy segmentation on a public dataset \055 and a data point on hybrid transformer models not automatically winning\056 Note\072 record 90 duplicates this paper under a different title\054 year and venue\056)
+/Keywords (lumbar\055spine\055review\073 AI\055generated\055summary)
+/Title (Automated Lumbar Spine Segmentation in MRI Using an Enhanced U\055Net with Inception Module and Dual\055Output Mechanism)
+/Author (Silveira \0502025\051)
+>>
+endobj
+2907 0 obj<<
+/Type /XRef
+/Size 2908
+/Root 2777 0 R
+/Filter /FlateDecode
+/Index [ 1 1 ]
+/W [ 1 4 1 ]
+/Info 1 0 R
+/Prev 3391027
+/ID [ <a7f9c717c911db44b51a3a229f23e1be> <267de1b3b3277486f14a4d8062907350> ]
+/Length 14
+>>
+stream
+xœcd0YÄÏ  à ç
+endstream
+endobj
+startxref
+3451113
+%%EOF

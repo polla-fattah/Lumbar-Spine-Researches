@@ -8754,3 +8754,36 @@ trailer
 startxref
 2483176
 %%EOF
+590 0 obj
+<<
+/Author (Hendrik M\366ller)
+/CreationDate (D\07220250214152829\05305\04730\047)
+/Creator (Springer)
+/CrossMarkDomains#5B1#5D (springer\056com)
+/CrossMarkDomains#5B2#5D (springerlink\056com)
+/Keywords (Spine\073 Magnetic resonance imaging\073 Intervertebral disc\073 Vertebral body\073 Deep learning\073 lumbar\055spine\055review\073 AI\055generated\055summary)
+/ModDate (D\07220250214153032\05305\04730\047)
+/Subject (SPINEPS\072 the first publicly available method giving both semantic and instance segmentation of 14 spinal structures \055 ten vertebra substructures \050including the posterior elements that most methods omit\051\054 intervertebral discs\054 spinal cord\054 spinal canal and sacrum \055 in whole\055body sagittal T2 turbo spin echo images\056 It works in two phases\072 a semantic segmentation model\054 then a sliding\055window second model that converts semantic masks into instance masks\056 Trained and tested on a public dataset \050179\05739 subjects\051\054 a German National Cohort subset \0501\054412\05765\051 and an in\055house test set of 10\056 SPINEPS beat an nnU\055Net baseline on every structure and metric \050vertebra instance Dice 0\056933 versus 0\056911\054 ASSD 0\05621 versus 0\056435\054 both p \074 0\056001\051\054 and combining NAKO with public training data pushed global Dice to 0\056931\056 The key methodological finding is that segmenting semantically first and instance\055wise second beats training directly on instance segmentation\056 Scalable whole\055spine localisation from T2 MRI\054 with arbitrary fields of view\056)
+/Title (SPINEPS\342\240\216automatic whole spine segmentation of T2\055weighted MR images using a two\055phase approach to multi\055class semantic and instance segmentation)
+/doi (10\0561007\057s00330\055024\05511155\055y)
+>>
+endobj
+591 0 obj<<
+/Type /XRef
+/Size 592
+/Root 288 0 R
+/Filter /FlateDecode
+/Index [ 590 1 ]
+/W [ 1 4 1 ]
+/Info 590 0 R
+/Prev 2483176
+/ID [ <9d2f95e7cbf5d9b924493e0aa319466d> <9733922ff24a9e44b5cafc060d839aa1> ]
+/Length 14
+>>
+stream
+xœcdPÚÎ  H ñ
+endstream
+endobj
+startxref
+2496985
+%%EOF

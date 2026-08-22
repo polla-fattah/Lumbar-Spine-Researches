@@ -29699,3 +29699,40 @@ trailer
 startxref
 3701025
 %%EOF
+1 0 obj
+<<
+/CreationDate (D\07220251218101803\05301\04700\047)
+/Creator (Adobe InDesign 18\0563 \050Windows\051)
+/CrossMarkDomains#5B1#5D (springer\056com)
+/CrossMarkDomains#5B2#5D (springerlink\056com)
+/CrossmarkDomainExclusive (true)
+/CrossmarkMajorVersionDate (2010\05504\05523)
+/ModDate (D\07220251218123653\05301\04700\047)
+/Producer (Adobe PDF Library 17\0560\073 modified using iText\256 5\0565\05613\0564 \2512000\0552024 iText Group NV \050SPRINGER SBM\073 licensed version\051)
+/Trapped /False
+/doi (10\0561007\057s44196\055025\05501098\0557)
+/Subject (MobileNetV2\055UNet applied to the RSNA 2024 dataset\054 joining MobileNetV2 for efficient feature extraction with U\055Net for segmentation\054 so classification and segmentation of lumbar degenerative conditions happen in one model\056 Depthwise separable convolutions keep computation low while U\055Net skip connections preserve spatial detail\054 and a combined Cross\055Entropy plus IoU loss optimises both objectives\056 Under 5\055fold cross\055validation the model reached 94\05693\045 accuracy\054 94\05661\045 Dice and 95\05665\045 F1 on conditions including neural foraminal narrowing and spinal canal stenosis\054 with an architecture light enough for real\055time clinical use\056 A same\055dataset comparator that combines localisation and classification \055 though note these figures are cross\055validation on RSNA data\054 not external validation\056)
+/Keywords (lumbar\055spine\055review\073 AI\055generated\055summary)
+/Title (Automated Lumbar Spine Degenerative Classification Using MobileNetV2\055UNet)
+/Author (Liu \0502025\051)
+>>
+endobj
+3796 0 obj<<
+/Type /XRef
+/Size 3797
+/Root 3656 0 R
+/Filter /FlateDecode
+/Index [ 1 1 ]
+/W [ 1 4 1 ]
+/Info 1 0 R
+/Prev 3701025
+/ID [ <de9fcc0b2bc16643b4bda3f9c99a6573> <ce04b42dab6fb3c9c8ac09f514d96d1e> ]
+/Length 14
+>>
+stream
+xœcd°\TÈ  ¸N
+endstream
+endobj
+startxref
+3778763
+%%EOF

@@ -27051,3 +27051,40 @@ trailer
 startxref
 3391027
 %%EOF
+1 0 obj
+<<
+/CreationDate (D\07220251109060433\05301\04700\047)
+/Creator (Adobe InDesign 18\0563 \050Windows\051)
+/CrossMarkDomains#5B1#5D (springer\056com)
+/CrossMarkDomains#5B2#5D (springerlink\056com)
+/CrossmarkDomainExclusive (true)
+/CrossmarkMajorVersionDate (2010\05504\05523)
+/ModDate (D\07220251110150904\05301\04700\047)
+/Producer (Adobe PDF Library 17\0560\073 modified using iText\256 5\0565\05613\0564 \2512000\0552024 iText Group NV \050SPRINGER SBM\073 licensed version\051)
+/Trapped /False
+/doi (10\0561038\057s41598\055025\05520721\0553)
+/Subject (\133DUPLICATE RECORD \055 this row\047s title\054 year \0502023\051\054 venue \050Int J Intelligent Systems\051 and method \0503D Swin Transformer\051 do not match its own URL or its PDF\054 both of which are the Silveira 2025 Scientific Reports enhanced\055U\055Net paper already catalogued as record 66\056 The file is byte\055identical to record 66\047s PDF\056 Treat record 66 as authoritative and verify whether a separate 3D Swin Transformer paper actually exists before citing this row\056\135 The content actually held\072 an enhanced U\055Net with an Inception module for multi\055scale feature extraction and a dual\055output mechanism\054 trained on SPIDER\054 outperforming U\055Net\054 ResUNet\054 Attention U\055Net and TransUNet with Dice loss \050mIoU 0\0568974\054 accuracy 0\0569742\054 F1 0\0569444\051\054 extended from binary to multiclass segmentation of vertebrae\054 IVDs and spinal canal\056)
+/Keywords (lumbar\055spine\055review\073 AI\055generated\055summary)
+/Title (Automated lumbar spine segmentation in MRI using an enhanced U\055Net with inception module and dual\055output mechanism)
+/Author (Silveira \0502023\051)
+>>
+endobj
+2907 0 obj<<
+/Type /XRef
+/Size 2908
+/Root 2777 0 R
+/Filter /FlateDecode
+/Index [ 1 1 ]
+/W [ 1 4 1 ]
+/Info 1 0 R
+/Prev 3391027
+/ID [ <a7f9c717c911db44b51a3a229f23e1be> <267de1b3b3277486f14a4d8062907350> ]
+/Length 14
+>>
+stream
+xœcd0YÄÏ  à ç
+endstream
+endobj
+startxref
+3451081
+%%EOF

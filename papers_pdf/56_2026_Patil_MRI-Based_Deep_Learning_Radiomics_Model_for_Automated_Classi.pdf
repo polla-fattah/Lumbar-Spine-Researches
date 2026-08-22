@@ -16018,3 +16018,40 @@ trailer
 startxref
 2737234
 %%EOF
+1 0 obj
+<<
+/CreationDate (D\07220260530072212\05302\04700\047)
+/Creator (Adobe InDesign 18\0563 \050Windows\051)
+/CrossMarkDomains#5B1#5D (springer\056com)
+/CrossMarkDomains#5B2#5D (springerlink\056com)
+/CrossmarkDomainExclusive (true)
+/CrossmarkMajorVersionDate (2010\05504\05523)
+/ModDate (D\07220260810025550\05302\04700\047)
+/Producer (Adobe PDF Library 17\0560\073 modified using iText\256 5\0565\05613\0564 \2512000\0552024 iText Group NV \050SPRINGER SBM\073 licensed version\051)
+/Trapped /False
+/doi (10\0561038\057s41598\055026\05556056\055w)
+/Subject (Unusually rigorous comparison of radiomic against deep features for Pfirrmann grading\056 Sagittal T1\054 T2 and T2 SPACE MRI from 218 SPIDER\055dataset patients yielded 1\054218 3D PyRadiomics features per disc per sequence plus 2\054048 features from a frozen ImageNet\055pretrained ResNet50\054 fused into vectors of up to 9\054798 features and reduced by LASSO to 680\056 Splits were patient\055level \05060\05720\05720\051 with no patient in two splits\073 TabPFN\054 LightGBM and Random Forest were isotonically calibrated and tested\054 supported by twelve supplementary analyses \050feature\055family ablations\054 ordinal regression\054 leave\055one\055scanner\055out generalisation\054 decision curve analysis\054 calibration depth\051 and 500\055iteration bootstrap CIs\056 Multi\055class macro\055AUROC was \1760\05687 across all three models with accuracy only 0\056603\054 while binary low\055 versus high\055grade reached AUROC \076\075 0\05693 at \1760\05686 accuracy\056 The headline ablation result\072 radiomic features carry essentially the entire signal\054 and the frozen ImageNet ResNet50 features add no measurable discriminative value \055 a pointed caution against assuming pretrained deep features help\056 Intermediate\055grade discrimination remains the hard part\056)
+/Keywords (lumbar\055spine\055review\073 AI\055generated\055summary)
+/Title (MRI\055Based Deep Learning Radiomics Model for Automated Classification of Disc Degeneration in the Lumbar Spine)
+/Author (Patil \0502026\051)
+>>
+endobj
+1086 0 obj<<
+/Type /XRef
+/Size 1087
+/Root 997 0 R
+/Filter /FlateDecode
+/Index [ 1 1 ]
+/W [ 1 4 1 ]
+/Info 1 0 R
+/Prev 2737234
+/ID [ <e99d41afdc4fa941ac40ac0507bf8532> <14ad1d5309667974466421276a0d70b5> ]
+/Length 14
+>>
+stream
+xúcd–í|…  —.
+endstream
+endobj
+startxref
+2761236
+%%EOF

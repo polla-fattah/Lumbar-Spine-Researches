@@ -20192,3 +20192,34 @@ trailer
 startxref
 5128620
 %%EOF
+1 0 obj
+<<
+/Keywords (lumbar\055spine\055review\073 AI\055generated\055summary)
+/Creator (Springer)
+/ModDate (D\07220220207161925\05301\04700\047)
+/CreationDate (D\07220220204204421\05305\04730\047)
+/Subject (BianqueNet\072 a semantic segmentation network of three novel modules \050including Swin\055transformer components\051 that segments disc\055degeneration\055related regions from T2 MRI at high precision\054 coupled to a quantitative method that computes signal intensity and geometric features of the disc\056 Manual measurements agreed closely with the automatic calculations\054 but the automatic route was more repeatable and far more efficient\056 The authors then examined how these quantitative parameters relate to age\054 gender\054 spinal position and Pfirrmann grade across a large population\054 and \055 finding strong correlation with grade \055 proposed a quantitative criterion for degeneration to replace subjective grading\056 A strong example of anatomy\055aware quantitative assessment and hybrid CNN\055transformer design\056)
+/Producer (iText\256 5\0563\0565 \2512000\0552012 1T3XT BVBA \050SPRINGER SBM\073 licensed version\051)
+/Author (Hua\055Dong Zheng)
+/Title (Deep learning\055based high\055accuracy quantitation for lumbar intervertebral disc degeneration from MRI)
+>>
+endobj
+722 0 obj<<
+/Type /XRef
+/Size 723
+/Root 555 0 R
+/Filter /FlateDecode
+/Index [ 1 1 ]
+/W [ 1 4 1 ]
+/Info 1 0 R
+/Prev 5128620
+/ID [ <ea0f20418f9885d7245bdde4e8bd7e2e> <a8e05760c46b9e0ad8615a1c6799e6ad> ]
+/Length 14
+>>
+stream
+xœcdð«:Ç  N˜
+endstream
+endobj
+startxref
+5144559
+%%EOF

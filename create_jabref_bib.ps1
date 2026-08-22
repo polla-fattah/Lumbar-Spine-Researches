@@ -1,3 +1,23 @@
+# ============================== DO NOT RUN AS-IS ==============================
+# BROKEN (verified 2026-08-23). Two separate defects:
+#
+# 1. It does not run. Line ~41 calls $zip.GetEntry('xl\sharedStrings.xml') --
+#    a backslash where zip entry names use '/', AND this workbook has no
+#    sharedStrings part at all (its strings are stored inline in sheet1.xml).
+#    GetEntry returns $null, .Open() throws, and the script writes a .bib with
+#    0 ENTRIES, silently destroying the real one.
+#
+# 2. Even once it runs, it is lossy. The committed .bib carries 15 `doi` fields
+#    and JabRef's @Comment metadata block, neither of which exists anywhere in
+#    lumbar_spine_mri_ai.xlsx, so regeneration cannot reproduce them.
+#
+# The .bib is therefore currently maintained IN PLACE, not regenerated. Before
+# using this script again: read inline strings from sheet1.xml, add a DOI column
+# to the workbook, and diff the output against the committed .bib.
+#
+# Column AB ('AI Summary') feeds the `comment` field below.
+# ==============================================================================
+
 Add-Type -AssemblyName System.IO.Compression.FileSystem
 
 $project = (Get-Location).Path
@@ -60,6 +80,7 @@ try {
         $pdfPath = ''
         if ($pdfFormula -match 'papers_pdf/[^"\)]+') { $pdfPath = $Matches[0] }
         $status = $cells['X'].Trim()
+        $summary = $cells['AB'].Trim()
 
         $baseKey = (CleanKey $author) + $year + (CleanKey (($title -split '\s+')[0]))
         $key = $baseKey
@@ -73,6 +94,7 @@ try {
         if ($year) { $lines += "  year = {$year}," }
         if ($journal) { $lines += "  journal = {$((BibEscape $journal))}," }
         if ($primaryUrl -match '^https?://') { $lines += "  url = {$((BibEscape $primaryUrl))}," }
+        if ($summary) { $lines += "  comment = {$((BibEscape $summary))}," }
         if ($pdfPath) {
             $lines += "  file = {:$pdfPath`:PDF},"
             if ($status) { $lines += "  keywords = {$status}," }

@@ -4871,3 +4871,34 @@ trailer
 startxref
 650365
 %%EOF
+1 0 obj
+<<
+/Keywords (Lumbar spinal stenosis\054MRI scans\054Automated grading\054Repeatability\054Validation\073 lumbar\055spine\055review\073 AI\055generated\055summary)
+/Creator (Arbortext Advanced Print Publisher 9\0561\056440\057W Unicode)
+/ModDate (D\07220200312113050\05301\04700\047)
+/CreationDate (D\07220200310071537\05308\04700\047)
+/Producer (Acrobat Distiller 10\0560\0560 \050Windows\051\073 modified using iText\256 5\0563\0565 \2512000\0552012 1T3XT BVBA \050SPRINGER SBM\073 licensed version\051)
+/Subject (Validation of automated SpineNet\055style grading of central lumbar spinal stenosis inside a population\055based epidemiological cohort\054 the Wakayama Spine Study\054 where all scans were graded by a spinal surgeon\056 Complete axial views were available for 4855 lumbar levels from 971 participants\073 4365 views trained the system and the remaining 490 were graded blind\054 in four classes \050none\054 mild\054 moderate\054 severe\051\056 Exact\055grade agreement was 65\0567\045 with Lin\047s concordance 0\05673\054 a two\055grade discrepancy in only 2\0562\045 and three\055grade in 0\0562\045\056 Collapsed to severe versus no\057mild\057moderate\054 agreement rose to 94\0561\045 with kappa 0\05675\056 Evidence that automated grading can carry large\055scale epidemiological studies\054 and a clear illustration of how much ordinal boundary error dominates the error budget\056)
+/Author (Yuyu Ishimoto)
+/Title (Could automated machine\055learned MRI grading aid epidemiological studies of lumbar spinal stenosis\077 Validation within the Wakayama spine study)
+>>
+endobj
+274 0 obj<<
+/Type /XRef
+/Size 275
+/Root 146 0 R
+/Filter /FlateDecode
+/Index [ 1 1 ]
+/W [ 1 4 1 ]
+/Info 1 0 R
+/Prev 650365
+/ID [ <7b1b53eb822d9d1562045829f65c9f68> <4beb2df22e3f605a1727979c1f88dccd> ]
+/Length 14
+>>
+stream
+xúcd‡bö«  v ¨
+endstream
+endobj
+startxref
+657637
+%%EOF

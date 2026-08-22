@@ -6440,3 +6440,30 @@ trailer
 startxref
 964641
 %%EOF
+2 0 obj
+<<
+/Producer (PyPDF2)
+/Title (Boundary Delineation of MRI Images for Lumbar Spinal Stenosis Detection Through Semantic Segmentation Using Deep Neural Networks)
+/Author (Ala S\056 Al\055Kafri\054 Sud Sudirman\054 Abir Hussain\054 Dhiya Al\055Jumeily\054 Friska Natalia\054 Hira Meidia\054 Nunik Afriliana\054 Wasfi Al\055Rashdan\054 Mohammad Bashtawi\054 Mohammed Al\055Jumaily)
+/Subject (Semantic segmentation and boundary delineation of lumbar MRI to support stenosis detection\054 using SegNet on studies from 515 patients with symptomatic back pain\054 each annotated by expert radiologists\056 The authors built a ground\055truth dataset labelling four important lumbar regions and \055 notably \055 introduced two new metrics\054 confidence and consistency\054 derived from the Jaccard Index\054 to assess the quality of that ground truth rather than only the model\056 Evaluation with contour\055 and region\055based metrics showed the model\047s performance falls within the range spanned by the worst and best manual labelling\054 and that the ground truth itself has excellent inter\055rater agreement\056 A stenosis\055specific segmentation\055first pipeline\054 and a good model for taking label quality seriously\056)
+/Keywords (01 Apr 2019\054 IEEE Access\054 Segmentation\054 Liverpool John Moores University\073 lumbar\055spine\055review\073 AI\055generated\055summary)
+>>
+endobj
+256 0 obj<<
+/Type /XRef
+/Size 257
+/Root 73 0 R
+/Filter /FlateDecode
+/Index [ 2 1 ]
+/W [ 1 4 1 ]
+/Info 2 0 R
+/Prev 964641
+/Length 14
+>>
+stream
+xœcdà;SÂ  P
+endstream
+endobj
+startxref
+971247
+%%EOF
