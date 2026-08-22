@@ -1,0 +1,14 @@
+# Windows / Explorer cruft
+desktop.ini
+Thumbs.db
+$RECYCLE.BIN/
+
+# Office lock & temp files
+~$*
+*.tmp
+
+# JabRef / editor backups
+*.bak
+*.sav
+*.bib.bak
+*.bib.sav
