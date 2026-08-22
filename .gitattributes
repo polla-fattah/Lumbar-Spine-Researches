@@ -1,0 +1,3 @@
+# Research corpus: mostly binary artifacts. Never translate line endings —
+# CRLF injection silently corrupts PDF and XLSX bytes on checkout.
+* -text
