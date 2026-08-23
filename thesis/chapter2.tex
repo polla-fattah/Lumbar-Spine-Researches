@@ -39,13 +39,17 @@
   isbn=false
 ]{biblatex}
 
+% Single bibliographic source for the whole thesis: 108 records, comprising the
+% 92 curated lumbar-spine papers plus the 16 foundational method/clinical papers
+% merged in (PDFs 93-108). references-extra.bib has been folded into this file
+% and is no longer used.
 \addbibresource{../lumbar_spine_mri_ai_literature_inventory.bib}
-\addbibresource{references-extra.bib}
 
 % The inventory .bib carries internal bookkeeping fields (provenance note, the
 % per-paper summary, the local PDF path). These are working metadata, not
 % bibliographic data, so they are suppressed from the printed reference list.
-% Leaving them in also breaks compilation, since they contain raw underscores.
+% Leaving the note field in also breaks compilation, since it contains raw
+% underscores that LaTeX reads as math subscripts.
 \AtEveryBibitem{%
   \clearfield{note}%
   \clearfield{comment}%

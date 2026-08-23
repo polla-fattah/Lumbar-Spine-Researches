@@ -1,7 +1,7 @@
 # Chapter 2 — Literature Review: Build Checklist
 
 **Output file:** `thesis/chapter2.tex` (single LaTeX file)
-**Bibliographies:** `../lumbar_spine_mri_ai_literature_inventory.bib` (92 curated papers) + `thesis/references-extra.bib` (foundational method papers)
+**Bibliography:** `../lumbar_spine_mri_ai_literature_inventory.bib` -- SINGLE source, 108 records (92 curated lumbar papers + 16 foundational method/clinical papers, PDFs 93-108). `references-extra.bib` has been merged in and removed.
 
 Each item is ticked as it is written into `chapter2.tex`.
 
@@ -112,4 +112,5 @@ Each item is ticked as it is written into `chapter2.tex`.
 
 - Do **not** cite `silveira2023automated` — it is a duplicate record of `silveira2025automated` (same paper, wrong year/venue in the inventory).
 - Records `pfirrmann2001magnetic`, `wang2024deep`, `hallinan2021deep` have correct bibliographic metadata but the wrong PDF filed against them; the citations are valid, the local PDFs are not.
-- Citations marked `% VERIFY` in `references-extra.bib` are foundational method papers added by hand and should be checked against the publisher record before submission.
+- The 16 merged foundational references were verified against arXiv/publisher records on 2026-08-23. Twelve are free on arXiv; Modic 1988 and Mysliwiec 2010 are paywalled.
+- Chapter 2 cites 107 of the 108 records; the one uncited record is the duplicate noted above.
