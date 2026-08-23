@@ -1,168 +1,459 @@
-Yes. For the PhD methodology we have designed, I would prioritize the following **10 concepts/techniques**, roughly in this order. You do not need to become a radiologist or mathematician in every area, but you should understand each deeply enough to defend why it is in the methodology and interpret its failures.
+# Training Curriculum — Selar
 
-1. **Lumbar-spine MRI anatomy, pathology, and the LumbarDISC label structure**
-   Before touching the AI, you need to understand what the data actually means: L1–L2 through L5–S1, spinal canal stenosis, left/right neural foraminal narrowing, left/right subarticular stenosis, and Normal/Mild → Moderate → Severe grading. LumbarDISC contains these five anatomical targets at each of five levels, which is the reason our proposed system naturally becomes a **25-target structured prediction problem**. ([RSNA Publications Online][1])
-   **You should know:** sagittal versus axial views, T1 versus T2/STIR, discs, canal, foramina, subarticular recesses, laterality, spinal levels, and exactly how the RSNA annotations/localizers correspond to them.
-   **Importance: 10/10.** This is the foundation of the whole PhD.
-
-2. **DICOM, medical-image geometry, registration, and preprocessing**
-   This is much deeper than knowing how to convert DICOM to PNG. Learn `ImagePositionPatient`, `ImageOrientationPatient`, pixel spacing, slice thickness, coordinate systems, volume reconstruction, resampling, intensity normalization and registration. This allows you to mathematically relate, for example, a location seen on Sagittal T2 to the corresponding Axial T2 slices. LumbarDISC deliberately contains multisequence, multiplanar DICOM examinations with localizers, so preserving this information is particularly valuable. ([RSNA Publications Online][1])
-   You should also become comfortable with **PyDICOM, SimpleITK and MONAI**; MONAI already provides medical-image spatial, intensity, cropping and related transforms. ([MONAI Docs][2])
-   **Importance: 10/10.**
-
-3. **Medical image segmentation, detection, localization, and ROI extraction**
-   You need to understand the difference between:
-   **classification:** what disease/severity?
-   **detection/localization:** where is it?
-   **segmentation:** exactly which pixels/voxels belong to the structure?
-   For this PhD, segmentation/localization is primarily an enabling technology: automatically find L1–L2…L5–S1, discs, canal and related structures, then extract standardized disease-specific ROIs. Learn U-Net, U-Net++, nnU-Net, heatmap regression, Dice loss, focal loss, Dice coefficient, IoU and localization error in millimeters.
-   **Importance: 9.5/10.** You need it even though segmentation is not necessarily the final PhD contribution.
-
-4. **2D, 2.5D and 3D deep learning for MRI**
-   You should understand why treating every MRI slice as an independent photograph is problematic. Learn the differences between 2D CNN/ViT models, **2.5D approaches using adjacent slices**, and full 3D CNN/transformer models. You need to understand receptive fields, spatial context, anisotropic voxels, memory requirements and how to build an ROI such as:
-   [
-   [I_{-2},I_{-1},I_0,I_{+1},I_{+2}]
-   ]
-   around a target disc level. Also study ResNet/ConvNeXt, EfficientNet, Swin Transformer and modern medical-image transformers—not because the PhD should merely compare them, but because they will become your feature encoders. Vision transformers are now extensively established across medical imaging, so using a transformer alone is not novelty. ([PubMed Central (PMC)][3])
-   **Importance: 9/10.**
-
-5. **Multimodal and multi-view feature fusion / attention mechanisms**
-   This is central to combining **Sagittal T1 + Sagittal T2/STIR + Axial T2**. Learn early fusion, intermediate/feature fusion, late/decision fusion, cross-attention, self-attention, gating networks and mixture-of-experts. Then understand **missing-modality learning/modality dropout**, because real examinations may not provide identical protocols. The ultimate question is not simply "which sequence is best?" but whether the system can learn:
-   [
-   F_c=\sum_m g_{c,m}F_m
-   ]
-   where the useful sequence weighting depends on the disease being predicted. Modern multimodal healthcare research increasingly uses graph and attention mechanisms for precisely this type of heterogeneous information integration. ([PubMed Central (PMC)][4])
-   **Importance: 9.5/10.**
-
-6. **Self-supervised and contrastive representation learning**
-   This is one of the most important concepts for our potential novel algorithm. Learn SimCLR, MoCo, BYOL, DINO/teacher–student learning, positive/negative pairs, embeddings, cosine similarity, temperature and InfoNCE loss. Then move beyond generic contrastive learning to the idea we discussed:
-   [
-   \text{same patient + same spinal level + different MRI sequence}
-   ]
-   should form an anatomically meaningful positive pair. That gives us **cross-sequence anatomical contrastive learning** rather than simply relying on ImageNet pretraining. You should understand representation learning well enough to design and mathematically justify your own positive/negative-pair strategy.
-   **Importance: 9/10.** This could become one of your standalone publications.
-
-7. **Graph Neural Networks, Graph Attention Networks, and Graph Transformers**
-   This is probably the technically hardest concept and potentially the **main algorithmic novelty**. Learn graph notation (G=(V,E)), adjacency matrices, node features, edge features, message passing, GCN, GraphSAGE, GAT, heterogeneous graphs and Graph Transformers. Medical imaging increasingly uses graphs specifically because anatomical and spatial relationships are not naturally represented as independent rectangular images. ([PubMed Central (PMC)][5])
-   For our model, understand how to represent:
-   [
-   v_{L4-L5,;Canal}
-   ]
-   and
-   [
-   v_{L4-L5,;LeftForamen}
-   ]
-   as different nodes, with separate edges for adjacent levels, same-level disease relationships and bilateral symmetry. The recent GNN literature emphasizes that graph construction should be biologically/anatomically justified—exactly what we would exploit with the lumbar spine. ([PubMed Central (PMC)][5])
-   **Importance: 10/10.** This may become the heart of AMOG-Net.
-
-8. **Ordinal classification, class imbalance, and clinically cost-sensitive learning**
-   This is crucial. Normal/Mild, Moderate and Severe are not three unrelated categories:
-   [
-   Normal < Moderate < Severe.
-   ]
-   Learn ordinal regression/classification, cumulative-link approaches, CORAL/CORN-style ordinal objectives, weighted cross-entropy, focal loss, oversampling and class-balanced losses. More importantly, learn how to formulate a **clinical cost matrix**, because:
-   [
-   Severe\rightarrow Normal
-   ]
-   should probably be penalized more heavily than:
-   [
-   Severe\rightarrow Moderate.
-   ]
-   LumbarDISC itself is heavily imbalanced, with Severe cases substantially less frequent than Normal/Mild at many targets and levels. ([RSNA Publications Online][1])
-   Also learn why **macro F1, balanced accuracy, sensitivity and quadratic weighted kappa** are usually more informative than raw accuracy for this problem.
-   **Importance: 10/10.**
-
-9. **Probability calibration, uncertainty quantification, explainability and selective prediction**
-   A clinical AI model should distinguish:
-   **"Severe, and I am very confident"** from **"Severe, but I am uncertain."**
-   Learn aleatoric versus epistemic uncertainty, deep ensembles, Monte Carlo dropout, entropy, temperature scaling, Expected Calibration Error, Brier score and ideally conformal prediction. Healthcare uncertainty literature distinguishes uncertainty arising from the data from uncertainty arising from limited model knowledge, and identifies uncertainty estimates as a potential way to flag difficult predictions for human review. ([PubMed Central (PMC)][6])
-   Then learn Grad-CAM/attention visualization carefully, because explainability is useful but attention maps alone should not be presented as proof of causal reasoning. Current medical-imaging XAI reviews emphasize both its value and limitations. ([PubMed Central (PMC)][7])
-   **Importance: 8.5/10.**
-
-10. **PhD-level experimental design, ablation studies, statistics, reproducibility and domain generalization**
-    This may actually determine whether excellent coding becomes an excellent thesis. Learn patient-level/site-level splitting, nested validation, repeated random seeds, confidence intervals, bootstrap testing, statistical comparison of models, ablation studies, external validation, domain shift, scanner/vendor effects and dataset leakage. LumbarDISC is especially useful because its 2,697 patients come from **eight institutions across six countries**, meaning site-aware evaluation and domain-generalization experiments are realistic rather than hypothetical. ([RSNA Publications Online][1])
-    Instead of reporting only:
-
-> AMOG-Net = 0.91
-
-you should be able to show:
-[
-Baseline
-\rightarrow +ROI
-\rightarrow +MultiView
-\rightarrow +Ordinal
-\rightarrow +SSL
-\rightarrow +Graph
-\rightarrow +Uncertainty
-]
-with confidence intervals and demonstrate what each contribution actually adds.
-**Importance: 10/10.**
-
-### The shortest way to think about the whole PhD
-
-These ten concepts actually form one chain:
-
-**MRI anatomy → DICOM geometry → localization/segmentation → 2.5D representations → multi-sequence fusion → self-supervised learning → anatomical graph reasoning → ordinal disease grading → uncertainty → rigorous external validation.**
-
-If I were supervising the preparation phase, I would **not** start with Graph Transformers. I would first make sure the researcher is completely comfortable with **1–4**, because most catastrophic mistakes in medical-imaging AI happen before the sophisticated model—wrong labels, wrong anatomical correspondence, data leakage, incorrect DICOM handling, or inappropriate evaluation. Once those are solid, **5–8 are where the real PhD novelty can be created**, while **9–10 are what make the resulting work scientifically credible rather than merely technically impressive**.
-
-[1]: https://pubs.rsna.org/doi/10.1148/ryai.250480?utm_source=chatgpt.com "The RSNA Lumbar Degenerative Imaging Spine Classification (LumbarDISC) Dataset | Radiology: Artificial Intelligence"
-[2]: https://docs.monai.io/en/latest/transforms_idx.html?utm_source=chatgpt.com "Crop and pad — MONAI 1.5.0rc1 Documentation"
-[3]: https://pmc.ncbi.nlm.nih.gov/articles/PMC12701147/?utm_source=chatgpt.com "Vision Transformers in Medical Imaging: a Comprehensive Review of Advancements and Applications Across Multiple Diseases - PMC"
-[4]: https://pmc.ncbi.nlm.nih.gov/articles/PMC12827511/?utm_source=chatgpt.com "Multimodal graph neural networks in healthcare: a review of fusion strategies across biomedical domains - PMC"
-[5]: https://pmc.ncbi.nlm.nih.gov/articles/PMC13295888/?utm_source=chatgpt.com "Graph Neural Networks for Medical Imaging Analysis and Biological Data: Integrating Topology, Geometry, Radiomics, and Generative AI - PMC"
-[6]: https://pmc.ncbi.nlm.nih.gov/articles/PMC9802673/?utm_source=chatgpt.com "Uncertainty-aware deep learning in healthcare: A scoping review - PMC"
-[7]: https://pmc.ncbi.nlm.nih.gov/articles/12809972/?utm_source=chatgpt.com "Explainable artificial intelligence (XAI) in medical imaging: a systematic review of techniques, applications, and challenges - PMC"
+**Ten concepts required to build and defend AMOG-Net**
+Supervisor: Dr. Polla Abdulhamid Fattah · Candidate: Selar · Companion to [`01_SELAR_PHD_ROADMAP.md`](01_SELAR_PHD_ROADMAP.md) and [`07_AMOGNET_TECHNICAL_SPEC.md`](07_AMOGNET_TECHNICAL_SPEC.md)
 
 ---
 
-## Appendix — Three different orderings, and why they conflict
+## How to use this document
 
-*Folded in from `plan-to-know.md` (now deleted) before that file was removed. It ranked
-20 topics by priority tier; this curriculum condenses them to the 10 that AMOG-Net
-actually requires. The one thing worth carrying over is the following distinction.*
+You do **not** need to become a radiologist, nor to be able to re-derive a graph
+transformer from scratch. The bar is different, and it is this:
 
-There are **three different ways to order this material**, and they do not agree:
+> For every concept, you must understand it well enough to **defend why it is in the
+> methodology**, and to **diagnose it when it fails**.
+
+That second half is what a viva actually tests. Anyone can report that a model scored
+0.91. You will be asked why the L5–S1 predictions are worse than L4–L5, and the answer
+will come from understanding anatomy, geometry and class imbalance — not from the model.
+
+**Each concept below follows the same five-part structure**, so you can work through them
+consistently:
+
+| Part | What it gives you |
+| :--- | :--- |
+| **What it is** | The one-paragraph version |
+| **Why this thesis needs it** | The specific role it plays in AMOG-Net — not a generic justification |
+| **You must be able to** | Concrete, checkable capabilities |
+| **Self-check** | A question you should be able to answer out loud. If you cannot, you are not done |
+| **Weight & time** | How much it matters, and a realistic estimate |
+
+Tick each box as you go. Estimates assume study alongside other work, not full-time.
+
+---
+
+## The three phases
+
+The ten concepts are not a flat list. They group into three phases that do different jobs:
+
+```mermaid
+flowchart LR
+    A["PHASE A — Foundations<br/>Concepts 1–4<br/><i>Where catastrophic mistakes happen</i>"]
+    B["PHASE B — Novelty<br/>Concepts 5–8<br/><i>Where the PhD contribution lives</i>"]
+    C["PHASE C — Credibility<br/>Concepts 9–10<br/><i>What makes it science, not a demo</i>"]
+    A --> B --> C
+```
+
+**Phase A is not the boring part.** Almost every catastrophic failure in medical imaging
+AI happens *before* the sophisticated model: wrong labels, broken anatomical
+correspondence, data leakage, mishandled DICOM geometry, inappropriate evaluation. A
+flawless graph transformer trained on misaligned labels produces a confident, worthless
+result. Do not rush Phase A.
+
+**Phase B is where the novelty is.** Concepts 5–8 are the four components that make
+AMOG-Net a contribution rather than an application.
+
+**Phase C is what makes it a PhD.** Excellent code with weak experimental design is an
+engineering project. Concepts 9–10 are the difference.
+
+---
+
+## Study order — read this before planning your reading
+
+There are **three different ways to order this material, and they disagree**:
 
 | Ordering | Answers |
 | :--- | :--- |
-| **Research importance** | What matters most to this specific PhD |
+| **Research importance** | What matters most to this thesis |
 | **Learning difficulty** | What is easiest to pick up |
-| **Prerequisite / dependency** | What must be understood before what |
+| **Prerequisite order** | What must be understood before what |
 
-The list above is ordered by **research importance, with ease breaking ties**. That is
-the right order for deciding *what to prioritise*, but it is the wrong order for deciding
-*what to read first*.
+The numbering below follows **research importance, with ease breaking ties**. That is the
+right order for deciding *how much depth* each topic needs. It is the **wrong order for
+deciding what to read first.**
 
-The clearest example: **graph neural networks and graph transformers rank near the top by
-research importance**, because the anatomical graph is the central methodological claim.
-But the dependency order is:
+The clearest example: graph transformers (concept 7) rank at the very top by importance,
+because the anatomical graph is the central methodological claim. But you cannot usefully
+read a graph transformer paper before understanding attention, and attention is hard
+without convolutional intuition first:
 
-> CNN -> Transformer -> Attention -> GNN -> Graph Transformer
+```mermaid
+flowchart LR
+    CNN[CNN] --> TR[Transformer] --> ATT[Attention] --> GNN[GNN] --> GT[Graph Transformer]
+```
 
-You cannot usefully read a graph transformer paper before understanding attention, and
-attention is hard to grasp without convolutional intuition first. So begin with
-concepts 1--4 (anatomy, DICOM geometry, segmentation, 2.5D modelling) even though
-concepts 6--8 carry more of the thesis's novelty.
+**Practical rule: study in dependency order, allocate depth by importance.**
 
-**Practical guidance:** study in dependency order, prioritise depth by research
-importance. Understand each topic well enough to defend why it is in the methodology and
-to interpret its failure modes -- not to re-derive it from scratch.
+---
 
-### Priority tiers, for reference
+# PHASE A — Foundations
 
-The original 20-topic version grouped material as follows, which is still a useful way to
-decide how much depth each area needs:
+*Concepts 1–4. Do not proceed to Phase B until these are solid.*
 
-- **Priority 1 (Essential)** -- cannot complete the PhD without it: lumbar anatomy and
-  grading, MRI sequences, preprocessing, DICOM geometry, segmentation and localisation,
-  2D/2.5D/3D modelling, experimental design and statistics, ordinal classification, graph
-  networks.
-- **Priority 2 (Very important)** -- needed for the main methodological contributions:
-  CNN and transformer encoders, class imbalance and cost-sensitive learning, multi-view
-  and multi-sequence fusion, structured anatomical modelling, self-supervised learning.
-- **Priority 3 (Important)** -- strengthens the work and supports individual papers:
-  registration, missing-modality learning, uncertainty and calibration. Best learned
-  *after* the core classification and localisation pipeline is working.
-- **Priority 4 (Supporting)** -- explainability. Easy to start, but it will not rescue a
-  model with incorrect labels, poor localisation or weak experimental design.
+## 1. Lumbar MRI anatomy, pathology, and the label structure
+
+**What it is.** What the data actually means, before any model touches it: L1–L2 through
+L5–S1, spinal canal stenosis, left/right neural foraminal narrowing, left/right
+subarticular stenosis, and the Normal/Mild → Moderate → Severe grading.
+
+**Why this thesis needs it.** LumbarDISC carries five anatomical targets at each of five
+levels — which is precisely why the system becomes a **25-target structured prediction
+problem** rather than image classification. If you do not understand the label structure,
+you will build the wrong model. This is also where the local Rizgary cohort diverges: its
+reports contain canal stenosis and foraminal narrowing, but **no subarticular findings at
+all**, so ten of the 25 targets have no local ground truth.
+
+**You must be able to:**
+- [ ] Point to a disc, the canal, a neural foramen and a subarticular recess on both a sagittal and an axial image
+- [ ] Explain what T1, T2 and STIR each make visible, and why
+- [ ] Trace one row of an RSNA annotation to the exact image region it refers to
+- [ ] State which sequence is the correct evidence for each of the five conditions
+
+**Self-check.** *"A patient has moderate left foraminal narrowing at L4–L5. Which image,
+which slice, and what am I looking at to see it?"*
+
+**Weight: 10/10 · Estimated 3–4 weeks.** The foundation of the entire PhD.
+
+---
+
+## 2. DICOM, medical-image geometry, and preprocessing
+
+**What it is.** Considerably more than converting DICOM to PNG. The patient coordinate
+system, and how to move between images within it.
+
+**Why this thesis needs it.** This is what lets you state that *this* location on a
+sagittal T2 corresponds to *those* axial slices. Without it, multi-sequence fusion is
+guesswork. AMOG-Net's Stage A depends entirely on preserving this geometry — and the
+single most common way to silently destroy a medical imaging project is to discard the
+3D coordinate system during preprocessing.
+
+**You must be able to:**
+- [ ] Use `ImagePositionPatient`, `ImageOrientationPatient`, `PixelSpacing`, `SliceThickness`
+- [ ] Reconstruct a volume from a series and resample it correctly
+- [ ] Map a point in one series to the corresponding location in another
+- [ ] Apply intensity normalisation and explain why it matters across scanners
+- [ ] Work confidently in **PyDICOM**, **SimpleITK** and **MONAI**
+
+**Self-check.** *"Given a sagittal coordinate at L4–L5, which axial slices cover it, and
+how did I compute that?"*
+
+**Weight: 10/10 · Estimated 3–4 weeks.**
+
+---
+
+## 3. Segmentation, detection, localisation and ROI extraction
+
+**What it is.** Three distinct tasks that are easy to confuse:
+
+| Task | Question answered |
+| :--- | :--- |
+| **Classification** | *What* disease, and how severe? |
+| **Detection / localisation** | *Where* is it? |
+| **Segmentation** | *Exactly which pixels* belong to the structure? |
+
+**Why this thesis needs it.** For AMOG-Net, localisation is an *enabling technology*, not
+the contribution: find L1–L2 … L5–S1 automatically, then extract standardised
+disease-specific ROIs. The literature is consistent that localising before classifying
+improves grading — and equally consistent that detection transfers across hospitals while
+grading does not, which is exactly what the domain-transfer study exploits.
+
+**You must be able to:**
+- [ ] Explain U-Net, U-Net++ and nnU-Net, and when each is appropriate
+- [ ] Implement heatmap regression for landmark localisation
+- [ ] Use Dice loss and focal loss, and say when each is the right choice
+- [ ] Report Dice, IoU, and localisation error in millimetres — and interpret them
+
+**Self-check.** *"My Dice is 0.91 but the L5–S1 disc is sometimes missed entirely. What
+does that tell me, and which metric would have revealed it sooner?"*
+
+**Weight: 9.5/10 · Estimated 4–5 weeks.**
+
+---
+
+## 4. 2D, 2.5D and 3D deep learning for MRI
+
+**What it is.** How much spatial context to give the network, and what each choice costs.
+
+**Why this thesis needs it.** Treating each slice as an independent photograph discards
+the fact that a disc spans several slices and that radiologists integrate across them.
+AMOG-Net uses **2.5D** — a stack of adjacent slices around each target — because it
+captures through-plane context at roughly 2D cost. You need to understand why that
+compromise is the right one here.
+
+**You must be able to:**
+- [ ] Explain receptive fields, spatial context and anisotropic voxels
+- [ ] Build a 2.5D ROI: slices `[i-2, i-1, i, i+1, i+2]` around a target disc level
+- [ ] Compare memory and compute for 2D vs 2.5D vs full 3D
+- [ ] Describe ResNet, ConvNeXt, EfficientNet and Swin Transformer as feature encoders
+
+> [!NOTE]
+> Learn these architectures as **encoders you will use**, not as a comparison you will
+> publish. Vision transformers are thoroughly established in medical imaging — using one
+> is not, by itself, novelty.
+
+**Self-check.** *"Why 2.5D and not 3D? Give the memory argument and the accuracy argument."*
+
+**Weight: 9/10 · Estimated 3 weeks.**
+
+---
+
+# PHASE B — Where the novelty lives
+
+*Concepts 5–8. Each of these could support a standalone publication.*
+
+## 5. Multi-view and multi-sequence fusion
+
+**What it is.** How to combine Sagittal T1 + Sagittal T2/STIR + Axial T2 into one decision.
+
+**Why this thesis needs it.** This is AMOG-Net's adaptive fusion stage. The interesting
+question is *not* "which sequence is best?" — it is whether the model can learn a
+**disease-specific** weighting, so that foraminal narrowing leans on sagittal T1 while
+canal stenosis leans on axial T2:
+
+```
+F_c = Σ_m  g_(c,m) · F_m        where  Σ_m g_(c,m) = 1
+```
+
+with `g` a learned confidence per sequence `m` and condition `c`. Modality dropout during
+training then makes the system robust when a sequence is missing — which matters, because
+real examinations do not always deliver all three.
+
+**You must be able to:**
+- [ ] Distinguish early, intermediate/feature, and late/decision fusion
+- [ ] Implement cross-attention between two feature streams
+- [ ] Explain gating networks and mixture-of-experts
+- [ ] Implement modality dropout and explain what it buys
+
+**Self-check.** *"One patient has no axial T2. What does my model do, and why does it not simply crash?"*
+
+**Weight: 9.5/10 · Estimated 4 weeks.**
+
+---
+
+## 6. Self-supervised and contrastive representation learning
+
+**What it is.** Learning useful representations from unlabelled data, before any
+supervised training.
+
+**Why this thesis needs it.** This is a genuine novelty opportunity. Generic contrastive
+learning treats augmented copies of an image as positive pairs. The proposal here is
+**anatomically defined** pairs instead:
+
+> Same patient · same spinal level · **different MRI sequence** → these should have
+> related representations, despite looking completely different.
+
+That is *cross-sequence anatomical contrastive learning*, and it uses DICOM spatial
+correspondence rather than generic image similarity. It also directly attacks your
+data-size problem: this cohort is small, and self-supervision is how you get more from it.
+
+**You must be able to:**
+- [ ] Explain SimCLR, MoCo, BYOL and DINO teacher–student learning
+- [ ] Define positive and negative pairs, embeddings, cosine similarity, temperature
+- [ ] Write the InfoNCE loss and explain each term
+- [ ] **Design and justify your own pairing strategy** — this is the contribution
+
+**Self-check.** *"Why is same-level-different-sequence a better positive pair than a rotated copy of the same image?"*
+
+**Weight: 9/10 · Estimated 4–5 weeks.** Potential standalone paper.
+
+---
+
+## 7. Graph neural networks and graph transformers
+
+**What it is.** Learning over data with explicit relational structure rather than a grid.
+
+**Why this thesis needs it.** This is likely the **heart of AMOG-Net**. The spine is not
+25 independent predictions — levels are biomechanically coupled, conditions at one level
+interact, and left and right are anatomically symmetric. Represent each
+level-condition pair as a node:
+
+```
+v(L4-L5, Canal)      v(L4-L5, LeftForamen)      v(L4-L5, RightForamen)  …
+```
+
+with three distinct edge types:
+
+| Edge type | Connects |
+| :--- | :--- |
+| **Longitudinal** | Adjacent levels — L3–L4 ↔ L4–L5 |
+| **Disease interaction** | Conditions at the same level — canal ↔ foraminal ↔ subarticular |
+| **Bilateral** | Left ↔ right at the same level |
+
+The literature is explicit that graph construction should be **anatomically justified**
+rather than arbitrary — which is exactly the argument the spine lets you make.
+
+**You must be able to:**
+- [ ] Read graph notation `G = (V, E)`, adjacency matrices, node and edge features
+- [ ] Explain message passing, and implement GCN, GraphSAGE and GAT
+- [ ] Explain heterogeneous graphs and relation-aware attention
+- [ ] Justify every edge in your graph on anatomical grounds
+
+**Self-check.** *"Why should an L3–L4 finding inform the L4–L5 prediction? Answer clinically, not mathematically."*
+
+**Weight: 10/10 · Estimated 6–8 weeks.** The hardest concept here — budget accordingly.
+
+---
+
+## 8. Ordinal classification, class imbalance and cost-sensitive learning
+
+**What it is.** Treating severity as **ordered** rather than as three unrelated categories:
+
+```
+Normal/Mild  <  Moderate  <  Severe
+```
+
+**Why this thesis needs it.** Standard cross-entropy penalises *severe graded as normal*
+exactly as heavily as *moderate graded as severe*. Clinically these are not remotely
+equivalent. You need a **cost matrix** that makes the dangerous error expensive:
+
+| True ↓ / Predicted → | Normal | Moderate | Severe |
+| :--- | :---: | :---: | :---: |
+| **Normal** | 0 | 1 | 2 |
+| **Moderate** | 1 | 0 | 1 |
+| **Severe** | **4** | 1 | 0 |
+
+LumbarDISC is severely imbalanced — 85.4% of spinal canal grades are Normal/Mild, 5.9%
+Severe. A model that always predicts Normal/Mild scores 85% accuracy and is clinically
+useless.
+
+> [!IMPORTANT]
+> **An open question, not a solved one.** Niemeyer et al. tested soft-kappa loss, ordinal
+> cross-entropy and regression losses against plain cross-entropy on 7,948 discs — and
+> found **none improved on it**. Do not assume ordinal losses will help. Test it, and
+> report the result either way. A negative result here is publishable.
+
+**You must be able to:**
+- [ ] Explain ordinal regression and cumulative-link models; implement CORAL/CORN
+- [ ] Apply weighted cross-entropy, focal loss, oversampling, class-balanced losses
+- [ ] Formulate and justify a clinical cost matrix
+- [ ] Explain why **macro F1, balanced accuracy, per-class recall and quadratic weighted kappa** beat raw accuracy here
+
+**Self-check.** *"My accuracy is 86%. Why might that be worse than a model scoring 79%?"*
+
+**Weight: 10/10 · Estimated 3–4 weeks.**
+
+---
+
+# PHASE C — What makes it science
+
+*Concepts 9–10. Skip these and you have an engineering demo, not a doctorate.*
+
+## 9. Calibration, uncertainty and explainability
+
+**What it is.** The difference between these two outputs:
+
+> *"Severe — and I am confident."*  vs  *"Severe — but I am uncertain."*
+
+**Why this thesis needs it.** For clinical triage this distinction is the whole point: an
+uncertain case can be referred to a radiologist rather than silently graded. It also
+connects to the graph — a severe prediction consistent with neighbouring levels should
+carry less uncertainty than an isolated one contradicted by its surroundings.
+
+**You must be able to:**
+- [ ] Distinguish aleatoric from epistemic uncertainty
+- [ ] Implement deep ensembles and Monte Carlo dropout
+- [ ] Apply temperature scaling; compute Expected Calibration Error and Brier score
+- [ ] Understand conformal prediction and selective prediction
+- [ ] Use Grad-CAM and attention maps — **and state their limits**
+
+> [!WARNING]
+> An attention map shows *where* the network responded, not *why*. It is a sanity check,
+> not evidence of reasoning. Presenting saliency as proof of causal understanding is a
+> common and correctly criticised overclaim.
+
+**Self-check.** *"My model says Severe with probability 0.71. Should a clinician trust that number? What would make it trustworthy?"*
+
+**Weight: 8.5/10 · Estimated 3 weeks.**
+
+---
+
+## 10. Experimental design, ablation, statistics and generalisation
+
+**What it is.** The methodology that turns results into evidence.
+
+**Why this thesis needs it.** This concept, more than any other, decides whether good
+code becomes a good thesis. It is not enough to report:
+
+> AMOG-Net = 0.91
+
+You must show what each component actually contributes:
+
+```
+Baseline → +ROI → +MultiView → +Ordinal → +SSL → +Graph → +Uncertainty
+```
+
+with confidence intervals at every step. If the graph adds 0.004 and the ROI cropping
+adds 0.09, that is a finding — and an honest one.
+
+RSNA makes this realistic rather than hypothetical: its studies come from **eight
+institutions across six countries**, so site-aware evaluation and domain-generalisation
+experiments are genuinely possible. *(Note: the published LumbarDISC cohort is 2,697
+patients; the public Kaggle release held locally is 1,975 studies.)*
+
+**You must be able to:**
+- [ ] Split at **patient level and site level** — never at image level
+- [ ] Run nested validation, repeated seeds, bootstrap confidence intervals
+- [ ] Compare models statistically (DeLong tests, paired tests) rather than by eye
+- [ ] Design and interpret an ablation study
+- [ ] Identify data leakage, domain shift, and scanner/vendor effects
+
+**Self-check.** *"The same patient appears in train and test. What breaks, and how would I have caught it?"*
+
+**Weight: 10/10 · Estimated 3–4 weeks.**
+
+---
+
+# Progress tracker
+
+| # | Concept | Phase | Weight | Est. | Done |
+| :-: | :--- | :---: | :---: | :---: | :---: |
+| 1 | Lumbar MRI anatomy & label structure | A | 10 | 3–4 w | [ ] |
+| 2 | DICOM geometry & preprocessing | A | 10 | 3–4 w | [ ] |
+| 3 | Segmentation, detection, ROI extraction | A | 9.5 | 4–5 w | [ ] |
+| 4 | 2D / 2.5D / 3D modelling | A | 9 | 3 w | [ ] |
+| 5 | Multi-view & multi-sequence fusion | B | 9.5 | 4 w | [ ] |
+| 6 | Self-supervised & contrastive learning | B | 9 | 4–5 w | [ ] |
+| 7 | Graph neural networks & transformers | B | 10 | 6–8 w | [ ] |
+| 8 | Ordinal classification & cost-sensitive learning | B | 10 | 3–4 w | [ ] |
+| 9 | Calibration, uncertainty, explainability | C | 8.5 | 3 w | [ ] |
+| 10 | Experimental design & generalisation | C | 10 | 3–4 w | [ ] |
+
+**Total: roughly 9–11 months of part-time study**, or 4–5 months if this is the primary
+activity. Phase A alone is 13–16 weeks — plan for that rather than being surprised by it.
+
+---
+
+# The one-sentence version
+
+The ten concepts form a single chain:
+
+> **MRI anatomy → DICOM geometry → localisation → 2.5D representation → multi-sequence
+> fusion → self-supervised learning → anatomical graph reasoning → ordinal grading →
+> uncertainty → rigorous external validation.**
+
+And the supervisory advice, stated plainly:
+
+- **Do not start with graph transformers.** Start with 1–4. Most catastrophic mistakes in
+  medical imaging AI happen before the sophisticated model ever runs.
+- **5–8 is where the PhD novelty can be created.**
+- **9–10 is what makes the work scientifically credible rather than merely technically impressive.**
+
+---
+
+# Reading list
+
+| # | Topic | Source |
+| :-: | :--- | :--- |
+| 1 | LumbarDISC dataset & label structure | [Radiology: AI](https://pubs.rsna.org/doi/10.1148/ryai.250480) |
+| 2 | Medical image transforms | [MONAI documentation](https://docs.monai.io/en/latest/transforms_idx.html) |
+| 3 | Vision transformers in medical imaging | [PMC12701147](https://pmc.ncbi.nlm.nih.gov/articles/PMC12701147/) |
+| 4 | Multimodal graph fusion in healthcare | [PMC12827511](https://pmc.ncbi.nlm.nih.gov/articles/PMC12827511/) |
+| 5 | GNNs for medical imaging | [PMC13295888](https://pmc.ncbi.nlm.nih.gov/articles/PMC13295888/) |
+| 6 | Uncertainty-aware deep learning in healthcare | [PMC9802673](https://pmc.ncbi.nlm.nih.gov/articles/PMC9802673/) |
+| 7 | Explainable AI in medical imaging | [PMC12809972](https://pmc.ncbi.nlm.nih.gov/articles/12809972/) |
+
+For the lumbar-specific literature — SpineNet, M-SCAN, SPIDER, the external-validation
+studies — work from the 108-record bibliography in
+`../lumbar_spine_mri_ai_literature_inventory.bib`, where every entry carries a summary of
+what the paper actually found. Chapter 2 of the thesis
+(`../thesis/chapter2.tex`) is organised along much the same structure as this curriculum.
