@@ -1734,6 +1734,38 @@ probability should not be interpreted as a clinical confidence, and this remains
 an open opportunity rather than a solved problem.
 
 % ===========================================================================
+% ###########################################################################
+% ## OPEN QUESTION -- REVISIT BEFORE SUBMISSION (flagged 2026-08-23)        ##
+% ##                                                                        ##
+% ## This section currently lands on RQ1 (ResNet50/EfficientNet-B4 vs Swin) ##
+% ## and RQ2 (multi-sequence vs Sagittal-T2-only), because Reviews/Review    ##
+% ## 2.md stated that as "the explicit gap addressed by this thesis".        ##
+% ##                                                                        ##
+% ## Two later documents in the project root contradict that brief:          ##
+% ##   - suggested_methodology.md: "I would change the research problem      ##
+% ##     itself, not merely replace ResNet50/EfficientNet/Swin"; "I would    ##
+% ##     not repeat the MSc design of: train one all-sequence model versus   ##
+% ##     another T2-only model." It proposes AMOG-Net instead (anatomical    ##
+% ##     graph over 25 level-condition nodes, ordinal severity, adaptive     ##
+% ##     missing-sequence fusion, uncertainty).                              ##
+% ##   - Noor_relivance.md: grades that same comparison "Novelty:            ##
+% ##     Moderate-low -- mainly experimental/comparative".                   ##
+% ##                                                                        ##
+% ## So RQ1/RQ2 may be the MSc-level question rather than the PhD one.       ##
+% ##                                                                        ##
+% ## IF THIS CHAPTER IS RETARGETED AT THE PhD: the body does not need        ##
+% ## rewriting. All twelve AMOG-Net building blocks are already covered      ##
+% ## (localisation 2.6, ROIs 2.6.5, 2.5D 2.8.1, contrastive 2.9.5, graph     ##
+% ## 2.7.4, ordinal 2.4.8/2.9.4, cost-sensitive loss 2.9.3/2.9.6, missing    ##
+% ## sequences 2.8.5, uncertainty 2.12.5, DICOM geometry 2.8.3, external     ##
+% ## validation 2.11.3, metrics 2.11.1). The work is confined to:            ##
+% ##   (a) rewriting this section's RQs, ~1,500 words;                       ##
+% ##   (b) a few sentences in 2.1.1 restating the guiding question;          ##
+% ##   (c) deepening 2.7.4 on graph networks, currently thin -- only         ##
+% ##       baur2024automated covers GNNs on this task.                       ##
+% ##                                                                        ##
+% ## Do not action until the target degree//student is confirmed.            ##
+% ###########################################################################
 \section{Synthesis and Research Gap}
 \label{sec:lr-gap}
 
