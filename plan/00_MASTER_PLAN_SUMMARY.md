@@ -20,9 +20,9 @@ flowchart TD
     subgraph Data Infrastructure & Audit
         D1[299 Local English Radiology Reports]
         D2[294 Local Multi-Sequence DICOMs]
-        D3[1,975 RSNA Kaggle Studies Held]
+        D3[1,975 RSNA Held Benchmark Studies]
         
-        D1 -->|NLP Extract & Manual Dual Audit| Gold[Local Gold Standard Matrix<br/>canal + foraminal + herniation]
+        D1 -->|NLP Extract & Manual Dual Audit| Gold[Level-Resolved Gold Standard Matrix]
     end
 
     subgraph Primary PhD Core: Selar
@@ -45,8 +45,8 @@ flowchart TD
 
 | Project | Primary Focus | Required Assets | Target Venues | Estimated Duration |
 | :--- | :--- | :--- | :--- | :---: |
-| **Selar PhD Roadmap** | Multi-sequence Graph Transformers, Zero-Shot & Few-Shot Domain Transfer | RSNA Benchmark (1,975 held) + Rizgary DICOMs (294) + Audited Matrix | *IEEE TMI*, *Medical Image Analysis*, *Radiology: AI* | 21–24 Months |
-| **MSc Project 1** | First Kurdish/Iraqi Lumbar Degeneration Population Epidemiology | Audited 25-Target Matrix (299 cases) | *European Spine Journal*, *J. Orthop. Surg. Res.* | 4–6 Months |
+| **Selar PhD Roadmap** | Multi-sequence Graph Transformers, Zero-Shot & Few-Shot Domain Transfer (Canal Stenosis & Local Herniations) | RSNA Benchmark (1,975) + Rizgary DICOMs (294) + Audited Matrix | *IEEE TMI*, *Medical Image Analysis*, *Radiology: AI* | 21–24 Months |
+| **MSc Project 1** | First Kurdish/Iraqi Lumbar Degeneration Population Epidemiology | Audited Level-Resolved Matrix (299 cases) | *European Spine Journal*, *J. Orthop. Surg. Res.* | 4–6 Months |
 | **MSc Project 2** | Sequence-Sparing Rapid Triage Protocol Optimization | AMOG-Net Trained Model + 294 Local DICOM Studies | *European Journal of Radiology*, *BMC Med. Imaging* | 6 Months |
 | **MSc Project 3** | Clinical NLP & Information Extraction for Unstructured Reports | 299 Narrative `.docx` Radiology Reports | *Journal of Biomedical Informatics*, *IEEE JBHI* | 6–8 Months |
 | **MSc Project 4** | Radiological Severity vs. Clinical Symptom & Surgical Outcome Prognostics | Audited Matrix + Hospital Symptom Logs | *The Spine Journal*, *Spine* | 6 Months (Bonus) |
@@ -55,35 +55,10 @@ flowchart TD
 
 ## 3. Data Governance & Hard Rules
 
-1. **Do NOT Train on Folder Names (`normal/bulge/protrusion/extrusion`):** The folder classification is lossy and contains errors (multi-level hernia co-occurrence, duplicate cases). All ground truth must derive from the audited local matrix. NOTE: this is NOT RSNA's 25-target schema. Verified across all 299 reports -- spinal canal stenosis appears in 97%, neural foraminal narrowing in 78%, but subarticular/lateral recess stenosis in **0%** (six spellings checked) and laterality is stated in only 27%. Ten of RSNA's 25 targets (left/right subarticular) cannot be evaluated on this cohort at all.
+1. **Do NOT Train on Folder Names (`normal/bulge/protrusion/extrusion`):** The folder classification is lossy and contains errors (multi-level hernia co-occurrence, duplicate cases). All ground truth must derive from the audited level-resolved local matrix.
 2. **Reports are Primary; Spreadsheet is Secondary:** The manual spreadsheet (`research LSS 1.xlsx`) covers only 195 cases and contains 14 age transcription errors. The 299 narrative `.docx` reports are the single source of truth.
-3. **Ground truth must be verified before any model is evaluated against it.** The 299
-   reports must be structured and manually checked before they are used as a reference
-   standard. This is a *quality* rule, not a *sequencing* rule.
-
-> [!IMPORTANT]
-> **Sequencing correction — the original dependency chain was fragile.**
->
-> As first written, every MSc project waited on Selar's Phase 1, and MSc 2 additionally
-> waited on Selar's Phase 2 (~month 10). That routes four students' graduations through
-> one student's research risk: if Selar's PhD slips, everything slips.
->
-> **Revised sequencing, which removes every avoidable dependency:**
->
-> | Project | Starts | Depends on |
-> | :--- | :--- | :--- |
-> | **MSc 1 — Epidemiology** | **Immediately** | Nothing. Extract the 299 reports by hand (~25–40 h). |
-> | **MSc 3 — Clinical NLP** | **Immediately** | Nothing. *Owns* the automated extraction and delivers the gold-standard matrix to everyone else. |
-> | **MSc 2 — Protocol Optimisation** | **Immediately** | A simple ResNet/EfficientNet baseline, *not* AMOG-Net. |
-> | **Selar PhD** | **Immediately** | RSNA data only until Phase 3. Local cohort not needed until month ~11. |
-> | **MSc 4 — Prognostics** | **Not yet** | Unconfirmed clinical data. See the caution in its roadmap. |
->
-> The natural cross-check falls out of this for free: MSc 1's manual extraction and MSc 3's
-> automated extraction cover the same 299 reports, so their agreement becomes a validation
-> result for MSc 3 rather than a scheduling conflict.
->
-> **Move report extraction out of Selar's Phase 1 and into MSc 3.** It shortens the PhD's
-> critical path and gives MSc 3 a genuine deliverable to own.
+3. **Target Schema Alignment (Empirical Finding):** Local reports do **not** contain RSNA's 25-target schema (subarticular stenosis appears in 0% of local reports, and laterality in only 27%). Zero-shot transfer evaluation is strictly scoped to **Spinal Canal Stenosis (5 targets)**—matching M-SCAN benchmark standards—while herniation morphology (bulge/protrusion/extrusion) is treated as a separate local multi-label task.
+4. **Phase 1 Must Precede Downstream Work:** Selar's initial NLP extraction + 100% manual verification of the 299 reports provides the foundational gold-standard matrix used by MSc Project 1, MSc Project 2, and Selar's Phase 3 evaluation.
 
 ---
 
@@ -96,4 +71,5 @@ All detailed individual roadmaps are stored in `c:\Users\polla\Drives\PollaFatta
 - [`02_MSC1_EPIDEMIOLOGY_ROADMAP.md`](file:///c:/Users/polla/Drives/PollaFattah/UNi/Research/Students/Selar/Project/plan/02_MSC1_EPIDEMIOLOGY_ROADMAP.md) — MSc 1: Population Epidemiology Study.
 - [`03_MSC2_PROTOCOL_OPTIMIZATION_ROADMAP.md`](file:///c:/Users/polla/Drives/PollaFattah/UNi/Research/Students/Selar/Project/plan/03_MSC2_PROTOCOL_OPTIMIZATION_ROADMAP.md) — MSc 2: Rapid Triage Protocol Optimization.
 - [`04_MSC3_CLINICAL_NLP_ROADMAP.md`](file:///c:/Users/polla/Drives/PollaFattah/UNi/Research/Students/Selar/Project/plan/04_MSC3_CLINICAL_NLP_ROADMAP.md) — MSc 3: Clinical Information Extraction NLP Benchmark.
-- [`05_MSC4_CLINICAL_PROGNOSTICS_ROADMAP.md`](file:///c:/Users/polla/Drives/PollaFattah/UNi/Research/Students/Selar/Project/plan/05_MSC4_CLINICAL_PROGNOSTICS_ROADMAP.md) — MSc 4: Clinical Symptom & Surgical Outcome Prognostics.
+- [`05_MSC4_CLINICAL_PROGNOSTICS_ROADMAP.md`](file:///c:/Users/polla/Drives/PollaFattah/UNi/Research/Students/Selar/Project/plan/05_MSC4_CLINICAL_PROGNOSTICS_ROADMAP.md) — MSc 4: Clinical Symptom & Surgical Prognostics.
+- [`06_RATIONALE_options_considered.md`](file:///c:/Users/polla/Drives/PollaFattah/UNi/Research/Students/Selar/Project/plan/06_RATIONALE_options_considered.md) — Record of the five medical-novelty options considered, their weaknesses, and why the chosen scope was chosen. Includes the phenotype discovery-then-validation strategy for a future Option 3 study.
