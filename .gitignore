@@ -12,3 +12,13 @@ $RECYCLE.BIN/
 *.sav
 *.bib.bak
 *.bib.sav
+
+# ---------------------------------------------------------------------------
+# Hospital data -- NEVER COMMIT.
+# data/ contains unanonymised DICOM studies: PatientName, PatientBirthDate,
+# PatientSex and StudyDate are populated in every study sampled (12/12).
+# Committing it would write identifiable patient data permanently into git
+# history. Keep it out of the repo until it has been de-identified, and keep
+# the de-identification mapping outside the repo as well.
+# ---------------------------------------------------------------------------
+data/
