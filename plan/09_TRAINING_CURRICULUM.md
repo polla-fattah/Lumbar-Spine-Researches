@@ -113,3 +113,56 @@ If I were supervising the preparation phase, I would **not** start with Graph Tr
 [5]: https://pmc.ncbi.nlm.nih.gov/articles/PMC13295888/?utm_source=chatgpt.com "Graph Neural Networks for Medical Imaging Analysis and Biological Data: Integrating Topology, Geometry, Radiomics, and Generative AI - PMC"
 [6]: https://pmc.ncbi.nlm.nih.gov/articles/PMC9802673/?utm_source=chatgpt.com "Uncertainty-aware deep learning in healthcare: A scoping review - PMC"
 [7]: https://pmc.ncbi.nlm.nih.gov/articles/12809972/?utm_source=chatgpt.com "Explainable artificial intelligence (XAI) in medical imaging: a systematic review of techniques, applications, and challenges - PMC"
+
+---
+
+## Appendix — Three different orderings, and why they conflict
+
+*Folded in from `plan-to-know.md` (now deleted) before that file was removed. It ranked
+20 topics by priority tier; this curriculum condenses them to the 10 that AMOG-Net
+actually requires. The one thing worth carrying over is the following distinction.*
+
+There are **three different ways to order this material**, and they do not agree:
+
+| Ordering | Answers |
+| :--- | :--- |
+| **Research importance** | What matters most to this specific PhD |
+| **Learning difficulty** | What is easiest to pick up |
+| **Prerequisite / dependency** | What must be understood before what |
+
+The list above is ordered by **research importance, with ease breaking ties**. That is
+the right order for deciding *what to prioritise*, but it is the wrong order for deciding
+*what to read first*.
+
+The clearest example: **graph neural networks and graph transformers rank near the top by
+research importance**, because the anatomical graph is the central methodological claim.
+But the dependency order is:
+
+> CNN -> Transformer -> Attention -> GNN -> Graph Transformer
+
+You cannot usefully read a graph transformer paper before understanding attention, and
+attention is hard to grasp without convolutional intuition first. So begin with
+concepts 1--4 (anatomy, DICOM geometry, segmentation, 2.5D modelling) even though
+concepts 6--8 carry more of the thesis's novelty.
+
+**Practical guidance:** study in dependency order, prioritise depth by research
+importance. Understand each topic well enough to defend why it is in the methodology and
+to interpret its failure modes -- not to re-derive it from scratch.
+
+### Priority tiers, for reference
+
+The original 20-topic version grouped material as follows, which is still a useful way to
+decide how much depth each area needs:
+
+- **Priority 1 (Essential)** -- cannot complete the PhD without it: lumbar anatomy and
+  grading, MRI sequences, preprocessing, DICOM geometry, segmentation and localisation,
+  2D/2.5D/3D modelling, experimental design and statistics, ordinal classification, graph
+  networks.
+- **Priority 2 (Very important)** -- needed for the main methodological contributions:
+  CNN and transformer encoders, class imbalance and cost-sensitive learning, multi-view
+  and multi-sequence fusion, structured anatomical modelling, self-supervised learning.
+- **Priority 3 (Important)** -- strengthens the work and supports individual papers:
+  registration, missing-modality learning, uncertainty and calibration. Best learned
+  *after* the core classification and localisation pipeline is working.
+- **Priority 4 (Supporting)** -- explainability. Easy to start, but it will not rescue a
+  model with incorrect labels, poor localisation or weak experimental design.

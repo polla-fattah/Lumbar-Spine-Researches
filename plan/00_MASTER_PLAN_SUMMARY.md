@@ -62,6 +62,9 @@ flowchart TD
 
 ---
 
+
+---
+
 ## 4. Directory Structure of the Plan
 
 All detailed individual roadmaps are stored in `c:\Users\polla\Drives\PollaFattah\UNi\Research\Students\Selar\Project\plan\`:
@@ -73,3 +76,29 @@ All detailed individual roadmaps are stored in `c:\Users\polla\Drives\PollaFatta
 - [`04_MSC3_CLINICAL_NLP_ROADMAP.md`](file:///c:/Users/polla/Drives/PollaFattah/UNi/Research/Students/Selar/Project/plan/04_MSC3_CLINICAL_NLP_ROADMAP.md) — MSc 3: Clinical Information Extraction NLP Benchmark.
 - [`05_MSC4_CLINICAL_PROGNOSTICS_ROADMAP.md`](file:///c:/Users/polla/Drives/PollaFattah/UNi/Research/Students/Selar/Project/plan/05_MSC4_CLINICAL_PROGNOSTICS_ROADMAP.md) — MSc 4: Clinical Symptom & Surgical Prognostics.
 - [`06_RATIONALE_options_considered.md`](file:///c:/Users/polla/Drives/PollaFattah/UNi/Research/Students/Selar/Project/plan/06_RATIONALE_options_considered.md) — Record of the five medical-novelty options considered, their weaknesses, and why the chosen scope was chosen. Includes the phenotype discovery-then-validation strategy for a future Option 3 study.
+- [`07_AMOGNET_TECHNICAL_SPEC.md`](file:///c:/Users/polla/Drives/PollaFattah/UNi/Research/Students/Selar/Project/plan/07_AMOGNET_TECHNICAL_SPEC.md) — The AMOG-Net design document: graph edge types, ordinal threshold formulation, cost matrix, contrastive objective, and the E0--E8 ablation ladder.  is the schedule; this is the specification it implements.
+- [`08_PUBLICATION_PLAN.md`](file:///c:/Users/polla/Drives/PollaFattah/UNi/Research/Students/Selar/Project/plan/08_PUBLICATION_PLAN.md) — Seven proposed papers, one per AMOG-Net component, cumulative toward a flagship system paper.
+- [`09_TRAINING_CURRICULUM.md`](file:///c:/Users/polla/Drives/PollaFattah/UNi/Research/Students/Selar/Project/plan/09_TRAINING_CURRICULUM.md) — The ten concepts Selar needs, with priority tiers and the dependency-order caveat.
+
+---
+
+## 5. Open Item — How Many Papers?
+
+> [!IMPORTANT]
+> **Two documents in this folder disagree, and the difference is not cosmetic.**
+>
+> - [`01_SELAR_PHD_ROADMAP.md`](01_SELAR_PHD_ROADMAP.md) commits Selar to **two papers**,
+>   with all six AMOG-Net components delivered inside Paper 1.
+> - [`08_PUBLICATION_PLAN.md`](08_PUBLICATION_PLAN.md) proposes **seven**, one per
+>   component, cumulative toward a flagship paper.
+>
+> These are not simply different targets. The seven-paper version is the *staged* build:
+> each component becomes publishable on its own, so partial success still yields output.
+> The two-paper version requires all six components to work before anything is
+> submittable, which is the single largest risk in the PhD.
+>
+> A PhD realistically lands **three or four** of the seven, not all of them -- but the
+> decomposition is the right shape, and staging protects the candidate.
+>
+> **This needs an explicit decision.** Left unresolved, the roadmap and the publication
+> plan will drift apart and the student will not know which target governs.
