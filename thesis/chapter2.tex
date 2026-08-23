@@ -421,9 +421,18 @@ The \textbf{Schizas classification} grades the morphology of the dural sac on
 axial T2 images by the ratio of cerebrospinal fluid to nerve rootlets. Grades~A
 and~B retain visible CSF---in~A the rootlets occupy part of the sac, in~B they
 fill it but remain individually discernible, giving a characteristic grainy
-appearance. Grades~C and~D show no discernible rootlets and no CSF signal,
-distinguished from one another by whether posterior epidural fat is preserved
-(C) or obliterated (D) \cite{schizas2010qualitative}. Applied to 95 subjects
+appearance. Grade~A is itself divided into four sub-grades by the position and
+extent of the rootlets: A1, lying dorsally and occupying less than half the sac;
+A2, dorsal and in contact with the dura in a horseshoe configuration; A3, dorsal
+but occupying more than half the sac; and A4, lying centrally and occupying the
+majority of it \cite{schizas2010qualitative}. Grades~C and~D show no discernible
+rootlets and no CSF signal, distinguished from one another by whether posterior
+epidural fat is preserved (C) or obliterated (D)
+\cite{schizas2010qualitative}. This seven-level structure is worth noting
+against the three-class scheme used in this thesis: a benchmark that collapses
+severity to Normal/Mild, Moderate and Severe is discarding distinctions the
+clinical instrument makes, which places an upper bound on how finely any model
+trained on it can discriminate. Applied to 95 subjects
 across surgical, conservatively managed and low-back-pain groups, intra- and
 inter-observer agreement were substantial and moderate respectively
 ($\kappa = 0.65$ and $0.44$). Critically, area measurement over-diagnosed
@@ -478,6 +487,21 @@ targets \cite{lurie2008reliability}, and it is also the target on which the
 severity distribution in LumbarDISC is least skewed
 (Section~\ref{sec:lr-lumbardisc}). Its difficulty is thus intrinsic, not merely
 a consequence of scarce severe examples.
+
+Because the lateral recess is bounded posteriorly by the facet joint,
+facet degeneration contributes directly to subarticular narrowing, and it is
+graded by its own instrument---the four-point Fujiwara scale for facet joint
+osteoarthritis, assessed on T1 and T2 images by joint space narrowing,
+osteophyte formation, articular process hypertrophy and subchondral erosion.
+The Fujiwara scale is not among the RSNA targets, but it is instructive here
+because it represents the reliability floor of this family of instruments:
+Nikpasand et al.\ report average human agreement of only $\kappa = 0.13$ for
+Fujiwara grading, against 0.68 for Pfirrmann on the same cohort, and their CNN
+correspondingly reached $\kappa = 0.18$ against 0.68
+\cite{nikpasand2024automated}. Where the human instrument is that unreliable,
+no model trained on it can be expected to do better, and the authors read their
+own result as evidence that facet scoring needs better criteria rather than a
+better network.
 
 \subsection{Disc Herniation: Nomenclature and the MSU Classification}
 \label{sec:lr-herniation-grading}
@@ -693,8 +717,14 @@ central, lateral recess and foraminal stenosis simultaneously
 \cite{wang2025a}, and a related design grades Pfirrmann degeneration, herniation
 and high-intensity zones from sagittal and axial input in one pass
 \cite{wang2025automated}. Minin et al.\ pursued the same objective for Pfirrmann
-grading with an explicitly open model, motivated by the inaccessibility of
-proprietary graders \cite{minin2025spinescan}.
+grading with a YOLOv8x model released openly, motivated by the inaccessibility
+of proprietary graders \cite{minin2025spinescan}. The progression through the
+YOLO generations---v3 for herniation detection \cite{tsai2021lumbar}, v5 for
+stenosis and degeneration grading
+\cite{wang2025a,wang2025automated,liawrungrueang2023automatic}, v8 for combined
+segmentation and keypoint localisation
+\cite{yilihamu2025quantification,minin2025spinescan}---tracks the field's
+gradual shift from detecting a lesion to characterising it.
 
 This third formulation is precisely that of the benchmark used in this thesis,
 which requires twenty-five graded outputs per study: five conditions across five
@@ -1195,13 +1225,21 @@ the probability of drawing a minority-class example is inflated so that each
 minibatch approaches a uniform severity distribution and gradients are not
 dominated by the majority class. Aggressive augmentation of minority classes
 complements this, since with few severe examples a network may memorise them
-rather than learn the morphology of severe compression. Reported techniques
-include contrast-limited adaptive histogram equalisation, random scaling, affine
-rotation and elastic deformation, alongside mixing methods.
+rather than learn the morphology of severe compression. Reported techniques fall
+into three groups: intensity transformations, of which contrast-limited adaptive
+histogram equalisation (CLAHE) is the most common in this domain because it
+enhances local soft-tissue contrast without amplifying global noise; geometric
+transformations such as random scaling, affine rotation, horizontal flipping and
+elastic deformation; and sample-mixing methods such as MixUp and CutMix, which
+synthesise new training examples by blending or splicing pairs of images and
+their labels. Mixing methods warrant caution on ordinal targets, since
+interpolating between a normal and a severe disc produces a label with no
+clinical referent.
 
 Tsai et al.\ provide the clearest single demonstration of augmentation's value
 in the small-data regime, treating it as the subject of the study rather than an
-implementation detail: mean average precision reached 92.4\% at 550 images with
+implementation detail: using YOLOv3 with a DarkNet-53 backbone to detect disc
+herniation, mean average precision reached 92.4\% at 550 images with
 augmentation, and augmentation was decisive in preventing both under- and
 over-fitting \cite{tsai2021lumbar}. Ahmed et al.\ attack a related form of
 imbalance---between anatomical structures rather than severity classes---through
@@ -1527,7 +1565,9 @@ al.\ report the same asymmetry in different terms: binary detection across five
 pathologies held up well while ordinal Pfirrmann grading remained the limiting
 factor, degrading further in older patients and upper lumbar discs
 \cite{wu2026external}. Yilihamu et al.\ show the effect within a single study as
-task granularity increases: segmentation IoU remained above 97\% externally,
+task granularity increases, using a dual-branch YOLOv8 pipeline that pairs
+YOLOv8-seg for disc segmentation with YOLOv8-pose for canal keypoint
+localisation: segmentation IoU remained above 97\% externally,
 while classification precision fell from 81.21\% to 74.50\% for an 18-category
 problem yet held at 92.51\% to 90.07\% for four-category severity
 \cite{yilihamu2025quantification}.
