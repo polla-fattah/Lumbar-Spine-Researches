@@ -1,0 +1,1926 @@
+% ===========================================================================
+%  Chapter 2 -- Literature Review
+%  Automated Classification of Lumbar Degenerative Disease from MRI
+%
+%  Compiles standalone:   pdflatex chapter2 ; biber chapter2 ; pdflatex chapter2
+%
+%  To fold into a larger thesis instead, delete everything from \documentclass
+%  down to \begin{document}, and the \printbibliography/\end{document} at the
+%  foot, then \input{chapter2} from your main file.
+% ===========================================================================
+
+\documentclass[12pt,a4paper]{report}
+
+\usepackage{lmodern}          % scalable fonts; required for microtype expansion
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage[english]{babel}
+\usepackage{microtype}
+\usepackage[margin=2.5cm]{geometry}
+\usepackage{setspace}
+\onehalfspacing
+
+\usepackage{amsmath,amssymb}
+\usepackage{booktabs}
+\usepackage{longtable}
+\usepackage{array}
+\usepackage{graphicx}
+\usepackage[hidelinks]{hyperref}
+
+\usepackage[
+  backend=biber,
+  style=numeric-comp,
+  sorting=none,
+  maxbibnames=6,
+  minbibnames=3,
+  giveninits=true,
+  doi=true,
+  url=false,
+  isbn=false
+]{biblatex}
+
+\addbibresource{../lumbar_spine_mri_ai_literature_inventory.bib}
+\addbibresource{references-extra.bib}
+
+% The inventory .bib carries internal bookkeeping fields (provenance note, the
+% per-paper summary, the local PDF path). These are working metadata, not
+% bibliographic data, so they are suppressed from the printed reference list.
+% Leaving them in also breaks compilation, since they contain raw underscores.
+\AtEveryBibitem{%
+  \clearfield{note}%
+  \clearfield{comment}%
+  \clearfield{annotation}%
+  \clearfield{abstract}%
+  \clearfield{file}%
+}
+
+\begin{document}
+
+\chapter{Literature Review}
+\label{ch:litreview}
+
+% ===========================================================================
+\section{Introduction}
+\label{sec:lr-intro}
+
+\subsection{Scope and Objectives of the Review}
+\label{sec:lr-scope}
+
+Lumbar degenerative disease is among the most common indications for magnetic
+resonance imaging (MRI) worldwide, and the interpretation of those images is a
+repetitive, subjective and time-consuming task that has attracted sustained
+attention from the medical image analysis community \cite{lee2024artificial,zhang2024a}.
+This chapter reviews that body of work. Its purpose is not to catalogue every
+published model, but to establish what is genuinely settled, what remains
+contested, and where a controlled experiment can still add knowledge.
+
+The review is organised around a single guiding question: \emph{what determines
+whether an automated system can grade lumbar degenerative severity reliably
+enough to be clinically useful?} Four candidate answers recur in the
+literature---the quality and definition of the reference labels, the degree to
+which the anatomy is localised before it is classified, the choice of
+representational backbone, and the configuration of imaging sequences supplied
+to the model. Each is examined in turn, and the chapter closes by identifying
+the two of these that remain inadequately resolved and that this thesis
+therefore addresses.
+
+Three specific objectives follow from this. First, to characterise the clinical
+grading systems that supply the ground truth for every supervised model in this
+field, and to quantify the reliability ceiling those systems impose. Second, to
+trace the methodological evolution from handcrafted features to contemporary
+convolutional and attention-based architectures, with particular attention to
+comparative claims between the two. Third, to assess the evidence on how much
+diagnostic information is carried by each MRI sequence and plane, and thus
+whether the computational expense of multi-sequence processing is warranted.
+
+\subsection{Search Strategy, Sources, and Inclusion Criteria}
+\label{sec:lr-search}
+
+The literature underpinning this chapter was assembled into a structured
+inventory of 92 records spanning 2001 to 2026. Sources were identified through
+PubMed, Scopus, IEEE~Xplore and arXiv, using combinations of the terms
+\emph{lumbar spine}, \emph{MRI}, \emph{spinal stenosis}, \emph{disc
+degeneration}, \emph{deep learning}, \emph{convolutional neural network},
+\emph{transformer}, \emph{segmentation} and \emph{grading}. Reference lists of
+the retrieved systematic reviews \cite{compte2023are,wang2024machine,liawrungrueang2025artificial,mendes2026deep}
+were searched by hand for records the database queries had missed, and the
+citation graphs of the most influential frameworks were traced forward.
+
+Records were retained if they satisfied at least one of four criteria: they
+define or validate a clinical grading standard for lumbar degenerative disease;
+they present an automated method for detecting, segmenting or grading lumbar
+pathology on MRI; they externally validate such a method; or they describe a
+dataset or benchmark on which such methods are trained. Studies confined to
+computed tomography or plain radiography were excluded unless they establish a
+methodological principle transferable to MRI, as were studies of the cervical
+or thoracic spine except where explicitly used for contrast.
+
+Two caveats on the evidence base should be recorded at the outset. First, the
+field's publication rate accelerated sharply after 2024, and a substantial
+fraction of the most directly relevant work
+\cite{batra2025mscan,acharya2026disccentric,nguyen2026crossspine,islamsk2026an}
+exists as preprints that have not completed peer review; these are cited as
+indicative of methodological direction rather than as settled results. Second,
+performance figures reported across studies are frequently not comparable,
+because they derive from different datasets, different label definitions and
+different evaluation protocols. Wherever numerical results are quoted in this
+chapter, the cohort and validation regime that produced them are stated
+alongside, and cross-study comparisons are avoided unless the underlying
+protocols genuinely align.
+
+\subsection{Structure of the Chapter}
+\label{sec:lr-structure}
+
+Sections~\ref{sec:lr-clinical} to~\ref{sec:lr-grading} establish the clinical
+substrate: the disease, the imaging protocol used to observe it, and the
+grading systems that convert observation into ordinal labels. This material is
+not background decoration. The severity classes a model is trained to predict
+are defined entirely by these systems, and their documented unreliability
+propagates directly into every reported accuracy figure in the chapters that
+follow.
+
+Section~\ref{sec:lr-evolution} traces the methodological history of the field,
+and Section~\ref{sec:lr-localization} isolates anatomical localisation as the
+design principle that most consistently separates effective systems from
+ineffective ones. Sections~\ref{sec:lr-backbones} and~\ref{sec:lr-context} then
+address the two axes on which this thesis experiments: the representational
+backbone, and the spatial and sequential context supplied to it.
+Section~\ref{sec:lr-imbalance} treats class imbalance and the ordinal structure
+of the label space, and Section~\ref{sec:lr-datasets} the datasets and
+benchmarks---principally the RSNA LumbarDISC collection---on which the field now
+converges. Sections~\ref{sec:lr-validation} and~\ref{sec:lr-interpretability}
+consider validation practice and interpretability respectively.
+Section~\ref{sec:lr-gap} synthesises the whole and states the research gap.
+
+% ===========================================================================
+\section{Clinical Background: Lumbar Degenerative Disease}
+\label{sec:lr-clinical}
+
+\subsection{Epidemiology and Socioeconomic Burden}
+\label{sec:lr-epidemiology}
+
+Low back pain is the single largest contributor to years lived with disability
+worldwide, and lumbar degenerative change is among its most frequently
+implicated structural correlates \cite{compte2023are,zheng2022deep}. Lifetime
+prevalence is reported as high as 84\%, and in the United States alone the
+combined direct medical and indirect productivity costs are estimated between
+\$50 and \$100 billion annually \cite{richards2026the}. Lumbar spinal stenosis
+in particular is the most common indication for spinal surgery in patients over
+65 \cite{schizas2010qualitative,bharadwaj2023deep}, and demographic ageing is
+expected to increase both its incidence and the imaging workload it generates
+\cite{lee2024artificial}.
+
+The operational consequence for this thesis is one of volume. MRI referrals for
+low back pain have grown faster than the radiology workforce able to report
+them \cite{ghosh2014supervised,compte2023are}, and each lumbar study requires
+the reader to assign severity at multiple anatomical levels across several
+sequences---an average of 14 to 19 minutes of expert time per study
+\cite{compte2023are}. It is this combination of high volume, repetitive
+structure and documented inter-reader variability that makes the task a
+plausible target for automation, rather than any claim that machines perceive
+the underlying pathology more acutely than radiologists do.
+
+\subsection{The Degenerative Cascade}
+\label{sec:lr-cascade}
+
+Degeneration of the lumbar spine is a progressive, multifactorial process
+driven by ageing, mechanical loading, genetic predisposition and lifestyle
+factors \cite{esposito2025mribased,zhao2025advances}. It begins in the
+intervertebral disc, whose nucleus pulposus loses proteoglycan content and
+therefore water from approximately the third decade of life onward. The
+resulting dehydration reduces the disc's height, its capacity to distribute
+axial load, and its signal intensity on T2-weighted imaging---the last of these
+being precisely what the Pfirrmann scale measures \cite{pfirrmann2001magnetic}.
+
+Disc height loss initiates a compensatory cascade through the rest of the motion
+segment. The annulus fibrosus weakens and may permit bulging or frank herniation
+of nuclear material; the ligamentum flavum buckles and hypertrophies; the
+posterior facet joints, now bearing altered load, develop osteoarthritic change
+and osteophytosis \cite{bharadwaj2023deep,nikpasand2024automated}. Changes in
+the adjacent vertebral endplates and marrow---the Modic
+phenotypes~\cite{modic1988degenerative}---frequently accompany this process and
+have themselves been the target of automated detection
+\cite{gao2022automatic,athertya2021classification}. The clinical significance of
+the cascade is that these individually modest changes act cumulatively to
+encroach on the spaces occupied by neural tissue.
+
+\subsection{The Three Anatomical Forms of Stenosis}
+\label{sec:lr-stenosis-types}
+
+Encroachment is conventionally partitioned by anatomical compartment, and this
+partition is directly mirrored in the label structure of the dataset used in
+this thesis \cite{richards2026the}:
+
+\begin{enumerate}
+  \item \textbf{Spinal canal stenosis} is narrowing of the central canal, which
+  contains the thecal sac and the cauda equina. It is best appreciated on axial
+  T2-weighted images, where the relationship between cerebrospinal fluid and
+  nerve rootlets is visible \cite{schizas2010qualitative,lee2011a}. Severe
+  central stenosis characteristically produces neurogenic claudication.
+
+  \item \textbf{Neural foraminal narrowing} is constriction of the lateral
+  foramina through which the exiting nerve roots pass. It is assessed on
+  parasagittal images, where the epidural fat surrounding the root provides the
+  contrast that makes compression visible---T1 weighting being particularly
+  suited to this \cite{lee2010a}. It produces dermatomal radicular symptoms.
+
+  \item \textbf{Subarticular stenosis}, also termed lateral recess stenosis,
+  affects the zone between the medial edge of the facet and the foramen, where
+  it compresses the traversing root before it exits at the level below
+  \cite{lurie2008reliability,andreisek2014consensus}.
+\end{enumerate}
+
+The distinction matters computationally as well as clinically, because the three
+compartments are not equally visible in any single plane. Foraminal narrowing is
+poorly assessed from axial images and subarticular stenosis poorly from
+sagittal ones, a constraint that Section~\ref{sec:lr-context} shows to have
+concrete consequences for model design. It is also the compartment that
+correlates with which sequence a model must be given, and thus sits at the
+centre of the multi-sequence question this thesis examines.
+
+\subsection{Clinical Presentation and the Treatment Decision}
+\label{sec:lr-treatment}
+
+Severity grading is not an academic exercise; it partitions patients into
+distinct management pathways. Conservative management---physiotherapy, analgesia,
+epidural steroid injection---is appropriate for mild and most moderate disease,
+whereas severe compression with corresponding symptoms may warrant decompressive
+surgery or fusion \cite{schizas2010qualitative,mysliwiec2010msu}. The evidence
+that morphological grade carries genuine prognostic weight is strongest for the
+Schizas classification, where grade~C and~D patients were substantially more
+likely to fail conservative treatment \cite{schizas2010qualitative}, and for the
+MSU herniation grades, where size~2 and~3 lesions identify microdiscectomy
+candidates \cite{mysliwiec2010msu}.
+
+Two qualifications temper this. First, the correlation between imaging findings
+and symptoms is imperfect: anatomical stenosis is demonstrable in a substantial
+proportion of asymptomatic individuals \cite{lurie2008reliability,esposito2025mribased},
+so imaging severity constrains rather than determines management. Second, and
+more consequentially for automated systems, the clinically decisive boundary is
+not evenly distributed across the ordinal scale. The distinction between
+\emph{normal} and \emph{mild} rarely changes management, whereas the distinction
+between \emph{moderate} and \emph{severe} frequently does. A model that
+distributes its errors uniformly across grade boundaries is therefore not
+clinically equivalent to one of the same overall accuracy that concentrates its
+errors at the harmless end---a point developed in
+Section~\ref{sec:lr-error-asymmetry}.
+
+% ===========================================================================
+\section{MRI Acquisition: Sequences, Planes, and Diagnostic Yield}
+\label{sec:lr-mri}
+
+\subsection{Why MRI is the Reference Modality}
+\label{sec:lr-why-mri}
+
+MRI is the reference standard for non-invasive assessment of the lumbar spine.
+Computed tomography and plain radiography depict osseous anatomy well but
+resolve soft tissue poorly, and both expose the patient to ionising radiation.
+MRI resolves the intervertebral disc, thecal sac, individual nerve roots and
+ligamentous structures with a contrast unavailable to the alternatives
+\cite{zhao2025advances,liawrungrueang2025artificial}, and it is the disposition
+of exactly these soft-tissue structures that defines every grading system
+reviewed in Section~\ref{sec:lr-grading}. MRI has correspondingly displaced CT
+myelography for stenosis assessment \cite{tumko2024a}.
+
+\subsection{Complementary Information Across Sequences and Planes}
+\label{sec:lr-sequences}
+
+Lumbar protocols are inherently multiplanar and multisequence, because the spine
+is a three-dimensional structure whose pathologies are not all visible in one
+projection. Three acquisitions dominate clinical practice and constitute the
+input available in the dataset used here \cite{richards2026the}.
+
+\emph{Sagittal T2-weighted} imaging renders fluid hyperintense, so cerebrospinal
+fluid in the thecal sac appears bright against darker ligament and bone. It is
+the sequence on which disc hydration---and therefore Pfirrmann
+grade---is judged \cite{pfirrmann2001magnetic}, and on which the
+craniocaudal extent of canal compromise is surveyed. Short tau inversion
+recovery (STIR) suppresses the signal from fat and thereby exposes marrow
+oedema and inflammatory change, making it the sequence of choice for active
+Modic type~1 change \cite{gao2022automatic}.
+
+\emph{Sagittal T1-weighted} imaging renders fat hyperintense. Because the exiting
+nerve root within the neural foramen is normally surrounded by epidural fat, T1
+provides the contrast against which obliteration of that fat---the basis of the
+Lee foraminal grading system---becomes visible \cite{lee2010a}.
+
+\emph{Axial T2-weighted} imaging provides the transverse cross-section through
+the disc level. It is the only view in which the morphology of the dural sac,
+the arrangement of the cauda equina rootlets and the lateral recesses can be
+directly assessed, and it therefore underpins both the Schizas and Lee central
+canal systems \cite{schizas2010qualitative,lee2011a} and the assessment of
+subarticular stenosis \cite{andreisek2014consensus}.
+
+\subsection{Matching Pathology to Sequence}
+\label{sec:lr-sequence-matching}
+
+The correspondence between pathology and sequence is not a matter of
+convention but of physics, and the empirical literature bears this out with
+unusual clarity. The most direct evidence comes from external validation of
+sagittal-only systems. Nigru et al.\ evaluated SpineNetV2 across eleven
+radiological features on 1{,}747 lumbosacral discs and found agreement above
+$\kappa = 0.7$ for most targets but distinctly lower agreement for foraminal
+stenosis and disc herniation, attributing the shortfall specifically to the
+absence of transverse anatomical context in sagittal input
+\cite{nigru2024external}. Hallinan et al.\ approached the same constraint from
+the opposite direction, deliberately assigning axial T2 to central canal and
+lateral recess grading while reserving sagittal T1 for the neural foramina
+\cite{hallinan2021deep}.
+
+This has a direct bearing on the experiments in this thesis. If a
+single-sequence model is to be evaluated, the choice of which sequence to
+retain is not arbitrary: sagittal T2 is the most defensible candidate because it
+is acquired in essentially every back-pain protocol and because it carries the
+signal for canal stenosis and disc degeneration, but the literature predicts
+that it should be weakest precisely on the foraminal and subarticular targets.
+Whether a sufficiently expressive architecture can compensate for that
+predicted weakness is an open question, and one this thesis is designed to
+answer.
+
+\subsection{Sources of Acquisition Variability}
+\label{sec:lr-variability}
+
+Models trained on one institution's images frequently degrade on another's, and
+the proximate causes lie in acquisition. Scanner manufacturer and field strength
+(typically 1.5 versus 3.0~T), slice thickness and spacing, in-plane resolution,
+echo and repetition times, the presence or absence of fat suppression, and
+patient positioning all vary between sites \cite{senzgamboa2023automatic,mendes2026deep}.
+Axial acquisitions vary further in whether slices form a continuous stack or are
+angled to lie parallel to each disc level---a difference the LumbarDISC
+inclusion criteria explicitly accommodate \cite{richards2026the}, and one that
+any model consuming axial data must tolerate.
+
+S\'aenz~Gamboa et al.\ treat this variability as the research problem in its own
+right rather than as a nuisance, evaluating segmentation across multiple centres
+and acquisition parameters and finding that ensembles of U-Net variants were
+required to maintain performance \cite{senzgamboa2023automatic}. Batra et al.\
+make the complementary design argument: rather than assuming uniform histograms
+and a fixed slice count per study, their pipeline is built to accept a variable
+number of axial and sagittal slices, on the grounds that this reflects the
+conditions under which clinical data actually arrives \cite{batra2025mscan}.
+Variability is thus not merely a threat to validity but a specification
+constraint, and Section~\ref{sec:lr-generalization} returns to how effectively
+the field has met it.
+
+% ===========================================================================
+\section{Clinical Grading Systems as the Origin of Ground Truth}
+\label{sec:lr-grading}
+
+Every supervised model reviewed in this chapter learns to reproduce labels
+generated by a human applying one of the systems described below. The
+properties of those systems---their definitions, their granularity and above all
+their reliability---therefore bound what any model trained on them can achieve.
+This section treats them as the measurement instruments they are.
+
+\subsection{Disc Degeneration: Pfirrmann and its Modified Extension}
+\label{sec:lr-pfirrmann}
+
+The Pfirrmann classification, introduced in 2001, remains the most widely
+adopted scheme for intervertebral disc degeneration and is applied to sagittal
+T2-weighted images \cite{pfirrmann2001magnetic}. It assigns one of five ordinal
+grades on the basis of four morphological criteria: homogeneity of the nucleus
+pulposus, distinction between nucleus and annulus, T2 signal intensity as a
+proxy for hydration, and disc height. Grade~I denotes a homogeneous, bright,
+normally proportioned disc; grade~V a collapsed disc of uniformly low signal.
+
+Its virtues are simplicity and universality; its limitations are well
+documented. It is a subjective visual judgement, it is insensitive to change
+over short intervals, and it captures only intrinsic disc state, saying nothing
+about Modic change, high-intensity zones or the downstream compression of neural
+structures \cite{esposito2025mribased,zhao2025advances}. It also suffers a
+ceiling effect in elderly cohorts, where most discs present as grade~IV or~V and
+clinically meaningful variation is compressed into the top of the scale.
+Griffith et al.\ addressed this with an eight-level modified scale supported by a
+24-image reference panel, validated on 260 discs in 52 subjects of mean age 73;
+intra-observer agreement was excellent (weighted $\kappa$ 0.79--0.91) and
+inter-observer agreement substantial (0.65--0.67), with most disagreement
+confined to a single grade \cite{griffith2007modified}.
+
+Esposito et al.\ place these two systems in a wider context that is worth
+recording: a scoping review of 569 studies identified \emph{93} distinct grading
+systems for lumbar disc degeneration---63 subjective, 25 quantitative---of which
+the Pfirrmann method accounted for just over half of all reported use
+\cite{esposito2025mribased}. The apparent standardisation of the field is
+therefore partly illusory, and comparisons of automated grading accuracy across
+studies must confirm that the same instrument was being reproduced.
+
+\subsection{Central Canal Stenosis: Schizas and Lee}
+\label{sec:lr-central-grading}
+
+Two morphological systems have largely displaced simple dural sac
+cross-sectional area (DSCA) thresholds for central canal assessment, on the
+grounds that area measurements correlate poorly with symptoms and overlap
+substantially between symptomatic and asymptomatic individuals
+\cite{schizas2010qualitative}.
+
+The \textbf{Schizas classification} grades the morphology of the dural sac on
+axial T2 images by the ratio of cerebrospinal fluid to nerve rootlets. Grades~A
+and~B retain visible CSF---in~A the rootlets occupy part of the sac, in~B they
+fill it but remain individually discernible, giving a characteristic grainy
+appearance. Grades~C and~D show no discernible rootlets and no CSF signal,
+distinguished from one another by whether posterior epidural fat is preserved
+(C) or obliterated (D) \cite{schizas2010qualitative}. Applied to 95 subjects
+across surgical, conservatively managed and low-back-pain groups, intra- and
+inter-observer agreement were substantial and moderate respectively
+($\kappa = 0.65$ and $0.44$). Critically, area measurement over-diagnosed
+stenosis in 35 patients and under-diagnosed it in 12 relative to the
+morphological grade, and grades~C and~D predicted failure of conservative
+management \cite{schizas2010qualitative}.
+
+The \textbf{Lee central canal system} offers a simpler four-grade alternative
+based on the degree of separation of the cauda equina rootlets on axial T2:
+grade~0 no stenosis; grade~1 obliteration of the anterior CSF space with all
+rootlets still separated; grade~2 some rootlets aggregated; grade~3 none
+separated \cite{lee2011a}. Assessed by four musculoskeletal radiologists across
+81 patients, it achieved inter-reader ICC of 0.730--0.953 and intra-reader
+$\kappa$ of 0.863--0.900, and grades tracked cross-sectional area and
+anteroposterior diameter at nearly all levels---notably better agreement than
+the Schizas system, at the cost of finer morphological detail.
+
+\subsection{Neural Foraminal Stenosis: Lee and Sartoretti}
+\label{sec:lr-foraminal-grading}
+
+The \textbf{Lee foraminal system} grades parasagittal images by the pattern of
+perineural fat obliteration and the morphology of the nerve root: grade~0
+normal; grade~1 fat obliteration in two opposing directions; grade~2
+obliteration in all four directions without morphological change to the root;
+grade~3 nerve root collapse or distortion \cite{lee2010a}. Evaluated on 576
+foramina in 96 patients from L3--L4 to L5--S1 by two radiologists, inter- and
+intra-observer agreement were near-perfect ($\kappa$ approximately 0.80--1.0).
+This is the direct clinical precursor of the left and right foraminal narrowing
+targets in the benchmark used in this thesis. The Sartoretti classification
+offers a six-point sagittal alternative (grades~A--F) indexed to progressive
+contact between the exiting root and each foraminal boundary.
+
+The near-perfect agreement Lee et al.\ report deserves scepticism when
+generalised. It was obtained by two experienced readers applying explicit
+criteria to a curated series; the multi-reader, multi-institution agreement
+figures in Section~\ref{sec:lr-reliability} are considerably lower, and it is
+the latter that describe the conditions under which large training corpora are
+actually annotated.
+
+\subsection{Subarticular and Lateral Recess Stenosis}
+\label{sec:lr-subarticular-grading}
+
+Subarticular stenosis is graded on axial T2 by the proportion of the lateral
+recess compromised: mild at up to one third, moderate between one and two
+thirds, severe beyond two thirds, with nerve root involvement described as
+touching, displacing or compressing \cite{lurie2008reliability,andreisek2014consensus}.
+Compared with the disc and central canal systems this is a notably less
+crisply specified instrument, resting on a visually estimated ratio rather than
+a discrete morphological pattern. That imprecision shows in the reliability
+data: subarticular stenosis is consistently the least reproducible of the
+targets \cite{lurie2008reliability}, and it is also the target on which the
+severity distribution in LumbarDISC is least skewed
+(Section~\ref{sec:lr-lumbardisc}). Its difficulty is thus intrinsic, not merely
+a consequence of scarce severe examples.
+
+\subsection{Disc Herniation: Nomenclature and the MSU Classification}
+\label{sec:lr-herniation-grading}
+
+Herniation is described qualitatively by the standardised nomenclature of
+bulge, protrusion, extrusion and sequestration \cite{fardon2014lumbar}, and
+quantitatively by the Michigan State University (MSU) classification, which
+grades size against a transverse line joining the medial edges of the facet
+joints on the axial slice of maximal herniation \cite{mysliwiec2010msu}.
+Grade~1 extends less than half the distance to that line, grade~2 more than
+half without crossing it, grade~3 completely beyond it. The MSU system supplies
+the reference standard for several automated herniation studies
+\cite{zhang2023deep}, and its size~1 versus size~2/3 boundary maps onto the
+conservative versus surgical decision.
+
+\subsection{Inter- and Intra-Observer Reliability}
+\label{sec:lr-reliability}
+
+The most consequential study for present purposes is that of Lurie et al., who
+assessed standardised MRI interpretation of lumbar stenosis using 58 randomly
+selected studies from the SPORT trial read by four independent readers, with 20
+re-read after at least a month \cite{lurie2008reliability}. Inter-reader
+agreement was substantial for central stenosis ($\kappa = 0.73$) but only
+moderate for foraminal stenosis ($0.58$) and nerve root impingement ($0.51$),
+and poorest for subarticular stenosis ($0.49$), with marked variation between
+reader pairs. Quantitative measurement fared no better in absolute terms: mean
+absolute inter-reader difference in thecal sac area was 128~mm$^2$, or 13\%.
+Intra-reader agreement exceeded inter-reader agreement for every feature.
+
+Two structural findings recur across the wider reliability literature. First,
+agreement is systematically worse for the lateral compartments than for the
+central canal---the same ordering that later appears in automated model
+performance. Second, disagreement is overwhelmingly confined to adjacent
+grades: Griffith et al.\ report 84\% of intra-observer and 91\% of
+inter-observer disagreement spanning a single grade
+\cite{griffith2007modified}, and the same pattern recurs in automated
+evaluation \cite{mcsweeney2023external,udomluck2026multitask}. Earlier consensus
+efforts confirm that the underlying definitions were themselves contested: the
+Delphi survey of Mamisch et al.\ \cite{mamisch2012radiologic} and the consensus
+conference reported by Andreisek et al.\ \cite{andreisek2014consensus} were both
+convened precisely because radiologic criteria for stenosis varied between
+institutions.
+
+\subsection{Label Noise as a Performance Ceiling}
+\label{sec:lr-label-ceiling}
+
+The reliability figures above are not a peripheral caveat; they are a hard
+constraint on the interpretation of every result in this field. If four expert
+readers agree on subarticular severity at $\kappa = 0.49$, then a model trained
+on one reader's labels and evaluated against another's cannot exceed that
+agreement, and a reported accuracy approaching unity on such a target should
+prompt scrutiny of the evaluation protocol rather than admiration. The
+LumbarDISC dataset description states the point explicitly, noting that
+published inter-rater agreement on these grades ranges from poor to substantial
+depending on anatomical location \cite{richards2026the}.
+
+The field has responded to this in two ways. The first is to make the reference
+standard more robust by construction---majority voting across a panel with
+adjudication of disagreements, as in Tumko et al.\ (seven radiologists)
+\cite{tumko2024a} and Su et al.\ (two clinicians with expert adjudication)
+\cite{su2022automatic}. The second is to reframe the evaluation question: rather
+than asking whether a model matches a single reader, asking whether its
+disagreement with readers falls inside the band of disagreement between readers.
+Won et al.\ furnish the cleanest example, reporting that the difference between
+their two experts was statistically significant while the difference between
+each expert and the model trained on that expert's labels was not
+\cite{won2020spinal}. Comparatively few studies adopt either safeguard, and
+Section~\ref{sec:lr-reporting} returns to this as a systemic weakness.
+
+\subsection{The Ordinal Structure of the Label Space}
+\label{sec:lr-ordinality}
+
+Severity labels are ordinal, not categorical: \emph{normal}, \emph{mild},
+\emph{moderate} and \emph{severe} stand in a fixed order, and the distance
+between them is neither uniform nor clinically symmetric. Treating them as
+unordered classes under categorical cross-entropy---as the majority of the
+reviewed work does---discards that structure, penalising a
+severe-graded-as-normal error exactly as heavily as a moderate-graded-as-severe
+one.
+
+Two empirical observations follow. First, errors concentrate overwhelmingly at
+adjacent grade boundaries. McSweeney et al.\ report that SpineNet disagreed with
+human raters on 20.83\% of discs but that only 0.85\% of discs differed by more
+than one grade \cite{mcsweeney2023external}; Udomluck et al.\ observe the same
+concentration \cite{udomluck2026multitask}; Ishimoto et al.\ find exact-grade
+agreement of 65.7\% rising to 94.1\% when collapsed to a severe-versus-rest
+dichotomy \cite{ishimoto2020could}. Much of the apparent error in ordinal
+grading is therefore boundary error rather than gross misclassification.
+
+Second, and less expectedly, explicitly ordinal objectives have not reliably
+improved on this. Niemeyer et al.\ tested soft-kappa loss, ordinal
+cross-entropy and regression losses against plain cross-entropy for Pfirrmann
+grading on 1{,}599 patients and 7{,}948 discs, together with class pooling and
+class-weighted losses, and found that none improved overall classification
+performance; the default cross-entropy classifier reached $\kappa = 0.92$ with
+predictions within one grade of ground truth in 99.2\% of cases
+\cite{niemeyer2021a}. Patil et al.\ likewise found performance strongest at the
+extremes of the Pfirrmann scale and on the binary low-versus-high distinction,
+with intermediate grades remaining the difficulty \cite{patil2026mribased}. The
+ordinal structure of the problem is thus real and measurable, but the question
+of how to exploit it is genuinely open---a point that informs the loss functions
+adopted in Chapter~3.
+
+% ===========================================================================
+\section{Evolution of Automated Lumbar MRI Analysis}
+\label{sec:lr-evolution}
+
+\subsection{Handcrafted Features and Classical Machine Learning}
+\label{sec:lr-classical}
+
+Before deep learning, automated analysis of lumbar MRI depended on features
+designed by hand. Investigators specified mathematical descriptors of local
+appearance and passed them to a conventional classifier. Ghosh et al.\ combined
+Histogram of Oriented Gradients (HOG) descriptors with a support vector machine
+and a set of geometric heuristics, reporting 99\% disc localisation accuracy
+across 53 clinical cases and 318 discs, and---unusually for the period---emitting
+a tight bounding box for each disc rather than a single interior point, so that
+a downstream system could operate on the region directly
+\cite{ghosh2012a}. Athertya and Kumar took a comparable approach to vertebral
+degeneration, extracting local binary patterns, Hu moments and gray-level
+co-occurrence matrix (GLCM) statistics to classify Modic changes, endplate
+defects and focal changes, reaching 85.91\% accuracy for the extent of Modic
+change on 100 patients \cite{athertya2021classification}. Related efforts applied
+hybrid classical models to disc abnormality detection
+\cite{unal2015detection,castromateos2016intervertebral} and semi-automatic
+computer-aided classification of degenerative disease \cite{ruizespaa2015semiautomatic},
+while Huber et al.\ pursued texture analysis with decision trees as a
+quantitative alternative to visual stenosis grading \cite{huber2019qualitative}.
+He et al.\ applied a synchronised superpixel representation to define consistent
+regions of interest across levels before classifying neural foraminal stenosis,
+an early attack on one of the exact conditions graded in this thesis
+\cite{he2016automated}.
+
+These systems established feasibility but generalised poorly. Handcrafted
+descriptors are sensitive to scanner hardware, field strength, slice thickness
+and patient positioning, and the anatomical variability of the lumbar spine
+defeats fixed geometric assumptions. One finding from this era nevertheless
+retains value: Athertya and Kumar's feature-sensitivity analysis showed that
+GLCM entropy alone sufficed to detect focal changes, while endplate-defect
+classification depended almost entirely on the first two Hu moments
+\cite{athertya2021classification}. Such explicit attribution of predictive power
+to individual features is something the deep models that displaced these methods
+recovered only later, and imperfectly, through the interpretability techniques of
+Section~\ref{sec:lr-interpretability}.
+
+\subsection{The First End-to-End Deep Learning Systems}
+\label{sec:lr-first-dl}
+
+Convolutional neural networks removed the need for explicit feature design by
+learning hierarchical representations directly from pixels \cite{he2016deep}. In
+lumbar imaging the decisive contribution was SpineNet
+\cite{jamaludin2017spinenet}. Trained on 2{,}009 patients and 12{,}018 disc
+volumes from sagittal T2 images, it predicted six radiological scores
+simultaneously---Pfirrmann grade, disc narrowing, upper and lower endplate
+defects, and upper and lower marrow changes---from a shared convolutional trunk
+that branched into task-specific heads. Two design decisions proved durable.
+First, multi-task learning let one architecture serve several targets, reducing
+the free parameters relative to training separate networks and exploiting the
+correlation between co-occurring pathologies. Second, the system required only
+disc-level class labels: no voxel-wise segmentation and no slice-level
+localisation, with the evidence hotspots emerging implicitly from classification
+training. Reported performance was state-of-the-art and near-human across all
+six scores.
+
+The same group demonstrated shortly afterwards that longitudinal clinical scans
+could serve as free supervision. A Siamese network was pre-trained with a
+contrastive loss on whether two scans belonged to the same patient---information
+available from DICOM metadata without knowing the patient's identity---together
+with an auxiliary vertebral-level prediction task, then fine-tuned for
+degeneration grading. On 1{,}016 subjects, 423 with follow-up imaging, the
+pre-trained network outperformed training from scratch and reached equivalent
+performance from far fewer annotated examples \cite{jamaludin2017selfsupervised}.
+This anticipated by several years the self-supervised pretraining strategies now
+routine in medical imaging, and it is the direct ancestor of the contrastive
+approach discussed in Section~\ref{sec:lr-contrastive}.
+
+SpineNet's principal limitation was structural rather than architectural: it
+consumed preprocessed sagittal disc volumes, and could therefore not assess
+pathologies that require the transverse plane. SpineNetV2 extended coverage to
+eleven radiological features and moved to a multi-stage design, using a U-Net to
+detect and label vertebral bodies and discs before a ResNet classifier graded
+each \cite{windsor2022spinenetv2}. The reliance on sagittal input nonetheless
+persisted, and Section~\ref{sec:lr-generalization} shows this to be the
+consistent locus of its external-validation failures.
+
+\subsection{From Binary Detection to Multi-Level, Multi-Pathology Grading}
+\label{sec:lr-task-evolution}
+
+The task definition itself has evolved, and the trajectory matters more than any
+individual model. Early deep learning work asked binary questions: is stenosis
+present or absent \cite{altun2023lssvgg16}; is a herniation visible in this image
+\cite{tsai2021lumbar}. Such formulations are tractable but clinically thin,
+because management depends on severity and on which level is affected.
+
+Three shifts followed. The first was to \emph{multi-class severity}: Won et al.\
+graded stenosis status on 542 L4--5 axial images against two independent experts
+\cite{won2020spinal}; Niemeyer et al.\ predicted the full five-point Pfirrmann
+scale across 7{,}948 discs \cite{niemeyer2021a}. The second was to
+\emph{multi-pathology} output, in which one model reports several findings at
+once: Lehnen et al.\ evaluated disc herniation, bulging, canal stenosis,
+nerve-root compression and spondylolisthesis across 888 lumbar segments from a
+single CNN \cite{lehnen2021detection}; Su et al.\ graded herniation, central
+canal stenosis and nerve-root compression from a shared ResNet-50 trunk with
+three classification heads \cite{su2022automatic}. The third was to
+\emph{per-level, per-side} prediction, in which the unit of analysis is not the
+study or the image but the individual disc level and, for the lateral
+compartments, the individual side. Hallinan et al.\ exemplify the mature form,
+grading central canal, lateral recess and neural foraminal stenosis at each
+level with the sequence appropriate to each \cite{hallinan2021deep}. Single-stage
+detectors have since been adapted to deliver the same output more cheaply: Wang
+et al.\ modified a YOLOv5 network to detect regions of interest and grade
+central, lateral recess and foraminal stenosis simultaneously
+\cite{wang2025a}, and a related design grades Pfirrmann degeneration, herniation
+and high-intensity zones from sagittal and axial input in one pass
+\cite{wang2025automated}. Minin et al.\ pursued the same objective for Pfirrmann
+grading with an explicitly open model, motivated by the inaccessibility of
+proprietary graders \cite{minin2025spinescan}.
+
+This third formulation is precisely that of the benchmark used in this thesis,
+which requires twenty-five graded outputs per study: five conditions across five
+disc levels \cite{rsna2024rsna,richards2026the}. The progression is therefore not
+merely historical. It explains why performance figures from the binary era
+cannot be compared with contemporary results, and why a model that classifies a
+whole image is solving a different and substantially easier problem than one
+that must attribute severity to a specific anatomical location.
+
+\subsection{Chronological Synthesis}
+\label{sec:lr-chronology}
+
+Four phases are discernible. Until roughly 2016 the field was dominated by
+handcrafted features and classical classifiers, with localisation as the central
+problem \cite{ghosh2012a,ghosh2014supervised}. From 2017 to 2020, CNNs displaced
+these methods and multi-task grading became feasible
+\cite{jamaludin2017spinenet,lu2018deepspine,han2018spinegan}. From 2021 to 2023
+the emphasis moved to clinical credibility: external validation
+\cite{mcsweeney2023external}, interpretability \cite{bharadwaj2023deep,gao2022automatic},
+reader-assistance evaluation \cite{lim2022improved} and multi-centre testing
+\cite{yi2023deep,su2022automatic}. From 2024 onward, the release of a large
+public benchmark \cite{richards2026the} redirected effort toward anatomically
+localised, multi-view severity grading, alongside the arrival of transformer and
+vision-language architectures
+\cite{batra2025mscan,nguyen2026crossspine,islamsk2026an,zeng2025gpt4lfs}.
+
+The through-line is a steady increase in the specificity of what is being
+predicted, accompanied---until recently---by a decrease in the rigour with which
+it is validated. Both systematic reviews of the period make the same complaint:
+Compte et al.\ found that algorithms performed markedly worse in replication or
+external validation than in their development studies \cite{compte2023are}, and
+Wang et al.\ concluded that despite pooled sensitivity of 0.84 and specificity of
+0.87 across twelve studies and 15{,}044 patients, no model was reliable enough
+for clinical practice \cite{wang2024machine}. Section~\ref{sec:lr-validation}
+takes up this tension directly.
+
+% ===========================================================================
+\section{Anatomical Localization as a Design Principle}
+\label{sec:lr-localization}
+
+\subsection{Disc and Vertebra Detection, Labelling, and Level Assignment}
+\label{sec:lr-detection}
+
+Before severity can be attributed to L4--L5, the system must know which structure
+is L4--L5. Level assignment is thus a precondition of per-level grading, and it
+has been treated as a problem in its own right since the earliest work
+\cite{ghosh2012a,lootus2015automated}. Pan et al.\ illustrate the mature
+solution: a Faster R-CNN locates vertebral bodies L1--S1 on sagittal images, the
+geometric relationship between sagittal and axial acquisitions identifies the
+corresponding disc in each axial slice, and the disc region of interest is then
+extracted---each of the three stages reported at 100\% accuracy, with the residual
+difficulty falling entirely on the subsequent classification
+\cite{pan2021automatically}. Detection has, in short, largely been solved;
+grading has not.
+
+\subsection{Semantic and Instance Segmentation of Lumbar Structures}
+\label{sec:lr-segmentation}
+
+Dense segmentation provides a stronger anatomical substrate than bounding boxes.
+The U-Net architecture \cite{ronneberger2015unet} and its descendants dominate,
+as a dedicated systematic review of deep-learning-assisted disc segmentation
+confirms \cite{wang2024deep}.
+Ghosh and Chaudhary segmented vertebrae, disc, dural sac and background jointly
+using cascaded random forests over image and sparsely sampled context features,
+achieving Dice 0.87 and 0.84 for dural sac and disc across 212 clinical cases
+\cite{ghosh2014supervised}. Han et al.\ introduced adversarial training for
+multi-structure segmentation \cite{han2018spinegan}, S\'aenz-Gamboa et al.\
+established CNN semantic segmentation of the structural elements surrounding the
+spinal cord \cite{senzgamboa2021automatic}, and Al-Kafri et al.\ applied
+SegNet to boundary delineation for stenosis assessment across 515 symptomatic
+patients, contributing two purpose-built metrics---confidence and
+consistency---for assessing the quality of the ground truth itself rather than
+only the model \cite{alkafri2019boundary}.
+
+Subsequent work has largely consisted of architectural refinement. Wang et al.\
+added multilevel feature-map attention and residual blocks to an Attention U-Net
+\cite{wang2022automatic}; Ahmed et al.\ targeted class imbalance between
+anatomical structures with a custom combined loss and modified upsampling
+\cite{ahmed2024pioneering}; Silveira et al.\ added an Inception module for
+multi-scale extraction and a dual-output mechanism, reporting mIoU 0.8974 and
+F1 0.9444 on SPIDER and---notably---outperforming TransUNet
+\cite{silveira2025automated}. M\"oller et al.\ extended coverage to the whole
+spine with SPINEPS, segmenting fourteen structures including the posterior
+elements, and established a useful general result: segmenting semantically first
+and instance-wise second outperformed training directly on instance segmentation,
+beating an nnU-Net baseline \cite{isensee2021nnunet} on every structure and metric
+\cite{mller2025spinepsautomatic}. Chen et al.\ merged convolutional and attention
+pathways in parallel with a novel position embedding, outperforming fifteen
+competing models \cite{chen2024symtc}.
+
+\subsection{Public Segmentation Resources and Benchmarks}
+\label{sec:lr-segmentation-data}
+
+Progress in this subfield has been unusually well served by shared data. The
+SPIDER dataset provides 447 sagittal T1 and T2 series from 218 patients across
+four hospitals, with reference segmentations of vertebrae, discs and spinal
+canal plus per-level radiological gradings, together with reference performance
+for a baseline algorithm and nnU-Net and a continuous public challenge on a
+sequestered test split \cite{vandergraaf2024lumbar}. Several of the segmentation
+models above are trained and benchmarked on it
+\cite{ahmed2024pioneering,silveira2025automated,patil2026mribased}, which makes
+their results mutually comparable in a way that is rare elsewhere in this
+literature.
+
+\subsection{Quantitative Morphometry}
+\label{sec:lr-morphometry}
+
+Segmentation enables measurement, and measurement offers an escape from ordinal
+subjectivity. The dural sac cross-sectional area is the canonical example.
+Ghobrial and Roth compared U-Net, Attention U-Net and MultiResUNet for automated
+DSCA quantification on 683 scans with 50 held back for external validation;
+MultiResUNet performed best, with Pearson correlation 0.9917 and mean absolute
+error 23.70~mm$^2$, holding up externally at 99.95\% accuracy and F1 0.9393
+\cite{ghobrial2025deep}. Zheng et al.\ pursued the same objective for disc
+degeneration, segmenting degeneration-related regions with a Swin-transformer
+network and computing signal-intensity and geometric features, then proposing a
+quantitative criterion to replace subjective Pfirrmann grading on the basis of
+strong correlation with grade across a large population \cite{zheng2022deep}.
+Related work measures the lordosis angle from segmentation masks
+\cite{ji2026mdvmunet}.
+
+A caution is warranted. Ghobrial and Roth's model relies on T1 weighting alone
+and a modest dataset, as the authors acknowledge \cite{ghobrial2025deep}, and
+Schizas' original finding---that area measurement over- and under-diagnosed
+stenosis relative to morphological grade in a substantial minority of patients
+\cite{schizas2010qualitative}---applies equally whether the area is traced by
+hand or by network. Automating a measurement does not repair a weak correlation
+between that measurement and the clinical state.
+
+\subsection{Evidence that Localisation Precedes Classification}
+\label{sec:lr-localize-first}
+
+The strongest recurring methodological finding in this literature is that
+explicit anatomical localisation before classification improves grading. The
+argument was made structurally by DeepSPINE, which chained U-Net vertebral
+segmentation and disc-level designation to a multi-task grading network across
+4{,}075 patients and more than 22{,}000 disc-level annotations
+\cite{lu2018deepspine}, and it has been corroborated repeatedly since.
+
+Four lines of evidence converge. Bharadwaj et al.\ segmented dural sac and disc
+with V-Net, localised facet and foramen by geometric rule, and only then
+classified, reaching Dice 0.93 and 0.94 with foramen and facet localisation IoU
+0.72 and 0.83 \cite{bharadwaj2023deep}. \v{S}u\v{s}ter\v{s}i\v{c} et al.\ showed
+that segmenting, cropping and enhancing the region of interest before
+classification produced 0.87 and 0.91 accuracy on axial and sagittal views for a
+multi-class herniation problem \cite{sustersic2022a}. Kowlagi et al.\ made the
+comparative case most directly, arguing that a well-tuned three-stage pipeline of
+segmentation, localisation and classification allows convolutional networks to
+outperform transformer approaches on Pfirrmann grading in a population cohort
+\cite{kowlagi2022a}. Acharya and Kansakar tested the principle in its strongest
+form, hypothesising that anatomical focus rather than architecture is the binding
+constraint, and grading severity from a single localised region of interest per
+disc \cite{acharya2026disccentric}.
+
+The implication for the present work is direct. If localisation dominates
+architecture in determining performance, then a comparison between backbones is
+only meaningful when both receive identically localised input---otherwise the
+comparison measures preprocessing rather than representation. This is a
+methodological requirement that Section~\ref{sec:lr-cnn-vs-transformer} shows
+much of the existing comparative literature fails to satisfy.
+
+\subsection{Reduced-Annotation and Unsupervised Alternatives}
+\label{sec:lr-weak-supervision}
+
+Dense annotation is expensive, and several strands of work reduce the
+requirement. Kuang et al.\ eliminated manual labels entirely for vertebral
+segmentation: sub-optimal masks from a rule-based method were combined through a
+voting mechanism to supervise CNN training, with a regional strategy restricting
+attention to a specific vertebral region, validated across 243 volunteers
+\cite{kuang2020mrisegflow}. SpineNet's evidence hotspots represent the
+complementary weakly supervised route, obtaining localisation from
+classification labels alone \cite{jamaludin2017spinenet}, while the SPIDER
+annotation protocol adopted a human-in-the-loop compromise, training on a small
+subset to produce initial masks that were then corrected and fed back
+\cite{vandergraaf2024lumbar}. Self-supervised pretraining on unlabelled or
+metadata-labelled data \cite{jamaludin2017selfsupervised} completes the picture.
+Together these establish that the annotation burden, long cited as the principal
+obstacle to clinical deployment, is substantially negotiable.
+
+% ===========================================================================
+\section{Backbone Architectures for Severity Classification}
+\label{sec:lr-backbones}
+
+\subsection{Convolutional Networks}
+\label{sec:lr-cnns}
+
+Convolutional networks exploit two properties well matched to imaging: local
+connectivity, since a filter responds to a neighbourhood rather than the whole
+field; and translation equivariance, since the same filter is applied at every
+position. Stacking convolutions builds a hierarchy in which early layers respond
+to edges and texture and later layers to composite anatomical structure.
+
+\textbf{ResNet} addressed the degradation encountered when networks are made
+deeper, introducing residual blocks whose skip connections allow a layer's input
+to bypass subsequent convolutions and be added to their output, providing an
+unimpeded path for gradients and permitting stable training at fifty layers and
+beyond \cite{he2016deep}. In lumbar imaging ResNet is ubiquitous: as the
+classification head in multi-task grading \cite{su2022automatic}, as the
+detection backbone in staged pipelines \cite{zhang2023deep}, as the encoder in
+segmentation networks \cite{batra2025mscan}, and as the classifier in
+SpineNetV2 \cite{windsor2022spinenetv2}.
+
+\textbf{EfficientNet} attacked a different problem---how to allocate a fixed
+computational budget---by scaling depth, width and input resolution together
+under fixed coefficients derived from a neural architecture search, rather than
+scaling one dimension in isolation \cite{tan2019efficientnet}. The resulting
+models reach comparable accuracy at substantially lower parameter and FLOP cost,
+which matters for the deployment scenarios that motivate this thesis.
+EfficientNet appears as the classifier in Kowlagi et al.'s Pfirrmann pipeline
+\cite{kowlagi2022a} and in the final stage of M-SCAN \cite{batra2025mscan}.
+\textbf{ConvNeXt} represents the most recent convolutional line, modernising the
+CNN with design choices borrowed from transformers while retaining convolution
+\cite{liu2022convnet}; Udomluck et al.\ include ConvNeXt-Tiny in their feature
+extractor comparison and find it stable across classifiers
+\cite{udomluck2026multitask}.
+
+The architectural limitation of convolution is a bounded receptive field. Deep
+stacks aggregate local responses into progressively broader ones, but the
+network never explicitly models a relationship between two distant regions---for
+instance, between the L1--L2 and L5--S1 levels, whose degenerative states are
+biomechanically coupled.
+
+\subsection{Vision Transformers and the Attention Bottleneck}
+\label{sec:lr-vit}
+
+Transformers dispense with convolution and rely on self-attention, in which
+every element of the input is weighted against every other regardless of
+distance \cite{vaswani2017attention}. The Vision Transformer applies this by
+partitioning an image into fixed patches, flattening them and treating the
+result as a sequence \cite{dosovitskiy2021image}. Global context is available
+from the first layer, and there is no locality prior to overcome---but also no
+locality prior to exploit, which is why vision transformers are markedly more
+data-hungry than convolutional networks of comparable capacity.
+
+The practical obstacle is cost. Global self-attention scales quadratically with
+the number of patches, hence quadratically with image area. Clinical MRI demands
+high spatial resolution to resolve structures a few millimetres across, so a
+naive vision transformer over full-resolution lumbar images is computationally
+prohibitive.
+
+\subsection{The Swin Transformer}
+\label{sec:lr-swin}
+
+The Swin Transformer resolves this bottleneck through two mechanisms
+\cite{liu2021swin}. \emph{Windowed self-attention} restricts attention to
+non-overlapping local windows, making cost linear rather than quadratic in image
+size; to restore cross-window communication, the window partition is
+\emph{shifted} by half a window between consecutive layers, so information
+propagates across boundaries over successive blocks. \emph{Hierarchical feature
+maps} are produced by patch-merging layers that progressively reduce spatial
+resolution while increasing channel depth, yielding a pyramid analogous to a
+CNN's and making the backbone usable for dense prediction as well as
+classification.
+
+For lumbar grading the appeal is specific. Severity depends simultaneously on
+fine local detail---the texture of a nucleus pulposus, the obliteration of
+perineural fat---and on regional context, since a rootlet configuration is
+interpretable only relative to the surrounding dural sac and the levels above
+and below. A hierarchical, windowed attention mechanism is a plausible fit to
+that structure, which is the substantive reason for selecting it as the
+transformer representative in this thesis. Swin-derived architectures have been
+applied to spinal segmentation, and Zheng et al.\ incorporate Swin components in
+their quantitative degeneration network \cite{zheng2022deep}.
+
+\subsection{Hybrid CNN--Transformer Architectures}
+\label{sec:lr-hybrids}
+
+A third position holds that the two families are complementary. SymTC merges
+convolutional and transformer layers in a \emph{parallel dual-path} arrangement
+rather than stacking them sequentially, and integrates a position embedding into
+the self-attention module to improve spatial awareness; benchmarked against
+fifteen existing models on both a private dataset and a released synthetic one,
+it performed best for both vertebral bones and discs \cite{chen2024symtc}. Zheng
+et al.\ similarly combine convolutional and Swin components
+\cite{zheng2022deep}, and Yi et al.\ pair a 3D ResNet18 backbone with transformer
+components across three hospitals \cite{yi2023deep}. Baur et al.\ explore a
+different pairing, segmenting discs with a U-Net, reconstructing each as a 3D
+point cloud and grading it with a graph neural network; performance was uneven
+across levels---F1 0.71 at L2/3 against 0.46 overall---which the authors present
+as a foundation requiring refinement rather than a competitive result
+\cite{baur2024automated}. Hybrids complicate the
+clean comparison this thesis undertakes, but they indicate where the field
+expects the answer to lie: not in the wholesale replacement of convolution, but
+in supplying it with a mechanism for long-range interaction.
+
+\subsection{Published CNN-versus-Transformer Comparisons and Their Limits}
+\label{sec:lr-cnn-vs-transformer}
+
+Several studies bear directly on the architectural question, and their results
+do not favour transformers as strongly as the general computer vision literature
+might suggest.
+
+Kowlagi et al.\ address it explicitly. Observing that recent gains had been
+attributed to transformer architectures, they show that a well-tuned three-stage
+convolutional pipeline outperforms the state-of-the-art transformer approaches
+on Pfirrmann grading, evaluated on the Northern Finland Birth Cohort 1966---a
+population cohort rather than a clinical convenience sample---with an ablation
+study and subgroup breakdown, and public code \cite{kowlagi2022a}. Their
+conclusion is that pipeline design and tuning outweigh backbone choice.
+
+Lee et al.\ provide the closest published analogue to the present study,
+developing a CNN-based and a transformer-based model for lumbar stenosis
+classification on 564 MRIs with a 100-study external test set, labelled by four
+radiologists with expert consensus as reference and read by eight participants
+across four experience levels. Both models exceeded 94\% detection recall; on
+dichotomised classification the CNN, transformer and human participants achieved
+kappas of 0.99/0.99/0.97--0.98 for central canal, 0.98/0.94/0.81--0.94 for
+lateral recesses and 0.98/0.95/0.91--0.95 for neural foramina. The CNN was
+superior overall, the transformer similar to superior against clinicians
+\cite{lee2026deep}.
+
+Udomluck et al.\ compared VGG19, ConvNeXt-Tiny and DINOv2 features with classical
+classifiers under external validation, finding conventional VGG19 features
+strongest (accuracy 0.9556 with logistic regression) and DINOv2 features
+generalising worst, dropping to 0.6222 with LightGBM
+\cite{udomluck2026multitask}. Patil et al.\ reached a still more pointed
+conclusion through ablation: radiomic features carried essentially the entire
+signal for Pfirrmann grading, and frozen ImageNet-pretrained ResNet50 features
+added no measurable discriminative value \cite{patil2026mribased}. Silveira et
+al.\ likewise found their enhanced U-Net outperformed TransUNet on segmentation
+\cite{silveira2025automated}.
+
+Three methodological limitations recur across this evidence. First, the
+compared architectures are rarely given identical preprocessing, localisation
+and training budgets, so differences may reflect tuning effort rather than
+representational capacity---exactly the confound Kowlagi et al.\ identify
+\cite{kowlagi2022a}. Second, the input configuration is usually held fixed,
+leaving unexamined the interaction between architecture and available context,
+even though a transformer's advantage should plausibly be largest where global
+context must substitute for missing views. Third, several comparisons rely on
+frozen pretrained features rather than fine-tuned backbones
+\cite{udomluck2026multitask,patil2026mribased}, which disadvantages transformers
+disproportionately given their weaker inductive biases. These three gaps
+motivate the experimental design of this thesis.
+
+\subsection{Transfer Learning, Pretraining, and Self-Supervision}
+\label{sec:lr-pretraining}
+
+Medical datasets are small by the standards these architectures were designed
+for, so initialisation matters. ImageNet pretraining is near-universal, though
+Patil et al.'s ablation is a caution that its benefit is not automatic
+\cite{patil2026mribased}. Domain-specific pretraining is better supported:
+Jamaludin et al.\ obtained equivalent performance from far fewer labels through
+longitudinal self-supervision \cite{jamaludin2017selfsupervised}, and Acharya and
+Kansakar used contrastive pretraining on disc-centred crops to reduce sensitivity
+to irrelevant appearance variation \cite{acharya2026disccentric,chen2020simple}.
+Sequential transfer between related targets---initialising a subarticular model
+from spinal canal weights---has also been reported to help on smaller datasets, a
+strategy of particular relevance to transformers given their lack of
+convolutional inductive bias.
+
+% ===========================================================================
+\section{Exploiting Spatial Context: Slices, Volumes, and Views}
+\label{sec:lr-context}
+
+\subsection{2D, 2.5D, and 3D Input Representations}
+\label{sec:lr-dimensionality}
+
+An MRI series is a volume, but severity is assigned per level, so a
+representation must be chosen. \emph{2D} models classify individual slices and
+are cheap but discard through-plane context; since a disc spans several slices
+and a radiologist integrates across them, a single slice may not contain the
+evidence. \emph{3D} models consume the volume directly \cite{yi2023deep} at
+considerable memory cost---Acharya and Kansakar note that a standard
+high-resolution series contains millions of voxels, making full-volume
+processing impractical for many architectures \cite{acharya2026disccentric}.
+
+\emph{2.5D} representations occupy the middle ground and have become the
+default in this domain. A small stack of adjacent slices is treated as channels
+or as a short sequence, capturing local through-plane context at roughly 2D
+cost. SpineNet's input was a stack of nine slices per disc
+\cite{jamaludin2017spinenet}; M-SCAN describes its approach explicitly as 2.5D,
+selecting the three axial slices closest to each level and modelling them with
+recurrent layers \cite{batra2025mscan}; the leading challenge solutions combined
+2D CNNs with sequence models or attention-based multiple-instance learning over
+the slice dimension.
+
+\subsection{Cross-Sequence and Cross-Plane Fusion}
+\label{sec:lr-fusion}
+
+Where multiple sequences are available, they must be combined. The simplest
+approach concatenates them as channels, which presumes spatial registration that
+sagittal and axial acquisitions do not satisfy. More considered strategies
+process each sequence separately and fuse at the feature level.
+
+CrossSpine is the most explicit treatment. Nguyen et al.\ identify two failings
+of baselines---single-stream designs cannot integrate complementary information
+across sequences, and uniform treatment of all discs ignores level-specific
+anatomy---and address the first with a cross-sequence attention mechanism that
+fuses features at multiple spatial scales, letting each sequence attend to all
+others, followed by a weighting mechanism that prioritises the most
+diagnostically informative sequence. They report Macro F1 improved by more than
+125\%, Mean AUPRC by 99\% and Mean AUROC by 36\% over their baseline
+\cite{nguyen2026crossspine}. M-SCAN applies cross-attention to align sagittal and
+axial feature maps before classification \cite{batra2025mscan}, and Park et al.\
+pursue transformer-based multimodal fusion on the same benchmark
+\cite{park2025multiview}. Zeng et al.\ extend fusion beyond imaging entirely,
+combining ConvNeXt image features with GPT-4o-generated textual descriptions
+encoded by RoBERTa through a Mamba fusion stage \cite{zeng2025gpt4lfs}.
+
+\subsection{Geometric Correspondence Between Planes}
+\label{sec:lr-geometry}
+
+Fusing sagittal and axial data requires knowing which axial slice corresponds to
+which sagittal level---a geometric problem solved through DICOM spatial
+metadata rather than learned. Pan et al.\ derive the correspondence from the
+geometric relationship between the two acquisitions, reporting 100\% accuracy in
+identifying the disc in each axial slice \cite{pan2021automatically}. M-SCAN
+projects 2D sagittal stenosis coordinates into 3D using patient orientation data
+from the DICOM headers, then selects the three nearest axial slices for each of
+the five levels \cite{batra2025mscan}.
+
+This step is a hidden cost of multi-sequence modelling, and one that bears
+directly on the trade-off examined here. It adds a preprocessing dependency, a
+failure mode when metadata is absent or inconsistent, and an engineering burden
+that a single-sequence pipeline simply does not incur.
+
+\subsection{Multi-Sequence versus Single-Sequence Input}
+\label{sec:lr-multiseq}
+
+The clinical standard is unambiguous that all three sequences contribute
+\cite{richards2026the,hallinan2021deep}, and the strongest reported results on
+the RSNA benchmark use all three \cite{batra2025mscan}. The countervailing
+consideration is cost: multi-sequence processing demands greater memory and
+compute, cross-plane registration, and longer inference, and the resulting
+infrastructure requirements exceed what many hospital environments provide.
+
+The evidence on whether reduced input suffices is genuinely mixed, which is why
+the question remains open. On one side, external validation of sagittal-only
+SpineNetV2 found agreement dropping specifically for foraminal stenosis and
+herniation---the pathologies requiring transverse context
+\cite{nigru2024external}---and Wu et al.\ found ordinal Pfirrmann grading
+degrading in upper lumbar discs while binary detection held up
+\cite{wu2026external}. On the other, Acharya and Kansakar grade severity from
+\emph{sagittal T2 alone}, reaching 78.1\% balanced accuracy with a
+severe-to-normal misclassification rate of 2.13\%, on the argument that
+anatomical focus rather than input breadth is the binding constraint
+\cite{acharya2026disccentric}. Kowlagi et al.\ likewise operate on sagittal input
+and outperform transformer baselines \cite{kowlagi2022a}.
+
+Two observations sharpen the question. First, the comparison has not been made
+under controlled conditions: the sagittal-only and multi-sequence results above
+come from different architectures, datasets, localisation strategies and
+evaluation protocols, so the contribution of sequence configuration cannot be
+isolated. Second, the expected penalty is target-dependent---severe for
+foraminal and subarticular grading, mild for central canal---so a single
+aggregate accuracy figure would obscure precisely the structure of interest.
+Both observations inform the design adopted in Chapter~3.
+
+\subsection{Robustness to Missing or Incomplete Sequences}
+\label{sec:lr-missing}
+
+Clinical data is incomplete: sequences are omitted, truncated or corrupted by
+artifact. The LumbarDISC inclusion criteria required all three sequences and
+excluded studies with substantial artifact \cite{richards2026the}, so a model
+trained on it has not been exposed to the degraded conditions of routine
+practice. A model that requires three sequences fails outright when one is
+absent, whereas a single-sequence model is unaffected---an argument for reduced
+input configurations that is about robustness rather than efficiency, and one
+that the literature on missing-modality learning addresses only in passing for
+this application.
+
+% ===========================================================================
+\section{Class Imbalance and Ordinal Severity Modelling}
+\label{sec:lr-imbalance}
+
+\subsection{Severity Distributions in Lumbar MRI Datasets}
+\label{sec:lr-distributions}
+
+Class imbalance in this domain is not an artefact of sampling but a property of
+the population: in any unselected clinical cohort, most disc levels are normal or
+mildly degenerate, and severe compression is uncommon. The RSNA LumbarDISC
+distributions make the scale explicit \cite{richards2026the}. Of 13{,}474 spinal
+canal stenosis grades, 85.4\% are normal or mild, 8.8\% moderate and 5.9\%
+severe. Of 26{,}919 neural foraminal grades, roughly 78\% are normal or mild,
+18\% moderate and 4.5\% severe. Subarticular grading is the least skewed of the
+three, with roughly 69\% normal or mild, 19\% moderate and 11\% severe across
+26{,}285 grades.
+
+The same pattern recurs elsewhere. Liawrungrueang et al.\ report a Pfirrmann
+distribution of 220 grade~I, 530 grade~II, 170 grade~III, 160 grade~IV and just
+20 grade~V across 1{,}000 images \cite{liawrungrueang2023automatic}; Niemeyer et
+al.\ describe an approximately Gaussian grade distribution with grades~1 and~5
+under-represented \cite{niemeyer2021a}. Two consequences follow. First, a model
+trained under unweighted cross-entropy can achieve roughly 85\% accuracy on
+spinal canal stenosis by predicting \emph{normal/mild} unconditionally, so
+aggregate accuracy is close to uninformative on this task. Second, the ordering
+of imbalance across targets is the inverse of the ordering of difficulty:
+subarticular stenosis has the most balanced label distribution yet the poorest
+human reliability \cite{lurie2008reliability}, confirming that its difficulty is
+intrinsic rather than a consequence of scarce positive examples.
+
+\subsection{Data-Level Strategies}
+\label{sec:lr-data-level}
+
+The most common data-level intervention is weighted random sampling, in which
+the probability of drawing a minority-class example is inflated so that each
+minibatch approaches a uniform severity distribution and gradients are not
+dominated by the majority class. Aggressive augmentation of minority classes
+complements this, since with few severe examples a network may memorise them
+rather than learn the morphology of severe compression. Reported techniques
+include contrast-limited adaptive histogram equalisation, random scaling, affine
+rotation and elastic deformation, alongside mixing methods.
+
+Tsai et al.\ provide the clearest single demonstration of augmentation's value
+in the small-data regime, treating it as the subject of the study rather than an
+implementation detail: mean average precision reached 92.4\% at 550 images with
+augmentation, and augmentation was decisive in preventing both under- and
+over-fitting \cite{tsai2021lumbar}. Ahmed et al.\ attack a related form of
+imbalance---between anatomical structures rather than severity classes---through
+preprocessing that rectifies class inconsistencies before training
+\cite{ahmed2024pioneering}.
+
+\subsection{Loss-Level Strategies}
+\label{sec:lr-loss-level}
+
+Class-weighted cross-entropy multiplies each class's contribution to the loss by
+a scalar, forcing the optimiser to penalise minority-class errors more heavily.
+The RSNA challenge encoded this directly into its evaluation metric, assigning
+weights of 1, 2 and 4 to normal/mild, moderate and severe respectively, so that
+aligning the training objective with the evaluation criterion is a matter of
+adopting the same coefficients.
+
+Focal loss goes further, introducing a modulating factor that down-weights
+well-classified examples dynamically and concentrates gradient on hard,
+borderline cases \cite{lin2017focal}. This is well matched to the present
+problem, where the abundant normal cases are mostly easy and the difficulty
+concentrates at the mild/moderate and moderate/severe boundaries---precisely
+where human readers also disagree. Acharya and Kansakar combine weighted focal
+loss with contrastive pretraining \cite{acharya2026disccentric}, and Islam~Sk et
+al.\ propose an adaptive PID-Tversky loss that borrows feedback control to adjust
+training penalties dynamically toward under-segmented minority instances
+\cite{islamsk2026an}.
+
+\subsection{Ordinal-Aware Objectives and Whether They Help}
+\label{sec:lr-ordinal-losses}
+
+Given the ordinal label structure of Section~\ref{sec:lr-ordinality}, it is
+natural to expect ordinal-aware objectives to outperform categorical ones. The
+evidence does not support this expectation as strongly as the intuition
+suggests.
+
+Niemeyer et al.\ conducted the most systematic test available, evaluating soft
+kappa loss, ordinal cross-entropy and regression losses against standard
+cross-entropy for Pfirrmann grading on 1{,}599 patients and 7{,}948 discs, with
+extensive hyperparameter optimisation, and additionally trying class pooling and
+class-weighted losses to counter imbalance. None of these improved classification
+performance overall. The default cross-entropy classifier reached Cohen
+$\kappa = 0.92$, average sensitivity 90.2\% and precision 92.5\%, with
+predictions within one grade of ground truth in 99.2\% of cases and a mean
+absolute error of 0.08 grades \cite{niemeyer2021a}. Patil et al.\ list ordinal
+regression among the supplementary analyses they ran, and still report that
+intermediate-grade discrimination remains the outstanding difficulty
+\cite{patil2026mribased}.
+
+Two readings are possible. Either the ordinal structure is already implicitly
+captured---a network trained with cross-entropy on visually ordered classes will
+naturally confuse adjacent grades more often than distant ones---or the specific
+formulations tested were inadequate. The literature does not currently
+distinguish these, which is why this thesis treats the choice of objective as an
+empirical question rather than a settled one.
+
+\subsection{Contrastive and Representation-Learning Approaches}
+\label{sec:lr-contrastive}
+
+A third strategy attacks imbalance in the representation rather than in the
+sampling or the loss. Contrastive learning pulls examples of similar severity
+together in the latent space and pushes dissimilar ones apart before any
+classifier is fitted \cite{chen2020simple}, so the representation is shaped by
+the structure of the problem rather than by class frequency.
+
+Acharya and Kansakar apply this directly, combining contrastive pretraining with
+disc-level fine-tuning over a single anatomically localised region of interest
+per disc, on the reasoning that this forces attention onto intrinsic disc
+features and reduces sensitivity to irrelevant appearance variation. An auxiliary
+regression task handles disc localisation and a weighted focal loss addresses the
+residual imbalance. The result---78.1\% balanced accuracy with the
+severe-to-normal misclassification rate reduced to 2.13\% relative to supervised
+training from scratch---is notable less for the headline accuracy than for what
+it optimises \cite{acharya2026disccentric}. The lineage runs back to Jamaludin et
+al.'s longitudinal self-supervision \cite{jamaludin2017selfsupervised}.
+
+\subsection{The Clinical Asymmetry of Error}
+\label{sec:lr-error-asymmetry}
+
+The most important point in this section is that not all errors are equal, and
+that standard metrics conceal the difference. Grading a severe stenosis as
+normal risks a missed diagnosis and delayed decompression; grading a normal disc
+as moderate risks an unnecessary review. Overall accuracy, macro-F1 and even
+Cohen's $\kappa$ treat these identically.
+
+Three studies take the asymmetry seriously. Acharya and Kansakar report the
+severe-to-normal misclassification rate as a headline result alongside balanced
+accuracy, arguing explicitly that conventional metrics do not capture the
+differential clinical risk \cite{acharya2026disccentric}. Wu et al.\ characterise
+SpineNetv2's error profile as specificity-oriented, with false negatives
+exceeding false positives, and conclude that the system is suitable as a
+confirmatory second reader but that reliance on its negative findings is not
+recommended---a conclusion about deployment that follows from the shape of the
+errors rather than their number \cite{wu2026external}. The RSNA weighted metric
+encodes the same judgement into the benchmark itself.
+
+Ishimoto et al.\ supply the complementary observation: collapsing four grades to
+a severe-versus-rest dichotomy raised agreement from 65.7\% to 94.1\% with
+$\kappa = 0.75$ \cite{ishimoto2020could}. If the clinically decisive question is
+whether a level is severe, then performance on that question is considerably
+better than the multi-class figures suggest, and evaluation should report both.
+This chapter therefore recommends, and Chapter~3 adopts, reporting per-class
+recall for the severe class alongside aggregate measures.
+
+% ===========================================================================
+\section{Datasets and Benchmarks}
+\label{sec:lr-datasets}
+
+\subsection{Private and Single-Institution Cohorts}
+\label{sec:lr-private-data}
+
+Most work before 2024 used private single-institution data, with cohort sizes
+spanning three orders of magnitude---from 75 exams \cite{gao2022automatic} and
+146 consecutive patients \cite{lehnen2021detection} through 200 studies
+\cite{bharadwaj2023deep} and 542 images \cite{won2020spinal} to 4{,}075 patients
+\cite{lu2018deepspine} and 15{,}254 axial images \cite{su2022automatic}.
+Aggregate performance correlates only loosely with cohort size, because larger
+private datasets are frequently drawn from a single scanner and protocol.
+
+Two consequences follow, and both are structural rather than incidental. Results
+are not comparable across studies, since each is measured against a different
+label distribution and reference standard; and models cannot be independently
+re-evaluated, since the data cannot be shared. Both systematic reviews of the
+period identify this as the field's central methodological weakness
+\cite{compte2023are,mendes2026deep}.
+
+\subsection{Population and Epidemiological Cohorts}
+\label{sec:lr-population-data}
+
+A smaller body of work uses population cohorts, which differ from clinical
+convenience samples in a way that matters for generalisation: participants are
+not selected by referral, so the severity distribution reflects the population
+rather than the imaged-because-symptomatic subset. The Northern Finland Birth
+Cohort 1966, comprising lumbar MRI from participants imaged at age 46--47, is the
+most used \cite{mcsweeney2023external,kowlagi2022a}; the Wakayama Spine Study
+\cite{ishimoto2020could} and the Hong Kong Disc Degeneration Population-Based
+Cohort \cite{cheung2022learningbased} serve similar roles. Kowlagi et al.\ are
+explicit that evaluating on a population cohort rather than a clinical sample is
+a deliberate methodological choice, reflecting the transferability of results to
+downstream research \cite{kowlagi2022a}.
+
+\subsection{Public Lumbar MRI Datasets}
+\label{sec:lr-public-data}
+
+Public data arrived late to this field relative to CT, where large annotated
+vertebral collections have existed for years. SPIDER is the principal
+segmentation resource: 447 sagittal T1 and T2 series from 218 patients across
+four hospitals, with reference segmentations of vertebrae, discs and spinal
+canal, per-level radiological gradings, baseline and nnU-Net reference
+performance, and a continuous challenge on a sequestered split
+\cite{vandergraaf2024lumbar}. Its influence is visible in the number of
+subsequent methods benchmarked on it
+\cite{ahmed2024pioneering,silveira2025automated,patil2026mribased,ghobrial2025deep}.
+Smaller public collections support classification work
+\cite{natalia2024lumbar,shahzadi2023nerve,nikpasand2024automated}.
+
+\subsection{The RSNA 2024 Challenge and LumbarDISC}
+\label{sec:lr-lumbardisc}
+
+The RSNA Lumbar Degenerative Imaging Spine Classification dataset is the largest
+and most diverse expertly annotated lumbar spondylosis collection assembled, and
+it is the dataset used in this thesis \cite{richards2026the}. It comprises MRI
+studies from 2{,}697 patients and 8{,}593 image series drawn from eight
+institutions across six countries and five continents---a geographic spread
+chosen deliberately so that models trained on it face genuine acquisition
+heterogeneity rather than a single site's conventions.
+
+Inclusion required a sagittal T2-like series (conventional spin echo T2, STIR or
+Dixon), a sagittal T1 series and an axial T2 series covering at least three
+lumbar disc levels, from outpatients aged 18 or over imaged for degenerative
+disease. Studies with lumbosacral hardware, active non-degenerative pathology,
+severe scoliosis or substantial artifact were excluded \cite{richards2026the}.
+Annotation was performed by expert volunteer neuroradiologists and
+musculoskeletal radiologists recruited through the ASNR
+\cite{rsna2024rsna}. The associated challenge \cite{rsna2024rsna} made the
+dataset the field's common benchmark and shifted attention decisively from
+whole-image classification toward anatomically localised, per-level severity
+grading.
+
+\subsection{Label Structure, Distribution, and the Weighted Metric}
+\label{sec:lr-label-structure}
+
+The label structure is the defining feature of the benchmark and warrants precise
+statement. Each study receives twenty-five graded outputs: five conditions
+---spinal canal stenosis, left and right neural foraminal narrowing, left and
+right subarticular stenosis---at each of five disc levels from L1/L2 to L5/S1.
+Each is assigned one of three ordinal classes: Normal/Mild, Moderate or Severe.
+Expert coordinate annotations accompany the grades, so anatomical localisation
+can be learned in a supervised manner rather than inferred
+\cite{rsna2024rsna,richards2026the}.
+
+Three properties follow. The task is \emph{not} generic three-class image
+classification, and results from studies that treat it as such are not
+comparable. The severity distribution is severely imbalanced and differently so
+for each condition (Section~\ref{sec:lr-distributions}). And the challenge metric
+is a sample-weighted log loss with weights of 1, 2 and 4 across the three
+classes, which encodes the clinical asymmetry of
+Section~\ref{sec:lr-error-asymmetry} directly into the evaluation. A model tuned
+for unweighted accuracy is therefore optimising a different objective from the
+one the benchmark measures.
+
+\subsection{Challenge Solutions and the Practices They Standardised}
+\label{sec:lr-challenge-solutions}
+
+The solutions converged on a common template, and that convergence is itself a
+finding. Nearly all adopted multi-stage pipelines in which localisation precedes
+classification: a detection model---commonly a U-Net, YOLO variant or Faster
+R-CNN with a feature pyramid---identifies each disc level on the sagittal
+series, and a second-stage classifier grades tightly cropped regions, typically
+using 2.5D representations that combine a 2D backbone with a sequence model or
+attention over adjacent slices.
+
+M-SCAN exemplifies the approach and reports AUROC 0.971 on 1{,}975 studies,
+using a U-Net with ResNet50 encoder to locate stenosis points on sagittal images,
+projecting these into 3D via DICOM orientation metadata to select corresponding
+axial slices, and applying cross-attention to align sagittal and axial features
+\cite{batra2025mscan}. Liu et al.\ pair MobileNetV2 with U-Net for efficiency,
+reporting 94.93\% accuracy under five-fold cross-validation
+\cite{liu2025automated}; Park et al.\ apply transformer-based multimodal fusion
+\cite{park2025multiview}; and further challenge-derived work continues to appear
+\cite{patel2025automated,garciadecelis2025deep}.
+
+Two cautions attach to these figures. Most are cross-validation results on the
+public training split rather than external validation, so they measure fit to
+LumbarDISC rather than transportability beyond it. And the top solutions rely on
+large ensembles, which inflate reported accuracy relative to what a single
+deployable model achieves---a gap directly relevant to the efficiency question
+this thesis examines.
+
+% ===========================================================================
+\section{Evaluation, Validation, and Generalization}
+\label{sec:lr-validation}
+
+\subsection{Metrics and Their Appropriateness}
+\label{sec:lr-metrics}
+
+Reported metrics in this field are heterogeneous and frequently ill-matched to
+the task. Overall accuracy remains the most common headline figure despite being
+close to meaningless under the severity distributions of
+Section~\ref{sec:lr-distributions}. Area under the ROC curve is widely reported
+\cite{batra2025mscan,wang2024machine} but is defined for binary problems and must
+be extended by one-versus-rest averaging for three-class grading, which conceals
+which class is failing.
+
+More appropriate choices appear in the better studies. Cohen's and Gwet's
+$\kappa$ measure agreement above chance and are directly comparable with the
+human reliability figures of Section~\ref{sec:lr-reliability}, which is the
+correct reference point \cite{lim2022improved,su2022automatic,mcsweeney2023external}.
+Balanced accuracy corrects for prevalence \cite{mcsweeney2023external,acharya2026disccentric}.
+Mean absolute error in grades exploits the ordinal structure and distinguishes a
+one-grade slip from a two-grade error \cite{niemeyer2021a,wu2026external}.
+Ishimoto et al.\ report both exact-grade agreement and the collapsed
+severe-versus-rest figure, making the difference visible rather than choosing
+between them \cite{ishimoto2020could}.
+
+The recommendation that follows is to report a small panel rather than a single
+number: a prevalence-corrected aggregate, an agreement statistic comparable to
+inter-reader values, per-class recall for the severe class, and the distribution
+of error magnitudes across grade boundaries.
+
+\subsection{Internal Validation and Optimistic Reporting}
+\label{sec:lr-internal-validation}
+
+A recurring pattern is that internally validated performance is high and
+externally validated performance is materially lower. Several reported accuracies
+in the reviewed literature exceed 95\%
+\cite{shahzadi2023nerve,liawrungrueang2023automatic,liu2025automated,tabarestani2026a},
+which sits uneasily beside inter-reader agreement of $\kappa = 0.49$ for
+subarticular stenosis \cite{lurie2008reliability}. Where a model appears to
+exceed the reproducibility of the process that generated its labels, the
+explanation usually lies in the evaluation protocol: single-institution data,
+cross-validation rather than held-out external testing, labels from a single
+reader, or a task collapsed to a binary decision.
+
+The point is not that these studies are wrong on their own terms, but that
+their numbers do not transfer. Compte et al.\ state the general finding
+directly: algorithms did not perform as well in replication or external
+validation as in their development studies \cite{compte2023are}.
+
+\subsection{External Validation and Domain Shift}
+\label{sec:lr-generalization}
+
+External validation on geographically and temporally separate cohorts is the
+strongest available evidence of clinical viability, and a small number of
+studies supply it.
+
+McSweeney et al.\ evaluated SpineNet on 1{,}331 participants from the Northern
+Finland Birth Cohort 1966, a dataset separate from its UK training data in both
+geography and time. Balanced accuracy was 78\% for disc degeneration and 86\%
+for Modic changes, with Pfirrmann reliability against expert radiologists of Lin
+concordance 0.86 and Cohen $\kappa = 0.68$, and Modic detection at
+$\kappa = 0.74$; both were essentially unchanged in a low-back-pain subset. The
+informative detail is the error structure: 20.83\% of discs were graded
+differently from human raters, but only 0.85\% differed by more than one grade
+\cite{mcsweeney2023external}. Nigru et al.\ evaluated SpineNetV2 across eleven
+features on 1{,}747 discs from 353 patients, finding agreement above 0.7 for most
+targets but distinctly lower for foraminal stenosis and herniation, attributed
+to the limits of sagittal input \cite{nigru2024external}. Wu et al.\ tested
+SpineNetv2 on 491 patients and 2{,}455 discs, reporting overall accuracy of
+83.5--97.5\% and superiority over a junior orthopaedic surgeon on canal stenosis,
+spondylolisthesis and bilateral foraminal stenosis \cite{wu2026external}. Grob et
+al.\ contribute a further independent validation on 882 scans
+\cite{grob2022external}.
+
+Studies that build external testing into their development are still uncommon
+but instructive. Tumko et al.\ evaluated on 150 studies graded by a panel of
+seven radiologists with majority voting and external adjudication
+\cite{tumko2024a}; Su et al.\ used a 1{,}273-image external set from a different
+hospital and observed accuracy falling by roughly 7--10 points relative to
+internal testing \cite{su2022automatic}; Zhang et al.\ found classification
+accuracy dropping from 87.70\% to 74.23\% externally \cite{zhang2023deep}; Zeng
+et al.\ report an unusually small external drop, from 93.7\% to 92.2\%
+\cite{zeng2025gpt4lfs}.
+
+\subsection{Detection Versus Fine-Grained Grading}
+\label{sec:lr-detection-vs-grading}
+
+A consistent and under-appreciated finding is that these two capabilities
+generalise differently. Zhang et al.\ provide the clearest illustration:
+moving to an external institution, detection degraded only modestly---mean IoU
+0.82 to 0.70, precision 98.4\% to 96.3\%, sensitivity 99.4\% to 97.8\%---while
+classification accuracy fell from 87.70\% to 74.23\% \cite{zhang2023deep}. Wu et
+al.\ report the same asymmetry in different terms: binary detection across five
+pathologies held up well while ordinal Pfirrmann grading remained the limiting
+factor, degrading further in older patients and upper lumbar discs
+\cite{wu2026external}. Yilihamu et al.\ show the effect within a single study as
+task granularity increases: segmentation IoU remained above 97\% externally,
+while classification precision fell from 81.21\% to 74.50\% for an 18-category
+problem yet held at 92.51\% to 90.07\% for four-category severity
+\cite{yilihamu2025quantification}.
+
+The implication is that where a system fails is predictable. Finding the anatomy
+is robust; judging how bad it looks is not. Reporting a single aggregate figure
+for a pipeline that performs both obscures this, and evaluation should separate
+the two stages.
+
+\subsection{Benchmarking Against Clinicians}
+\label{sec:lr-clinician-benchmark}
+
+Comparison against human readers is the most clinically meaningful benchmark, and
+the better studies construct it carefully. Won et al.\ provide the cleanest
+design: two experts each labelled the data, a model was trained on each expert's
+labels, and the key result was that the difference between the two experts was
+statistically significant while the difference between each expert and their
+corresponding model was not \cite{won2020spinal}. Tumko et al.\ compared against
+a seven-radiologist panel average and found the model matched or exceeded it on
+all three stenosis types \cite{tumko2024a}. Lee et al.\ benchmarked against eight
+participants spanning four experience levels \cite{lee2026deep}, and Wu et al.\
+against orthopaedic surgeons of differing seniority \cite{wu2026external}.
+
+Two cautions apply. Comparisons against junior readers or against surgeons rather
+than radiologists set a lower bar than subspecialty radiological practice
+\cite{ke2025integrating,wu2026external}. And readers in these studies typically
+work from cropped images without clinical history, which is not how they read in
+practice---so such comparisons measure a narrower task than clinical
+interpretation.
+
+\subsection{Longitudinal Stability and Reproducibility}
+\label{sec:lr-longitudinal}
+
+One-shot accuracy does not establish that a model is stable over repeat imaging,
+which matters for monitoring progression. Murto et al.\ supply the only
+longitudinal evidence in this collection, comparing SpineNet's Pfirrmann grading
+against radiologists in 19 volunteers imaged at age 37 and again at 51.
+Radiologist-to-SpineNet concordance was 0.54 at both timepoints, clearly below
+the 0.83 and 0.78 observed between radiologists, and SpineNet systematically
+assigned grade~1 to several discs and grade~5 to more discs than the readers did
+\cite{murto2025comparison}. The cohort is small, but a systematic offset that is
+stable across time is exactly the failure mode that one-shot evaluation cannot
+detect. Cheung et al.\ approach the temporal dimension differently, predicting
+five-year progression from baseline imaging across 1{,}343 participants
+\cite{cheung2022learningbased}.
+
+\subsection{Reporting Quality and Recurring Weaknesses}
+\label{sec:lr-reporting}
+
+The systematic reviews converge on a consistent diagnosis. Wang et al.\ pooled
+twelve studies covering 15{,}044 patients, obtaining pooled sensitivity 0.84 and
+specificity 0.87 with SROC AUC 0.92, but with heterogeneity of $I^2$ near 99\%
+and four of twelve studies at high risk of bias; they concluded that no current
+model is reliable enough for clinical practice, citing the need for accepted
+reference standards, larger datasets, external validation and fuller reporting
+\cite{wang2024machine}. Compte et al.\ found no significant difference between
+algorithm families and identified the development-to-validation performance drop
+as the field's central problem \cite{compte2023are}. Mendes et al.\ found that
+most of 56 segmentation studies relied on private datasets and lacked external
+validation \cite{mendes2026deep}. Liawrungrueang et al.\ report metrics spanning
+71.5\% to 99\% across twenty studies---a range so wide as to indicate that the
+underlying tasks are not comparable \cite{liawrungrueang2025artificial}.
+
+Four weaknesses recur: single-institution data without external testing; ground
+truth from a single reader with no adjudication; task definitions that vary
+between studies while sharing a label vocabulary; and metric selection that
+flatters imbalanced problems. The present work adopts the public LumbarDISC
+benchmark, its panel-derived labels and its weighted metric specifically to
+avoid the first, second and fourth of these.
+
+% ===========================================================================
+\section{Interpretability and Clinical Integration}
+\label{sec:lr-interpretability}
+
+\subsection{Saliency, Evidence Hotspots, and Grad-CAM}
+\label{sec:lr-saliency}
+
+The earliest interpretability contribution in this domain is SpineNet's evidence
+hotspots, which map output-layer gradients back to the input to produce a heatmap
+per radiological score, obtained without any localisation supervision
+\cite{jamaludin2017spinenet}. Grad-CAM \cite{selvaraju2017gradcam} has since
+become the default. Tabarestani et al.\ use it to confirm that their cascade
+attends to clinically relevant regions \cite{tabarestani2026a}, and Silveira et
+al.\ report that attention concentrated on vertebral bodies and nucleus pulposus
+in spatial correspondence with manual segmentations \cite{silveira2025automated}.
+
+The value of these methods should not be overstated. A saliency map shows where
+a network responded, not why, and confirming that attention falls on plausible
+anatomy is a weak check---it excludes gross reliance on background artefact but
+does not establish that the model has learned the morphological criteria the
+grading system specifies.
+
+\subsection{Inherently Interpretable Models}
+\label{sec:lr-interpretable}
+
+A stronger position is to build models whose reasoning is legible by
+construction. Bharadwaj et al.\ provide the most striking result in this
+literature: alongside a Big Transfer classifier they trained a decision-tree
+classifier operating on segmentation-derived features for central canal stenosis,
+and the interpretable model \emph{outperformed} the black box, reaching
+$\kappa = 0.80$ against 0.54 and approaching inter-reader agreement of 0.74--0.86
+\cite{bharadwaj2023deep}. Quantitative morphometry belongs to the same family:
+a measured dural sac area \cite{ghobrial2025deep} or a quantitative degeneration
+criterion \cite{zheng2022deep} is inspectable in a way a logit is not. Patil et
+al.\ make the related point that radiomic features carried the entire
+discriminative signal for Pfirrmann grading while deep features added nothing
+measurable, and that radiomics additionally yields interpretable shape and
+intensity descriptors usable as imaging biomarkers \cite{patil2026mribased}.
+
+Together these findings undercut the assumption that interpretability must be
+purchased at the cost of accuracy---at least for targets whose clinical
+definition is already explicitly morphological.
+
+\subsection{Vision--Language Models and Report Generation}
+\label{sec:lr-vlm}
+
+The most recent direction outputs prose rather than labels. Islam~Sk et al.\
+present an explainable vision--language framework that classifies severity,
+segments the anatomy and generates radiologist-style reports, built on
+biomedical foundation models, with a spatial patch cross-attention module that
+preserves the anatomical hierarchies global pooling discards and an adaptive
+PID-Tversky loss for class imbalance; they report 90.69\% classification
+accuracy, macro-averaged Dice 0.9512 and CIDEr 92.80\%
+\cite{islamsk2026an}. Zeng et al.\ take a narrower approach, fusing ConvNeXt
+image features with GPT-4o-generated descriptions for foraminal stenosis
+classification across three centres and seven scanners \cite{zeng2025gpt4lfs}.
+These systems are early and their language metrics measure fluency rather than
+clinical correctness, but they indicate where the field is heading.
+
+\subsection{Reader-Assistance Studies and Workflow Impact}
+\label{sec:lr-reader-assistance}
+
+The most consequential evidence for clinical value comes not from model metrics
+but from measuring what changes when readers use the model. Lim et al.\ conducted
+the definitive study of this kind: eight radiologists with 2--13 years of
+experience read the same studies with and without deep-learning assistance,
+separated by a one-month washout, against a 32-year-veteran musculoskeletal
+radiologist as reference. Interpretation time per study fell from 124--274
+seconds to 47--71 seconds, and interobserver agreement was superior or equivalent
+for every stenosis grading. The largest gain fell to general and in-training
+radiologists on four-class foraminal stenosis, where $\kappa$ rose from 0.39 to
+0.71 and 0.70 \cite{lim2022improved}. Gao et al.\ observed a comparable effect
+for Modic assessment, where AI assistance raised agreement between a junior
+radiologist and a senior neuroradiologist from $\kappa = 0.52$ to 0.58
+\cite{gao2022automatic}.
+
+The pattern in both is that assistance helps least-experienced readers most and
+standardises rather than replaces judgement. This reframes the objective: the
+target is not a model that outperforms the best radiologist, but one that raises
+the floor.
+
+\subsection{Uncertainty and Calibration}
+\label{sec:lr-uncertainty}
+
+Uncertainty estimation is conspicuously underdeveloped in this literature. Where
+errors concentrate at grade boundaries and where the reference standard is itself
+unreliable, a calibrated confidence would let borderline cases be referred rather
+than silently graded---a natural fit for triage. Almost none of the reviewed work
+reports calibration. Patil et al.\ are the exception, applying isotonic
+calibration on a validation split and reporting Brier scores alongside
+discrimination metrics \cite{patil2026mribased}. Since modern networks are
+systematically overconfident \cite{guo2017calibration}, an uncalibrated severity
+probability should not be interpreted as a clinical confidence, and this remains
+an open opportunity rather than a solved problem.
+
+% ===========================================================================
+\section{Synthesis and Research Gap}
+\label{sec:lr-gap}
+
+\subsection{What the Literature Has Established}
+\label{sec:lr-established}
+
+Five findings are supported well enough to be treated as settled.
+
+\textbf{Anatomical localisation precedes classification.} From DeepSPINE
+\cite{lu2018deepspine} through the interpretable pipelines of Bharadwaj et al.\
+\cite{bharadwaj2023deep} to essentially every leading RSNA challenge solution
+\cite{batra2025mscan}, systems that localise the disc level before grading it
+outperform those that classify whole images. Detection is close to solved, with
+several studies reporting near-perfect level assignment
+\cite{pan2021automatically,ghosh2012a}.
+
+\textbf{Automated grading is competitive with human reliability, because human
+reliability is low.} Inter-reader agreement is substantial for central canal
+stenosis but only moderate for foraminal and poor for subarticular grading
+\cite{lurie2008reliability}. Against that benchmark, models sit inside the band
+of human disagreement \cite{won2020spinal,mcsweeney2023external,tumko2024a}.
+This is a real result, but it is a statement about the modesty of the reference
+standard as much as the capability of the models.
+
+\textbf{Errors concentrate at adjacent grade boundaries.} Disagreement above one
+grade is rare---0.85\% of discs in the largest external validation
+\cite{mcsweeney2023external}---and collapsing to a severe-versus-rest decision
+raises agreement substantially \cite{ishimoto2020could}. The difficulty lies in
+boundary placement, not gross misclassification.
+
+\textbf{Detection generalises across institutions; fine-grained grading does
+not.} The asymmetry is consistent and large
+\cite{zhang2023deep,wu2026external,yilihamu2025quantification}.
+
+\textbf{Class imbalance must be addressed explicitly.} With 85.4\% of spinal
+canal grades normal or mild \cite{richards2026the}, unweighted objectives yield
+degenerate solutions, and weighted sampling, weighted or focal losses and
+contrastive pretraining are all established mitigations
+\cite{lin2017focal,acharya2026disccentric}.
+
+\subsection{What Remains Contested}
+\label{sec:lr-contested}
+
+Three questions remain genuinely open, and the disagreement is substantive
+rather than terminological.
+
+\emph{Does architectural sophistication help?} The general computer vision
+literature would predict transformers to outperform convolutional networks given
+sufficient data, but the lumbar evidence does not bear this out. Kowlagi et al.\
+report a tuned CNN pipeline beating transformer approaches \cite{kowlagi2022a};
+Lee et al.\ find a CNN superior and a transformer merely comparable
+\cite{lee2026deep}; Silveira et al.\ beat TransUNet with an enhanced U-Net
+\cite{silveira2025automated}; Udomluck et al.\ find conventional VGG19 features
+generalising better than DINOv2 \cite{udomluck2026multitask}; and Patil et al.\
+find deep features adding nothing over radiomics \cite{patil2026mribased}. Set
+against this, hybrid architectures report gains
+\cite{chen2024symtc,zheng2022deep}, and cross-sequence attention reports large
+ones \cite{nguyen2026crossspine}.
+
+\emph{Does the ordinal structure of the labels admit exploitation?} Errors
+demonstrably cluster at adjacent grades, yet the most systematic test of
+ordinal-aware objectives found none improved on plain cross-entropy
+\cite{niemeyer2021a}.
+
+\emph{How much imaging is actually required?} Clinical practice and the strongest
+benchmark results use all three sequences
+\cite{richards2026the,batra2025mscan}, while sagittal-only systems report
+competitive performance \cite{acharya2026disccentric,kowlagi2022a} and
+sagittal-only systems also fail in a specific, predicted way on the lateral
+compartments \cite{nigru2024external}.
+
+\subsection{Gap 1: Architecture Comparison Under Controlled Conditions}
+\label{sec:lr-gap-architecture}
+
+The comparative studies above are informative but none isolates the variable of
+interest. Three confounds recur.
+
+First, \emph{unequal pipelines}. Compared architectures rarely receive identical
+preprocessing, localisation and training budgets, so a reported difference may
+reflect engineering effort rather than representational capacity---precisely the
+argument Kowlagi et al.\ advance when attributing their CNN's advantage to
+pipeline design rather than to convolution as such \cite{kowlagi2022a}. Given the
+evidence of Section~\ref{sec:lr-localize-first} that localisation dominates
+performance, a comparison in which one arm is better localised than the other
+measures preprocessing.
+
+Second, \emph{frozen features}. Several comparisons extract features from frozen
+pretrained backbones rather than fine-tuning end to end
+\cite{udomluck2026multitask,patil2026mribased}. This systematically
+disadvantages transformers, whose weaker inductive biases make them more
+dependent on in-domain adaptation.
+
+Third, \emph{fixed input configuration}. Every comparison holds the sequence
+configuration constant, so the interaction between architecture and available
+context is untested. This matters because the theoretical case for global
+attention is strongest exactly where context must be inferred rather than
+observed---that is, where a view is missing.
+
+A controlled comparison therefore requires a shared localisation stage, a shared
+training and augmentation protocol, comparable capacity and tuning budgets, and
+end-to-end fine-tuning of both backbones, evaluated on the same benchmark with
+the same metric. No study in this review satisfies all four conditions.
+
+\subsection{Gap 2: Sequence Configuration and the Accuracy--Efficiency Trade-off}
+\label{sec:lr-gap-sequence}
+
+The second gap concerns input rather than model. Multi-sequence pipelines carry
+costs that are rarely quantified alongside their accuracy: greater memory and
+compute, cross-plane geometric registration dependent on DICOM metadata
+\cite{batra2025mscan,pan2021automatically}, longer inference, and brittleness
+when a sequence is missing or degraded (Section~\ref{sec:lr-missing}). Against
+these, the incremental diagnostic yield of each additional sequence has not been
+measured under controlled conditions.
+
+The literature supplies both sides of the argument but no direct test. Evidence
+that the third sequence matters is indirect, inferred from the failure of
+sagittal-only systems on foraminal and subarticular targets
+\cite{nigru2024external,wu2026external}; evidence that it may not is likewise
+indirect, resting on sagittal-only systems that perform respectably against
+different baselines on different data
+\cite{acharya2026disccentric,kowlagi2022a}. Because these come from different
+architectures, cohorts, localisation strategies and metrics, the contribution of
+sequence configuration cannot be separated from everything else that differs.
+
+Two design requirements follow. The comparison must hold architecture and
+pipeline constant while varying only the input configuration; and it must report
+results per condition rather than in aggregate, since the expected penalty is
+concentrated in the foraminal and subarticular targets and an aggregate figure
+would average away the structure of interest.
+
+\subsection{Research Questions and Objectives}
+\label{sec:lr-questions}
+
+The two gaps combine into a single factorial investigation. Crossing
+architecture with input configuration answers both questions and, additionally,
+tests whether they interact---whether a transformer's global attention can
+partially compensate for absent multiplanar data, which neither gap addresses
+alone. This yields the following research questions:
+
+\begin{description}
+  \item[RQ1] Under matched localisation, training and evaluation protocols, how
+  do convolutional backbones (ResNet50, EfficientNet-B4) compare with a
+  hierarchical vision transformer (Swin) for per-level, per-condition severity
+  grading of lumbar degenerative disease?
+
+  \item[RQ2] What is the cost in diagnostic performance of reducing the input
+  from the full multi-sequence configuration (Sagittal T1, Sagittal T2/STIR,
+  Axial T2) to a single-sequence configuration (Sagittal T2), and how is that
+  cost distributed across the five graded conditions?
+
+  \item[RQ3] Do architecture and sequence configuration interact---specifically,
+  is the penalty for single-sequence input smaller for the transformer than for
+  the convolutional backbones?
+
+  \item[RQ4] Which class-imbalance strategies most effectively reduce
+  clinically consequential errors, in particular severe cases graded as
+  normal or mild?
+\end{description}
+
+The corresponding objectives are to implement a shared localisation and
+preprocessing stage so that all arms receive identical input regions; to train
+each architecture under both configurations with matched budgets; to evaluate
+using the benchmark's weighted metric together with per-condition and per-class
+reporting; and to quantify computational cost---parameters, memory and inference
+time---so that any accuracy difference can be weighed against it.
+
+\subsection{Scope and Delimitations}
+\label{sec:lr-scope-delimit}
+
+Four boundaries are stated explicitly. The work addresses \emph{severity
+grading}, taking localisation as a shared and largely solved precondition
+(Section~\ref{sec:lr-detection}) rather than a contribution. It evaluates on
+\emph{LumbarDISC} \cite{richards2026the}; because that collection excludes
+studies with hardware, non-degenerative pathology, severe scoliosis or
+substantial artifact, conclusions do not extend to those populations, and no
+independent external cohort is available to test transportability beyond it. It
+compares a \emph{bounded set of architectures}---two convolutional and one
+transformer---chosen as representative rather than exhaustive, and does not
+evaluate hybrid or vision--language designs
+\cite{chen2024symtc,islamsk2026an}. Finally, it reports model performance and
+computational cost, not clinical impact: the reader-assistance evidence of
+Section~\ref{sec:lr-reader-assistance} \cite{lim2022improved} shows that
+workflow benefit requires a prospective reader study, which lies outside the
+present scope.
+
+Two constraints inherited from the literature bound the interpretation of any
+result. Performance is capped by the reliability of the reference standard
+(Section~\ref{sec:lr-label-ceiling}), so figures approaching perfect agreement
+should be read as evidence of a protocol artefact rather than of clinical
+readiness. And single-benchmark evaluation cannot establish generalisation; the
+consistent development-to-validation drop documented in
+Section~\ref{sec:lr-generalization} applies to this work as much as to any other.
+
+% ===========================================================================
+\section{Chapter Summary}
+\label{sec:lr-summary}
+
+This chapter reviewed the literature on automated assessment of lumbar
+degenerative disease from MRI, from the clinical grading systems that define the
+task through to the architectures that currently attempt it.
+
+The clinical sections established that severity labels originate in
+morphological grading systems---Pfirrmann for disc degeneration
+\cite{pfirrmann2001magnetic}, Schizas and Lee for central canal
+\cite{schizas2010qualitative,lee2011a}, Lee for foraminal
+\cite{lee2010a}---whose inter-reader reliability ranges from substantial to poor
+depending on the compartment \cite{lurie2008reliability}. This imposes a ceiling
+on achievable performance and makes agreement statistics, rather than accuracy,
+the appropriate measure. The labels are ordinal, errors concentrate at adjacent
+boundaries, and the clinical cost of an error depends on its direction.
+
+The methodological sections traced the field from handcrafted features through
+SpineNet's multi-task convolutional grading \cite{jamaludin2017spinenet} to
+contemporary multi-stage, multi-view pipelines \cite{batra2025mscan}. The most
+robust design principle to emerge is that anatomical localisation should precede
+classification \cite{lu2018deepspine,kowlagi2022a}. The most robust empirical
+regularity is that detection transfers across institutions while fine-grained
+grading does not \cite{zhang2023deep,wu2026external}.
+
+Two questions remain unresolved. Whether attention-based backbones offer any
+advantage over well-tuned convolutional ones is contested, with the balance of
+lumbar-specific evidence currently favouring CNNs
+\cite{kowlagi2022a,lee2026deep,silveira2025automated}, yet no study has compared
+them under matched localisation, training and evaluation conditions. And whether
+the full three-sequence protocol is necessary, or whether a single ubiquitous
+sequence suffices, has been argued from both sides without a controlled test.
+These two questions, and their interaction, constitute the gap this thesis
+addresses. Chapter~3 sets out the experimental design through which they are
+answered.
+
+% ===========================================================================
+\printbibliography[heading=bibintoc,title={References}]
+
+\end{document}
