@@ -43,7 +43,7 @@ Each target then receives:
 This gives a structured output:
 
 [
-5;levels \times 5;conditions = 25;severity\ predictions
+5;levels × 5;conditions = 25;severity\ predictions
 ]
 
 This is already scientifically much more meaningful than assigning one generic severity label to an MRI slice.
@@ -221,17 +221,14 @@ z^{T2Ax}_{L4-L5}
 
 and introduce a contrastive loss that pulls anatomically corresponding representations together:
 
-[
-L_{AC}
-======
+```
+L_AC  =  -log [ exp( sim(z_i, z_i+) / tau )
+                / sum over j of exp( sim(z_i, z_j) / tau ) ]
 
--\log
-\frac{
-\exp(sim(z_i,z_i^+)/\tau)
-}{
-\sum_j\exp(sim(z_i,z_j)/\tau)
-}
-]
+  z_i    anchor embedding
+  z_i+   positive: same patient, same level, different sequence
+  tau    temperature
+```
 
 But I would make it **anatomically hierarchical**.
 
@@ -343,14 +340,13 @@ Now use a **relation-aware Graph Transformer**.
 
 Something like:
 
-[
-h_i'
-====
+```
+h_i'  =  sum over j in N(i) of  alpha(i,j,r) * W_r * h_j
 
-\sum_{j\in N(i)}
-\alpha_{ij}^{(r)}
-W_rh_j
-]
+  r          edge type: adjacent-level | same-level | left-right
+  alpha      relation-aware attention weight
+  W_r        per-relation projection
+```
 
 where (r) specifies whether the relationship is:
 
@@ -403,21 +399,21 @@ Then:
 Normal/Mild:
 
 [
-P(Y>Normal)\approx0
+P(Y>Normal)≈0
 ]
 
 Moderate:
 
 [
-P(Y>Normal)\approx1,\quad
-P(Y>Moderate)\approx0
+P(Y>Normal)≈1,\quad
+P(Y>Moderate)≈0
 ]
 
 Severe:
 
 [
-P(Y>Normal)\approx1,\quad
-P(Y>Moderate)\approx1
+P(Y>Normal)≈1,\quad
+P(Y>Moderate)≈1
 ]
 
 Ordinal deep-learning methods are specifically designed for disease severity problems, and recent medical-imaging work shows that treating severity as ordered rather than categorical can materially change model behaviour. ([arXiv][7])
@@ -475,16 +471,9 @@ This is modality dropout.
 
 The network learns:
 
-[
-F=
-\sum_m g_mF_m
-]
-
-where:
-
-[
-\sum_m g_m=1
-]
+```
+F  =  sum over m of  g_m * F_m        subject to   sum over m of g_m = 1
+```
 
 and (g_m) is a learned confidence for each available sequence.
 
@@ -533,11 +522,9 @@ For clinical AI, this matters.
 
 The system can then implement selective prediction:
 
-[
-U(x)>\delta
-\Rightarrow
-\text{Refer to radiologist}
-]
+```
+if U(x) > delta:   refer to radiologist
+```
 
 rather than forcing every examination into a confident prediction.
 
@@ -555,43 +542,43 @@ I would therefore define the PhD model roughly as:
 
 [
 MRI
-\rightarrow
+→
 Localization
-\rightarrow
+→
 2.5D\ ROIs
-\rightarrow
+→
 MultiView\ Encoder
 ]
 
 [
-\rightarrow
+→
 Anatomical\ Contrastive\ Representation
 ]
 
 [
-\rightarrow
+→
 Adaptive\ CrossSequence\ Attention
 ]
 
 [
-\rightarrow
+→
 Anatomical\ Graph\ Transformer
 ]
 
 [
-\rightarrow
+→
 Ordinal\ Severity\ Heads
 ]
 
 [
-\rightarrow
+→
 Uncertainty\ Calibration
 ]
 
 producing:
 
 [
-25\times
+25×
 {severity,\ probability,\ uncertainty}.
 ]
 

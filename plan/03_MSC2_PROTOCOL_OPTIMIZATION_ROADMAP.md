@@ -40,7 +40,7 @@
   suffice for screening? *(Subarticular assessment cannot be included: the local reports
   contain no subarticular findings at all, so there is no reference standard to test
   against on this cohort.)*
-* **RQ3:** Can a rapid triage model achieve $\ge 92\%$ sensitivity for urgent surgical findings (e.g., severe canal compromise / extrusion) while reducing scan acquisition time by over 50%?
+* **RQ3:** Can a rapid triage model achieve ≥92% sensitivity for urgent surgical findings (e.g., severe canal compromise / extrusion) while reducing scan acquisition time by over 50%?
 
 ---
 
@@ -75,7 +75,7 @@ flowchart TD
 
 ### Month 2: Sequence Ablation Experiments
 - Execute systematic sequence masking: zero-out or strip T1 Sagittal, Axial T2, or T2 Sagittal channels.
-- Record predicted probabilities across all evaluable targets (canal stenosis at 5 levels; foraminal where laterality is stated) for all 4 configurations ($294 \text{ cases} \times 4 \text{ configs} = 1,176 \text{ evaluation runs}$).
+- Record predicted probabilities across all evaluable targets (canal stenosis at 5 levels; foraminal where laterality is stated) for all 4 configurations (294 cases × 4 configs = 1,176 evaluation runs).
 
 ### Month 3: Clinical Performance Evaluation
 - Calculate ROC-AUC, Macro-F1, Sensitivity, and Specificity for each configuration broken down by finding category:

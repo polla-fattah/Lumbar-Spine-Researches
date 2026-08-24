@@ -37,7 +37,7 @@
 
 ## 2. Research Questions (RQs)
 
-* **RQ1:** What is the degree of discordance between AI-graded anatomical stenosis severity ($L1\text{--}L2 \dots L5\text{--}S1$) and presenting clinical symptoms in a Middle Eastern cohort?
+* **RQ1:** What is the degree of discordance between AI-graded anatomical stenosis severity (L1–L2 … L5–S1) and presenting clinical symptoms in a Middle Eastern cohort?
 * **RQ2:** Which specific radiological finding combination (e.g., central canal vs. lateral recess vs. foraminal compromise) is the strongest multivariate predictor of surgical intervention?
 * **RQ3:** Does an AI-derived aggregate Lumbar Degeneration Index (LDI) predict 1-year post-treatment symptom resolution better than traditional single-level grading?
 
@@ -69,7 +69,7 @@ flowchart TD
 - Link clinical symptom fields with radiological target variables.
 
 ### Month 2: Symptom-Radiology Discordance Quantification
-- Calculate Cohen's Kappa ($\kappa$) and Goodman-Kruskal gamma between radiological stenosis grade and clinical severity.
+- Calculate Cohen's Kappa (κ) and Goodman-Kruskal gamma between radiological stenosis grade and clinical severity.
 - Identify "radiologically severe but clinically mild" and "radiologically mild but clinically severe" discordance rates.
 
 ### Month 3: Predictive Modeling of Surgical Intervention

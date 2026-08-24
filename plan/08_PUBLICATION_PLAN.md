@@ -105,10 +105,8 @@ available to the project** and should be written as soon as the cohort is clean.
 3. **Disease-Specific Adaptive Multi-View MRI Fusion with Missing-Sequence Robustness**
    **Core question:** Do different lumbar diseases require different MRI sequences, and can the network learn this automatically?
    Instead of assuming that every condition benefits equally from T1, sagittal T2 and axial T2, the model learns condition-specific weights:
-   [
-   F_c=\sum_m g_{c,m}F_m
-   ]
-   where (g_{c,m}) represents the importance of modality (m) for condition (c). During training, we deliberately remove modalities using **modality dropout**, so the model remains operational when a sequence is unavailable.
+   
+   where g(c,m) is the learned importance of sequence m for condition c. During training, we deliberately remove modalities using **modality dropout**, so the model remains operational when a sequence is unavailable.
    Existing work such as M-SCAN already shows that sagittal/axial multi-view cross-attention is powerful for spinal canal stenosis, so merely implementing cross-attention would no longer be novel enough. ([arXiv][3]) Our contribution would instead be **condition-dependent adaptive fusion + arbitrary missing-sequence robustness across all degenerative targets**.
    **Possible title:** *Disease-Adaptive Multi-Sequence Fusion with Missing-Modality Robustness for Lumbar Degenerative MRI Classification*.
    **Targets** — Reach: *Medical Image Analysis*. Target: *Artificial Intelligence in Medicine*. Floor: *Scientific Reports*.
@@ -146,21 +144,10 @@ available to the project** and should be written as soon as the cohort is clean.
 
 7. **The final flagship paper: the complete system**
    This integrates everything:
-   [
-   \text{MRI}
-   \rightarrow
-   \text{localization}
-   \rightarrow
-   \text{anatomical SSL}
-   \rightarrow
-   \text{adaptive multi-view fusion}
-   \rightarrow
-   \text{graph reasoning}
-   \rightarrow
-   \text{ordinal grading}
-   \rightarrow
-   \text{uncertainty}.
-   ]
+   ```
+   MRI -> localization -> anatomical SSL -> adaptive multi-view fusion
+       -> graph reasoning -> ordinal grading -> uncertainty
+   ```
    It would include a full ablation demonstrating exactly how much each PhD contribution adds. The output would be all lumbar levels and all relevant conditions, rather than a single generic severity label. Because current research is already moving toward simultaneous multi-condition ordinal classification, the integrated system must distinguish itself through **anatomical relational reasoning, modality adaptability and calibrated uncertainty** rather than simply claiming "multi-disease classification." ([Research Square][6])
    **Possible title:** *AMOG-Net: Anatomy-Aware Multi-View Ordinal Graph Learning for Comprehensive Lumbar Spine Degenerative Disease Assessment*.
    **Targets** — Reach: *IEEE TMI* or *Medical Image Analysis*. Target: *Radiology: Artificial Intelligence* if the clinical validation is strong. Floor: *Computers in Biology and Medicine*.

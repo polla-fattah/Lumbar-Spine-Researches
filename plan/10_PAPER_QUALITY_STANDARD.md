@@ -12,7 +12,7 @@ independently:
 
 | Review | Finding |
 | :--- | :--- |
-| Wang et al.\ 2024 | Pooled sensitivity 0.84, specificity 0.87 across 12 studies and 15,044 patients — **yet "none of them is reliable and practical enough to apply in real clinical practice"**. Heterogeneity $I^2 \approx 99\%$; 4 of 12 studies at high risk of bias. |
+| Wang et al.\ 2024 | Pooled sensitivity 0.84, specificity 0.87 across 12 studies and 15,044 patients — **yet "none of them is reliable and practical enough to apply in real clinical practice"**. Heterogeneity I² ≈ 99%; 4 of 12 studies at high risk of bias. |
 | Compte et al.\ 2023 | No significant difference between algorithm families. Algorithms **performed worse in replication and external validation than in their development studies**. |
 | Mendes et al.\ 2026 | Of 56 segmentation studies, **most used private datasets and lacked external validation**. |
 
@@ -63,12 +63,12 @@ Our own bibliography sets the bar:
 
 - [ ] State who annotated, their specialty and years of experience
 - [ ] State how disagreements were resolved
-- [ ] Report inter-reader agreement ($\kappa$) on at least a subset — **if you cannot, say so explicitly and treat it as a limitation**
+- [ ] Report inter-reader agreement (κ) on at least a subset — **if you cannot, say so explicitly and treat it as a limitation**
 - [ ] For the Rizgary cohort: state that reports are the primary source, the spreadsheet is a transcription, and that 14 of 195 ages disagree between them
 - [ ] State the label-coverage gaps plainly — subarticular findings appear in **0%** of local reports, laterality in only **27%**
 
 **The trap to avoid.** Published inter-reader agreement for lumbar MRI is
-$\kappa = 0.73$ for central canal but only **0.49 for subarticular stenosis**
+κ = 0.73 for central canal but only **0.49 for subarticular stenosis**
 (Lurie et al.). A model cannot be shown to exceed the reproducibility of the process that
 generated its labels. If a paper from this programme reports agreement above the human
 ceiling, the finding is a protocol artefact and a reviewer will say so.
@@ -87,7 +87,7 @@ is clinically worthless.
 **Every results table must contain:**
 
 - [ ] **Balanced accuracy or macro-F1** — corrects for prevalence
-- [ ] **Agreement statistic** ($\kappa$, ideally quadratic-weighted given the ordinal scale) — this is what makes results comparable to the human reliability figures
+- [ ] **Agreement statistic** (κ, ideally quadratic-weighted given the ordinal scale) — this is what makes results comparable to the human reliability figures
 - [ ] **Per-class recall, reported separately for the Severe class** — the number a clinician actually cares about
 - [ ] **The distribution of error magnitudes**, not just the error rate
 - [ ] **Confidence intervals** on every headline figure — bootstrap is fine
@@ -98,7 +98,7 @@ raters on 20.83% of discs — **but that only 0.85% differed by more than one gr
 second number transforms the interpretation, and most papers never compute it.
 
 **Also copy Ishimoto et al.**, who reported *both* exact-grade agreement (65.7%) *and* the
-collapsed severe-versus-rest figure (94.1%, $\kappa = 0.75$) rather than choosing whichever
+collapsed severe-versus-rest figure (94.1%, κ = 0.75) rather than choosing whichever
 looked better.
 
 ---
@@ -207,7 +207,7 @@ Run this before any manuscript leaves the group.
 - [ ] Label-coverage limitations stated plainly
 
 **Evaluation**
-- [ ] Balanced accuracy / macro-F1, weighted $\kappa$, per-class Severe recall all reported
+- [ ] Balanced accuracy / macro-F1, weighted κ, per-class Severe recall all reported
 - [ ] Confidence intervals on every headline number
 - [ ] Model comparisons tested statistically
 

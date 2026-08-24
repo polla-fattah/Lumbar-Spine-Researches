@@ -10,14 +10,14 @@
 ## 1. Executive Summary & Clinical Gap
 
 * **Clinical Gap:** Published lumbar spine MRI epidemiological cohorts are almost exclusively from North America, Western Europe, China, Japan, or South Korea. No MRI-based descriptive epidemiological baseline exists for Middle Eastern, specifically Kurdish/Iraqi, populations.
-* **Project Objective:** Conduct the first comprehensive descriptive epidemiological study of lumbar degenerative findings ($L1\text{--}L2 \dots L5\text{--}S1$) utilizing the 299 audited clinical radiology reports from Rizgary Teaching Hospital.
+* **Project Objective:** Conduct the first comprehensive descriptive epidemiological study of lumbar degenerative findings (L1–L2 … L5–S1) utilizing the 299 audited clinical radiology reports from Rizgary Teaching Hospital.
 * **Why it's ideal for MSc:** **Zero AI model training required.** Requires statistical analysis, data visualization, and literature synthesis. Fast execution with high publication certainty.
 
 ---
 
 ## 2. Specific Research Objectives
 
-1. Determine the level-by-level ($L1\text{--}L2 \dots L5\text{--}S1$) prevalence of:
+1. Determine the level-by-level (L1–L2 … L5–S1) prevalence of:
    - Intervertebral disc bulge, protrusion, and extrusion.
    - Central canal stenosis (reported in 97% of cases) and neural foraminal stenosis (78%).
    - **Not subarticular / lateral recess stenosis.** Verified across all 299 reports under
@@ -27,7 +27,7 @@
    - Facet joint arthrosis, ligamentum flavum hypertrophy, and nerve root compression.
 2. Analyze age-stratified prevalence curves and identify the peak age of onset for severe herniation vs. canal stenosis.
 3. Compare sex-specific differences in degenerative prevalence across age groups.
-4. Evaluate level-coupling dominance (e.g., whether $L4\text{--}L5$ and $L5\text{--}S1$ dominance matches Western and East Asian published norms).
+4. Evaluate level-coupling dominance (e.g., whether L4–L5 and L5–S1 dominance matches Western and East Asian published norms).
 
 ---
 
@@ -43,8 +43,8 @@
 > reconcile against the automated NLP output when MSc Project 3 delivers it -- the
 > agreement between the two then becomes a validation result for MSc 3 rather than a
 > delay for MSc 1.
-* **Sample Size:** $N = 299$ patients (294 with matching multi-sequence DICOM series).
-* **Variables:** Age, Sex, Spinal Level ($L1\text{--}L2$ to $L5\text{--}S1$), Finding Categories (Bulge, Protrusion, Extrusion, Stenosis, Nerve Root Compression, Facet Arthrosis).
+* **Sample Size:** N = 299 patients (294 with matching multi-sequence DICOM series).
+* **Variables:** Age, Sex, Spinal Level (L1–L2 to L5–S1), Finding Categories (Bulge, Protrusion, Extrusion, Stenosis, Nerve Root Compression, Facet Arthrosis).
 
 ---
 
@@ -64,7 +64,7 @@ flowchart LR
 
 ### Month 2: Statistical Analysis
 - Calculate overall and level-specific prevalence (%) with 95% Confidence Intervals (CI).
-- Run chi-square ($\chi^2$) tests and Fisher's exact tests for sex-stratified comparisons.
+- Run chi-square (χ²) tests and Fisher's exact tests for sex-stratified comparisons.
 - Perform multi-variable logistic regression to compute Odds Ratios (OR) for degeneration as a function of age deciles.
 - Generate high-publication-quality heatmaps of finding prevalence across spinal levels.
 
@@ -90,5 +90,5 @@ flowchart LR
 
 | Potential Risk | Severity | Mitigation Strategy |
 | :--- | :---: | :--- |
-| Sample size ($N=299$) questioned by reviewers | Low | Emphasize that this is a *single-center descriptive baseline* for an unstudied region; compute exact 95% CIs. |
+| Sample size (N = 299) questioned by reviewers | Low | Emphasize that this is a *single-center descriptive baseline* for an unstudied region; compute exact 95% CIs. |
 | Missing clinical symptom data | Low | Frame study strictly as a *radiological prevalence study* rather than a clinical symptom-correlation study. |
