@@ -1,0 +1,32 @@
+# AMOG-Net / Lumbar MRI PhD Project Dependencies (Phase 1)
+# PyTorch and Torchvision (install CUDA-enabled version for GPU acceleration)
+torch>=2.0.0
+torchvision>=0.15.0
+
+# Medical Imaging & DICOM Libraries
+pydicom>=2.4.0
+SimpleITK>=2.2.0
+monai>=1.2.0
+nibabel>=5.0.0
+pylibjpeg>=1.4.0
+
+# Data Science & Machine Learning
+numpy>=1.24.0
+pandas>=2.0.0
+scipy>=1.10.0
+scikit-learn>=1.2.0
+scikit-image>=0.20.0
+albumentations>=1.3.0
+opencv-python-headless>=4.7.0
+
+# Graph Neural Networks (Optional/Phase 12)
+torch-geometric>=2.3.0
+
+# Logging, Metrics & Utilities
+pyyaml>=6.0
+tqdm>=4.65.0
+h5py>=3.8.0
+matplotlib>=3.7.0
+seaborn>=0.12.0
+statsmodels>=0.14.0
+tensorboard>=2.12.0

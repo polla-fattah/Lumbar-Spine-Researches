@@ -1,0 +1,126 @@
+{
+  "timestamp": "2026-08-25 02:27:58",
+  "python_version": "3.13.2",
+  "os_platform": "Windows-11-10.0.26200-SP0",
+  "system_architecture": "64bit",
+  "processor": "Intel64 Family 6 Model 191 Stepping 2, GenuineIntel",
+  "cpu_count_logical": 24,
+  "gpu_available": false,
+  "gpus": [],
+  "packages": {
+    "PyTorch Core": {
+      "status": "Installed",
+      "version": "2.9.0+cpu",
+      "import_name": "torch"
+    },
+    "TorchVision Vision Models": {
+      "status": "Installed",
+      "version": "0.24.0+cpu",
+      "import_name": "torchvision"
+    },
+    "DICOM File Parsing": {
+      "status": "Installed",
+      "version": "3.0.1",
+      "import_name": "pydicom"
+    },
+    "Medical Image Processing & Geometry": {
+      "status": "Missing",
+      "version": null,
+      "import_name": "SimpleITK"
+    },
+    "Medical Open Network for AI": {
+      "status": "Missing",
+      "version": null,
+      "import_name": "monai"
+    },
+    "Neuroimaging / NIfTI & DICOM Utilities": {
+      "status": "Missing",
+      "version": null,
+      "import_name": "nibabel"
+    },
+    "Numerical Computing": {
+      "status": "Installed",
+      "version": "2.3.4",
+      "import_name": "numpy"
+    },
+    "Dataframes & Manifest Handling": {
+      "status": "Installed",
+      "version": "2.3.3",
+      "import_name": "pandas"
+    },
+    "Scientific Computing & Interpolation": {
+      "status": "Installed",
+      "version": "1.17.1",
+      "import_name": "scipy"
+    },
+    "Scikit-Learn Machine Learning & Metrics": {
+      "status": "Installed",
+      "version": "1.9.0",
+      "import_name": "sklearn"
+    },
+    "Scikit-Image Image Analysis": {
+      "status": "Installed",
+      "version": "0.26.0",
+      "import_name": "skimage"
+    },
+    "Fast Image Augmentations": {
+      "status": "Missing",
+      "version": null,
+      "import_name": "albumentations"
+    },
+    "OpenCV Computer Vision": {
+      "status": "Installed",
+      "version": "4.10.0",
+      "import_name": "cv2"
+    },
+    "PyTorch Geometric (GNN Support)": {
+      "status": "Missing",
+      "version": null,
+      "import_name": "torch_geometric"
+    },
+    "YAML Configuration Parsing": {
+      "status": "Installed",
+      "version": "6.0.2",
+      "import_name": "yaml"
+    },
+    "Progress Bars": {
+      "status": "Installed",
+      "version": "4.67.1",
+      "import_name": "tqdm"
+    },
+    "HDF5 File Storage": {
+      "status": "Missing",
+      "version": null,
+      "import_name": "h5py"
+    },
+    "Data Plotting": {
+      "status": "Installed",
+      "version": "3.10.7",
+      "import_name": "matplotlib"
+    },
+    "Statistical Visualization": {
+      "status": "Installed",
+      "version": "0.13.2",
+      "import_name": "seaborn"
+    },
+    "Statistical Hypotheses Testing": {
+      "status": "Missing",
+      "version": null,
+      "import_name": "statsmodels"
+    }
+  },
+  "ram_total_gb": 31.7,
+  "ram_available_gb": 12.55,
+  "pytorch_version": "2.9.0+cpu",
+  "cuda_available": false,
+  "missing_packages_count": 7,
+  "missing_package_names": [
+    "SimpleITK",
+    "monai",
+    "nibabel",
+    "albumentations",
+    "torch_geometric",
+    "h5py",
+    "statsmodels"
+  ]
+}
