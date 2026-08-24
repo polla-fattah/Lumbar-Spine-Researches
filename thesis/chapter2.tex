@@ -1042,10 +1042,15 @@ constructed \emph{within} a single disc---a point cloud over its reconstructed
 \cite{baur2024automated}. The graph therefore models disc shape, not spinal
 structure, and the levels remain independent predictions. Nguyen et al.\ move
 closer to the relational idea by injecting disc-level priors so that the model
-learns level-specific degeneration patterns, and demonstrate that the technique
-is model-agnostic, improving baselines as well as their own architecture
-\cite{nguyen2026crossspine}---but the levels are still separate outputs that do
-not exchange information.
+learns level-specific degeneration patterns \cite{nguyen2026crossspine}.
+Most recently, Chai et al.\ propose an anatomy-guided pipeline combining landmark
+parsing, multi-sequence ROI patches, quantitative anatomical biomarkers, and an
+inter-level Transformer to capture contextual dependencies across lumbar levels
+\cite{chai2026anatomy}. While Chai et al.\ model contextual dependence among
+lumbar-level feature tokens, the individual level--condition targets remain
+independent output predictions. No reviewed study constructs a heterogeneous graph
+whose nodes represent the level--condition and laterality targets themselves with
+typed edges for adjacency, co-occurrence, and bilateral symmetry.
 
 The distinction matters for what can be claimed. Sharing a \emph{trunk} across
 targets, as the multi-task systems of Section~\ref{sec:lr-task-evolution} do
@@ -1332,7 +1337,11 @@ predictions within one grade of ground truth in 99.2\% of cases and a mean
 absolute error of 0.08 grades \cite{niemeyer2021a}. Patil et al.\ list ordinal
 regression among the supplementary analyses they ran, and still report that
 intermediate-grade discrimination remains the outstanding difficulty
-\cite{patil2026mribased}.
+\cite{patil2026mribased}. More recently, Tr{\^\i}nc et al.\ presented a
+multi-level evaluation framework for LumbarDISC using condition-specific Vision
+Transformers, arguing that conventional accuracy is insufficient and proposing
+distance-aware ordinal penalties alongside patient-burden and anatomical
+correctness metrics \cite{trinc2026beyond}.
 
 Two readings are possible. Either the ordinal structure is already implicitly
 captured---a network trained with cross-entropy on visually ordered classes will
@@ -1900,16 +1909,18 @@ encodes left and right as separate targets that are nonetheless produced by one
 underlying morphology \cite{richards2026the}.
 
 Relational modelling of this structure is almost absent from the reviewed
-literature. The single exception is Baur et al., who reconstruct each disc as a
-3D point cloud and grade it with a graph neural network---but the graph is
-\emph{within} a disc, over its surface geometry, not \emph{across} levels or
-conditions, and the reported performance was uneven (F1 0.71 at L2/3 against
-0.46 overall) \cite{baur2024automated}. Nguyen et al.\ come closer in spirit,
-injecting disc-level priors and showing that the technique is model-agnostic
-\cite{nguyen2026crossspine}, but the levels remain independent outputs rather
-than communicating nodes. No study in this review constructs a graph whose nodes
-are the level--condition targets and whose edges encode adjacency, co-occurrence
-and bilateral symmetry.
+literature. Baur et al.\ reconstruct each disc as a 3D point cloud and grade it
+with a graph neural network---but the graph is \emph{within} a disc, over its
+surface geometry, not \emph{across} levels or conditions, and the reported
+performance was uneven (F1 0.71 at L2/3 against 0.46 overall)
+\cite{baur2024automated}. Nguyen et al.\ inject disc-level priors
+\cite{nguyen2026crossspine}, while Chai et al.\ introduce an inter-level
+Transformer to capture contextual dependencies across lumbar level tokens
+\cite{chai2026anatomy}. However, in all these formulations, the level--condition
+targets remain separate output predictions rather than communicating nodes. No study
+in this review constructs a heterogeneous graph whose nodes are the specific
+level--condition and laterality targets themselves and whose typed edges encode
+adjacent-level continuity, same-level condition co-occurrence, and bilateral symmetry.
 
 This matters because the structure is not merely decorative. If neighbouring
 evidence genuinely constrains a prediction, then relational modelling should
@@ -1929,21 +1940,22 @@ measurable. Yet the most systematic test of ordinal-aware objectives found that
 none of soft-kappa loss, ordinal cross-entropy or regression losses improved on
 plain cross-entropy \cite{niemeyer2021a}.
 
-The natural reading is that the ordinal formulations tested were inadequate
-rather than that the structure is unusable, but the literature does not resolve
-this. Two things are missing. Ordinal objectives have been evaluated on
-\emph{disc degeneration} grading in isolation, never on the multi-target
-stenosis problem where the ordinal scale interacts with severe class imbalance
-(Section~\ref{sec:lr-distributions}) and with relational structure. And the
-\emph{asymmetry of clinical cost} has scarcely been modelled at all: grading a
-severe stenosis as normal is not equivalent to the reverse, yet almost every
-reviewed system optimises a symmetric objective. Acharya and Kansakar are the
-notable exception, reporting severe-to-normal misclassification as a headline
-result rather than burying it in a confusion matrix
-\cite{acharya2026disccentric}, and Wu et al.\ characterise their model's
-error profile as specificity-oriented and draw a deployment conclusion from it
-\cite{wu2026external}. The RSNA benchmark encodes the asymmetry in its
-evaluation metric but nothing compels a model to optimise for it.
+The natural reading is that conventional ordinal formulations tested in isolation
+were inadequate rather than that ordinal structure is unusable. Recent work on
+LumbarDISC, including Tr{\^\i}nc et al.\ \cite{trinc2026beyond}, has evaluated
+distance-aware ordinal metrics and patient-burden scores, confirming that standard
+ordinal classification alone is no longer an unexplored standalone novelty claim.
+However, two critical dimensions remain unexploited. Ordinal objectives have
+scarcely been coupled with \emph{relational target consistency} across neighbouring
+predictions. And the \emph{asymmetry of clinical cost} has rarely been modelled at
+the loss level: grading a severe stenosis as normal is not equivalent to the
+reverse, yet standard models optimise symmetric objectives. Acharya and Kansakar
+are a notable exception in tracking severe-to-normal misclassifications
+\cite{acharya2026disccentric}, while Wu et al.\ characterise their model's error
+profile as specificity-oriented \cite{wu2026external}. The RSNA benchmark encodes
+asymmetry in its evaluation metric, but the methodological contribution lies in
+coupling cost-sensitive asymmetric losses with relational consistency and
+calibrated uncertainty for selective prediction.
 
 \subsection{Gap 3: Cross-Institutional Transfer Is Asserted, Not Measured}
 \label{sec:lr-gap-transfer}
@@ -2007,11 +2019,11 @@ questions:
   Middle Eastern cohort, and how many locally annotated studies are required
   under parameter-efficient adaptation to recover it?
 
-  \item[RQ5] Do cost-sensitive ordinal objectives reduce clinically consequential
-  errors---specifically severe cases graded as normal or mild---relative to the
-  symmetric categorical objectives that dominate the literature, and does
-  relational consistency across neighbouring predictions provide a usable signal
-  for identifying cases that warrant human review?
+  \item[RQ5] Do cost-sensitive asymmetric ordinal objectives reduce clinically
+  consequential errors---specifically severe cases graded as normal or mild---relative to
+  the symmetric categorical objectives that dominate the literature, and does
+  relational consistency across neighbouring predictions coupled with calibrated
+  uncertainty provide a reliable signal for selective prediction and human review?
 \end{description}
 
 The corresponding objectives are to implement a staged system in which each
