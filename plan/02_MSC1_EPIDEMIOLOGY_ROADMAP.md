@@ -15,6 +15,32 @@
 
 ---
 
+## Who this project suits
+
+**Technical difficulty: LOW.** The most accessible project in the programme, and the one
+most likely to produce a publication within the degree.
+
+**You will need**
+- Comfortable statistics: prevalence, confidence intervals, chi-square, logistic regression
+- Python (pandas, statsmodels) **or** R — either is fine
+- Willingness to read clinical literature carefully and build a comparison table
+- Patience for careful manual data work: roughly 25–40 hours structuring 299 reports
+
+**You will NOT need**
+- Any deep learning
+- Any GPU
+- Any DICOM or image processing
+
+**You will gain**
+- Epidemiological study design and STROBE reporting
+- Publication-quality statistical analysis and visualisation
+- A first-author clinical paper on a genuinely unstudied population
+
+**Best fit:** Data Science, Medical Informatics, Public Health, or a clinically minded
+Computer Science student who wants a clinical rather than an engineering thesis.
+
+---
+
 ## 2. Specific Research Objectives
 
 1. Determine the level-by-level (L1–L2 … L5–S1) prevalence of:

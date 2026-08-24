@@ -38,6 +38,31 @@
 
 ---
 
+## Who this project suits
+
+**Technical difficulty: MEDIUM.** Self-contained, with a clear deliverable the rest of the
+programme depends on — which makes it visible and well-supported work.
+
+**You will need**
+- Strong Python; comfortable with regex and text processing
+- Willingness to learn spaCy and to run open-weight LLMs locally (Ollama, vLLM)
+- A GPU is helpful for LoRA fine-tuning but 4-bit quantised models run on modest hardware
+- Care and patience: the manual verification pass is the part that makes the work credible
+
+**You will NOT need**
+- Any medical image processing
+- Heavy vision-model training
+
+**You will gain**
+- Practical LLM engineering: structured extraction, schema enforcement, evaluation
+- Clinical NLP experience, a growing and employable specialism
+- Ownership of the gold-standard matrix that MSc 1, MSc 2 and the PhD all build on
+
+**Best fit:** Computer Science, Artificial Intelligence, Data Science, or Health
+Informatics.
+
+---
+
 ## 2. Research Questions (RQs)
 
 * **RQ1:** How do zero-shot and few-shot open-weight LLMs (Llama-3-8B, Qwen-2.5-7B) compare to deterministic regex rules in extracting multi-label spinal findings from unstructured Middle Eastern English reports?

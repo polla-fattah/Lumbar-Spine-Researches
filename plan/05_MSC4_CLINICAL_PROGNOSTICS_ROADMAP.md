@@ -35,6 +35,36 @@
 
 ---
 
+## Who this project suits
+
+> **Note:** this project cannot be allocated until the hospital confirms that clinical
+> symptom and outcome records exist and may be linked to the imaging. See the caution at
+> the top of this document.
+
+**Technical difficulty: LOW–MEDIUM**, but the highest clinical value in the programme if
+the data becomes available.
+
+**You will need**
+- Strong applied statistics: logistic regression, odds ratios, ROC analysis, agreement measures
+- Python or R for statistical modelling
+- Genuine interest in clinical reasoning — this project is about the gap between what
+  imaging shows and what patients experience
+- Comfort working with messy real-world clinical records
+
+**You will NOT need**
+- To train any imaging model; you consume predictions produced elsewhere
+- A GPU
+
+**You will gain**
+- Clinical prognostic modelling, a highly transferable skill
+- Experience linking imaging to outcomes, which very few groups can offer
+- A paper addressing the most-cited unresolved problem in the lumbar literature
+
+**Best fit:** Medical Informatics, Clinical Data Science, Epidemiology, or a
+research-minded clinician.
+
+---
+
 ## 2. Research Questions (RQs)
 
 * **RQ1:** What is the degree of discordance between AI-graded anatomical stenosis severity (L1–L2 … L5–S1) and presenting clinical symptoms in a Middle Eastern cohort?

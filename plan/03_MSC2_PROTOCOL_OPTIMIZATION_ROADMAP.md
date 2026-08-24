@@ -32,6 +32,30 @@
 
 ---
 
+## Who this project suits
+
+**Technical difficulty: MEDIUM–HIGH.** The most engineering-heavy of the four, and the one
+with a hard hardware requirement.
+
+**You will need**
+- Solid Python and PyTorch; able to train and debug a CNN without hand-holding
+- DICOM handling — pydicom, SimpleITK or MONAI (learnable during the project)
+- Access to a GPU. This is not laptop work; confirm availability before choosing
+- Understanding of ROC analysis, sensitivity/specificity and statistical model comparison
+
+**You will NOT need**
+- To design a novel architecture — you use standard backbones (ResNet50, EfficientNet)
+- To wait for the PhD student's model; a standard baseline answers the clinical question
+
+**You will gain**
+- Medical imaging pipeline experience end to end
+- Controlled ablation design, which is a transferable research skill
+- A clinical paper with direct operational value to the hospital
+
+**Best fit:** Computer Science, Artificial Intelligence, or Biomedical Engineering.
+
+---
+
 ## 2. Research Questions (RQs)
 
 * **RQ1:** What is the diagnostic accuracy drop (AUC / F1 score) per finding type (central canal stenosis vs. neural foraminal stenosis vs. disc herniation) when sequence inputs are ablated from Full (T1+T2+Axial) to Single (T2 Sagittal alone)?
