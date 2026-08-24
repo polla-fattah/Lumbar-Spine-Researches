@@ -1,0 +1,195 @@
+% ===========================================================================
+%  THESIS WRAPPER -- master document
+%
+%  Automated Classification of Lumbar Degenerative Disease from MRI
+%  PhD candidature, Rizgary Teaching Hospital lumbar spine research programme
+%
+%  Build:   pdflatex thesis ; biber thesis ; pdflatex thesis ; pdflatex thesis
+%
+%  ---------------------------------------------------------------------------
+%  WHY THIS FILE EXISTS
+%
+%  chapter2.tex and chapter3.tex are each complete standalone documents, with
+%  their own \documentclass, preamble and \end{document}. That is deliberate and
+%  worth keeping: a chapter can be compiled and sent to a supervisor on its own
+%  in a couple of seconds without building the whole thesis.
+%
+%  The cost of standalone chapters is that cross-chapter references cannot
+%  resolve. Chapter 3 refers to \ref{ch:litreview} five times; compiled alone
+%  those emit "Chapter ??". Only a single document containing both chapters can
+%  resolve them, and only such a build can confirm that the gap -> research
+%  question -> contribution numbering holds end to end.
+%
+%  ---------------------------------------------------------------------------
+%  HOW IT WORKS -- and why the chapter files were NOT modified
+%
+%  The docmute package makes \input ignore everything in the included file up to
+%  \begin{document} and after \end{document}. The chapter preambles are
+%  therefore skipped automatically at build time.
+%
+%  This means chapter2.tex and chapter3.tex are byte-for-byte unchanged and keep
+%  compiling standalone exactly as before. There are no duplicated bodies to
+%  keep in sync, which is the usual failure mode of the alternative approach
+%  (splitting each chapter into a preamble file plus a body file).
+%
+%  The consequence is that every package a chapter needs must be declared HERE,
+%  because the \usepackage lines in the chapters are ignored. The preamble below
+%  is the union of both chapter preambles. If you add a package to a chapter,
+%  add it here too or the thesis build will fail while the chapter still works.
+% ===========================================================================
+
+\documentclass[12pt,a4paper]{report}
+
+% --- union of the chapter preambles -----------------------------------------
+\usepackage{lmodern}          % scalable fonts; required for microtype expansion
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage[english]{babel}
+\usepackage{microtype}
+\usepackage[margin=2.5cm]{geometry}
+\usepackage{setspace}
+\onehalfspacing
+
+\usepackage{amsmath,amssymb}
+\usepackage{booktabs}
+\usepackage{longtable}
+\usepackage{array}
+\usepackage{graphicx}
+\usepackage[hidelinks]{hyperref}
+
+\usepackage[
+  backend=biber,
+  style=numeric-comp,
+  sorting=none,
+  maxbibnames=6,
+  minbibnames=3,
+  giveninits=true,
+  doi=true,
+  url=false,
+  isbn=false
+]{biblatex}
+
+% Single bibliographic source for the whole thesis: 149 records, comprising the
+% 92 curated lumbar-spine papers, the 16 foundational method/clinical papers,
+% and the methodology references filed as records 111-149.
+\addbibresource{../lumbar_spine_mri_ai_literature_inventory.bib}
+
+% The inventory .bib carries internal bookkeeping fields (provenance note, the
+% per-paper summary, the local PDF path). These are working metadata, not
+% bibliographic data, so they are suppressed from the printed reference list.
+% Leaving the note field in also breaks compilation, since it contains raw
+% underscores that LaTeX reads as math subscripts.
+\AtEveryBibitem{%
+  \clearfield{note}%
+  \clearfield{comment}%
+  \clearfield{annotation}%
+  \clearfield{abstract}%
+  \clearfield{file}%
+}
+
+% Prospective-protocol markers, defined in chapter3.tex. Chapter 3 is written
+% before the experiment is run; these mark what must be replaced with the
+% executed protocol rather than filled in from intention.
+\newcommand{\toconfirm}[1]{\textbf{[TO CONFIRM: #1]}}
+\newcommand{\torecord}[1]{\textbf{[TO RECORD AFTER IMPLEMENTATION: #1]}}
+
+% --- machinery for folding standalone chapters in ---------------------------
+\usepackage{docmute}          % \input skips each child's preamble
+
+% Each chapter ends with its own \printbibliography, which is correct when it is
+% compiled alone but would produce a reference list after every chapter here.
+% Swallow those calls (including their optional argument) and emit one
+% consolidated bibliography at the end instead.
+\newcommand{\thesisgobblebib}[1][]{}
+\let\thesisrealbibliography\printbibliography
+\let\printbibliography\thesisgobblebib
+
+% --- title page fields ------------------------------------------------------
+% Placeholders are marked so they cannot be mistaken for settled facts.
+\newcommand{\thesistitle}{Disease-Adaptive Heterogeneous Graph Learning with
+  Anatomically Aligned Multi-Sequence MRI Representations for Lumbar
+  Degenerative Disease}
+\newcommand{\thesiscandidate}{\toconfirm{candidate's full name as registered}}
+\newcommand{\thesissupervisor}{Dr.\ Polla Fattah}
+\newcommand{\thesisinstitution}{\toconfirm{awarding institution and department}}
+\newcommand{\thesisdegree}{\toconfirm{degree for which the thesis is submitted}}
+
+\begin{document}
+
+% ===========================================================================
+%  FRONT MATTER
+% ===========================================================================
+\pagenumbering{roman}
+
+\begin{titlepage}
+\centering
+\vspace*{2cm}
+
+{\Large\bfseries \thesistitle \par}
+
+\vspace{2.5cm}
+{\large \thesiscandidate \par}
+
+\vspace{1cm}
+{\normalsize Supervised by \thesissupervisor \par}
+
+\vspace{2.5cm}
+{\normalsize \thesisinstitution \par}
+\vspace{0.5cm}
+{\normalsize \thesisdegree \par}
+
+\vfill
+
+\begin{minipage}{0.85\textwidth}
+\footnotesize\raggedright
+\textbf{Status of this build.} This document contains Chapters 2 and 3. The
+remaining chapters are not yet written; their \verb|\input| lines are present
+below and commented out. The chapter counter is advanced so that the literature
+review numbers as Chapter~2, matching every cross-reference in the text. Data
+collection is conducted at Rizgary Teaching Hospital; no patient-identifiable
+data appears in this document or in the repository that produces it.
+\end{minipage}
+
+\vspace{1cm}
+{\footnotesize Compiled \today \par}
+\end{titlepage}
+
+\tableofcontents
+
+% ===========================================================================
+%  MAIN MATTER
+% ===========================================================================
+\cleardoublepage
+\pagenumbering{arabic}
+
+% Chapter 1 does not exist yet. The counter is advanced so that the next
+% \chapter is numbered 2, which is what the prose of both chapters assumes:
+% seven hard-coded "Chapter~2"/"Chapter~3" mentions and five \ref{ch:litreview}
+% cross-references all depend on this numbering.
+%
+% WHEN chapter1.tex IS WRITTEN: uncomment its \input below and DELETE the
+% \setcounter line, or the introduction will be numbered 2 and everything after
+% it will shift by one.
+%
+% \input{chapter1}
+\setcounter{chapter}{1}
+
+\input{chapter2}
+
+\input{chapter3}
+
+% Later chapters, ready to be uncommented as they are written. Nothing else in
+% this file needs to change when they are added.
+%
+% \input{chapter4}    % Results
+% \input{chapter5}    % Discussion
+% \input{chapter6}    % Conclusions
+
+% ===========================================================================
+%  BACK MATTER
+% ===========================================================================
+\cleardoublepage
+\let\printbibliography\thesisrealbibliography
+\printbibliography[heading=bibintoc,title={References}]
+
+\end{document}
