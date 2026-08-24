@@ -64,14 +64,16 @@ gantt
   - *Ordinal & Uncertainty Loss:* Ordinal cross-entropy loss for stenosis grading + Monte Carlo Dropout / Evidential Loss for confidence estimation.
 - **Task 2.2:** Train and validate on RSNA benchmark ($N=1,975$). Compare against standard ResNet, Swin UNETR, and M-SCAN baseline architectures.
 - **Deliverable — Paper 1:** *"AMOG-Net: Anatomical Graph Transformers for Multi-Sequence Lumbar Spine MRI Assessment."*  
-  *Target Venues:* *IEEE Transactions on Medical Imaging (TMI)*, *Medical Image Analysis (MedIA)*, or *MICCAI*.
+  *Targets* — Reach: *IEEE TMI* or *Medical Image Analysis*. Target: *IEEE JBHI* or MICCAI main track. Floor: *Computers in Biology and Medicine*.
+  *Timing:* submitted ~month 10. Expect a first decision at months 16-22 and acceptance possibly after the viva -- plan the graduation criteria against submission, not acceptance.
 
 ### Phase 3: Zero-Shot Transfer & Few-Shot Domain Adaptation (Months 11–16)
 - **Task 3.1 (Zero-Shot Evaluation):** Deploy RSNA-trained AMOG-Net directly onto the 294 Rizgary DICOM studies for Spinal Canal Stenosis (5 targets) without local tuning. Measure macro F1, AUROC, and class-wise sensitivity degradation per spinal level.
 - **Task 3.2 (Domain Shift Analysis):** Analyze root causes of domain shift (slice thickness differences, Siemens Avanto magnetic field artifacts, regional anatomical variations).
 - **Task 3.3 (Few-Shot Adaptation):** Implement parameter-efficient domain adaptation (Adapter modules / LoRA fine-tuning) using subsets of local cases ($N=10, 25, 50, 100$). Plot efficiency curves showing performance recovery vs. annotation cost.
 - **Deliverable — Paper 2:** *"Cross-Institutional Generalizability of Multi-Sequence Lumbar MRI Models: Zero-Shot vs Few-Shot Transfer to a Middle Eastern Cohort."*  
-  *Target Venues:* *Radiology: Artificial Intelligence*, *European Radiology*, or *Computers in Biology and Medicine*.
+  *Targets* — Reach: *Radiology: Artificial Intelligence*. Target: *European Radiology*. Floor: *European Spine Journal* or *Scientific Reports*.
+  *Note:* this is the stronger clinical contribution of the two, since no published evaluation covers a Middle Eastern cohort.
 
 ### Phase 4: Dissertation Synthesis & Defense (Months 17–24)
 - **Task 4.1:** Write the comprehensive PhD dissertation combining Phase 1–3 methodology, benchmarks, and clinical validation.

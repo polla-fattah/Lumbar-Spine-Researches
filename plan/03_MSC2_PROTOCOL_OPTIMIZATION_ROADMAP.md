@@ -95,9 +95,9 @@ flowchart TD
 
 ## 5. Target Venues & Primary Deliverables
 
-* **Primary Target Journal:** *European Journal of Radiology* (IF ~3.3) or *Radiology: Artificial Intelligence*.
-* **Secondary Target Journal:** *BMC Medical Imaging* or *Academic Radiology*.
-* **Primary Output:** 1 accepted peer-reviewed journal paper + MSc Thesis Dissertation.
+* **Targets** — Reach: *Radiology: Artificial Intelligence*. Target: *European Journal of Radiology* (IF ~3.3). Floor: *BMC Medical Imaging* or *Academic Radiology*.
+* **Note:** the throughput argument is what makes this attractive to a radiology journal. Lead with scanner time and waiting lists, not with model architecture.
+* **Primary Output:** 1 peer-reviewed journal paper **submitted** + MSc Thesis Dissertation.
 
 ---
 

@@ -91,9 +91,8 @@ flowchart LR
 
 ## 5. Target Venues & Primary Deliverables
 
-* **Primary Target Journal:** *Journal of Biomedical Informatics (JBI)* (IF ~4.0) or *IEEE Journal of Biomedical and Health Informatics (JBHI)* (IF ~6.7).
-* **Secondary Target Journal:** *International Journal of Medical Informatics* or *BMC Medical Informatics and Decision Making*.
-* **Primary Output:** 1 accepted peer-reviewed NLP journal paper + MSc Thesis Dissertation + Open-source GitHub parsing tool.
+* **Targets** — Reach: *IEEE JBHI*. Target: *Journal of Biomedical Informatics*. Floor: *BMC Medical Informatics and Decision Making*. Note that 299 reports is a small corpus by NLP standards; lead with the regional and linguistic novelty, not the scale.
+* **Primary Output:** 1 peer-reviewed NLP journal paper **submitted** + MSc Thesis Dissertation + open-source parsing tool.
 
 ---
 

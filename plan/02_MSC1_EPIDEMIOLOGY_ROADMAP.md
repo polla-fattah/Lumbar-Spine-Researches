@@ -80,9 +80,9 @@ flowchart LR
 
 ## 5. Target Venues & Target Outputs
 
-* **Primary Target Journal:** *European Spine Journal* (IF ~2.8) or *Journal of Orthopaedic Surgery and Research* (IF ~2.6).
-* **Secondary Target Journal:** *BMC Musculoskeletal Disorders* or *European Radiology Experimental*.
-* **Primary Output:** 1 accepted peer-reviewed clinical journal paper + MSc Thesis Dissertation.
+* **Targets** — Reach: *European Spine Journal* (IF ~2.8). Target: *Journal of Orthopaedic Surgery and Research* (IF ~2.6). Floor: *BMC Musculoskeletal Disorders*.
+* **Note:** the highest-certainty publication in the programme. Descriptive epidemiology of an unstudied population is a well-understood contribution that reviewers know how to assess, and it needs no model to work.
+* **Primary Output:** 1 peer-reviewed clinical journal paper **submitted** (acceptance typically lands after the degree ends) + MSc Thesis Dissertation.
 
 ---
 

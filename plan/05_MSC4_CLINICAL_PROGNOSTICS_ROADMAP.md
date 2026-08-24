@@ -86,9 +86,9 @@ flowchart TD
 
 ## 5. Target Venues & Deliverables
 
-* **Primary Target Journal:** *The Spine Journal* (IF ~3.8) or *Spine* (IF ~3.0).
-* **Secondary Target Journal:** *European Spine Journal* or *Journal of Neurosurgery: Spine*.
-* **Primary Output:** 1 accepted clinical prognosis paper + MSc Thesis Dissertation.
+* **Targets** — Reach: *The Spine Journal* (IF ~3.8) or *Spine*. Target: *European Spine Journal*. Floor: *BMC Musculoskeletal Disorders*.
+* **Note:** if the clinical linkage is obtained, this is the most clinically significant paper in the programme and justifies aiming high.
+* **Primary Output:** 1 clinical prognosis paper **submitted** + MSc Thesis Dissertation.
 
 ---
 
