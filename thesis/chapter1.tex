@@ -1,0 +1,1194 @@
+% ===========================================================================
+%  Chapter 1 -- Introduction
+%  Disease-Adaptive Heterogeneous Graph Learning with Anatomically Aligned
+%  Multi-Sequence MRI Representations
+%
+%  PROSPECTIVE THESIS-FRAMING VERSION 1.0
+%  Written before completion of the full experimental programme.
+%  The research questions, hypotheses, scope boundaries and novelty position are
+%  intended to remain stable. Fields marked [TO CONFIRM], [TO RECORD] or
+%  [LATER INTEGRATION] must be completed transparently when the relevant facts or
+%  results exist; they must not be used to rewrite hypotheses after results are seen.
+%
+%  Compiles standalone:   pdflatex chapter1 ; biber chapter1 ; pdflatex chapter1
+%
+%  To fold into the thesis, delete everything from \documentclass down to
+%  \begin{document}, and the \printbibliography/\end{document} at the foot, then
+%  \input{chapter1} from the main thesis file.
+% ===========================================================================
+
+\documentclass[12pt,a4paper]{report}
+
+\usepackage{lmodern}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage[english]{babel}
+\usepackage{csquotes}
+\usepackage{microtype}
+\usepackage[margin=2.5cm]{geometry}
+\usepackage{setspace}
+\onehalfspacing
+
+\usepackage{amsmath,amssymb}
+\usepackage{booktabs}
+\usepackage{longtable}
+\usepackage{array}
+\usepackage{graphicx}
+\usepackage[hidelinks]{hyperref}
+
+\usepackage[
+  backend=biber,
+  style=numeric-comp,
+  sorting=none,
+  maxbibnames=6,
+  minbibnames=3,
+  giveninits=true,
+  doi=true,
+  url=false,
+  isbn=false
+]{biblatex}
+
+% Production bibliography cleaned for thesis compilation. Citation keys are
+% unchanged from the working literature inventory.
+\addbibresource{lumbar_spine_mri_ai_references_clean.bib}
+
+\newcommand{\toconfirm}[1]{\textbf{[TO CONFIRM: #1]}}
+\newcommand{\torecord}[1]{\textbf{[TO RECORD AFTER IMPLEMENTATION: #1]}}
+\newcommand{\laterinsert}[1]{\textbf{[LATER INTEGRATION: #1]}}
+
+\begin{document}
+
+\chapter{Introduction}
+\label{ch:introduction}
+
+% ===========================================================================
+\section{Introduction and Thesis Position}
+\label{sec:intro-position}
+
+Lumbar degenerative disease presents an unusually demanding problem for medical
+image analysis. The anatomical region is compact, but the diagnostic task is not:
+one examination contains several intervertebral levels, several pathological
+compartments, left--right distinctions, multiple magnetic resonance imaging (MRI)
+sequences acquired in different planes, and severity labels whose boundaries are
+partly subjective. A clinically meaningful automated system must therefore do more
+than recognise that degeneration is present. It must identify \emph{what} is
+abnormal, \emph{where} it is abnormal, \emph{how severe} the abnormality is, and
+\emph{which imaging evidence} supports that judgement. It must also remain
+interpretable as a measurement of radiological grading rather than be mistaken for
+an autonomous clinical diagnosis.
+
+The need for such systems arises from both disease burden and reporting workload.
+Low back pain remains one of the largest contributors to disability worldwide, and
+lumbar degenerative change is a frequent structural correlate examined by MRI
+\cite{compte2023are,wang2024machine}. Routine interpretation is repetitive because
+the reader must inspect multiple levels across sagittal and axial acquisitions,
+while the severity of central canal, foraminal and subarticular narrowing is judged
+against morphological criteria that are not perfectly reproducible between human
+readers \cite{lurie2008reliability,schizas2010qualitative,lee2011a,lee2010a}.
+Automation is attractive in this setting not because a neural network is assumed to
+possess a superior biological truth, but because a reproducible system may help
+standardise a high-volume structured task whose human reference process itself has
+known variability.
+
+The technical field has advanced rapidly. Early systems demonstrated that lumbar
+anatomy could be localised and individual discs graded with convolutional networks;
+more recent pipelines combine explicit localisation, 2.5D regions of interest,
+multiview fusion, attention and large public benchmarks
+\cite{lu2018deepspine,pan2021automatically,batra2025mscan,richards2026the}. The
+central problem has consequently shifted. The thesis no longer asks whether a
+convolutional neural network or transformer can classify a lumbar MRI in isolation.
+It asks whether the \emph{structure of the grading problem itself} has been
+represented faithfully enough.
+
+This thesis takes the position that lumbar MRI grading is a structured prediction
+problem with four coupled sources of information. First, disease occurs at ordered
+anatomical levels rather than at unrelated image locations. Second, several
+conditions coexist within one motion segment and lateral compartments occur as
+paired left--right structures. Third, the diagnostic value of an MRI sequence is
+target-dependent: sagittal T1, sagittal T2/STIR and axial T2 provide complementary
+rather than interchangeable evidence \cite{hallinan2021deep}. Fourth, a model that
+performs well on one benchmark may degrade when scanners, protocols, population and
+reference-standard conventions change across institutions
+\cite{mcsweeney2023external,zhang2023deep,guan2022domain}.
+
+The research therefore evaluates three methodological contributions and one
+translational validation programme. The integrated framework evaluating these components
+is designated \textbf{AMOG-Net} (\textbf{A}daptive \textbf{M}ulti-sequence \textbf{O}rganised-\textbf{G}raph Network). The first contribution is anatomically aligned cross-sequence
+self-supervision, in which DICOM patient-space correspondence defines which views
+should agree during representation learning. The second is disease-conditioned
+adaptive sequence routing, in which the model learns target- and patient-dependent
+weights over available MRI sequences and is explicitly tested under both missing
+and degraded inputs. The third is a heterogeneous disease--anatomy graph whose
+nodes represent level--condition--laterality targets and whose typed edges encode
+adjacent-level, same-level cross-condition and bilateral relations. These are then
+evaluated under a deliberately separate transfer programme: development occurs on
+a multinational public benchmark; the selected model is frozen; zero-shot
+performance is measured on an independent Rizgary Hospital cohort; and controlled
+few-shot adaptation is performed only afterwards.
+
+Several related techniques are necessary but are not claimed as doctoral novelty.
+Anatomical localisation, segmentation, 2.5D region construction, conventional CNN
+or transformer encoders, class-imbalance handling, ordinal loss functions,
+calibration and parameter-efficient fine-tuning are established tools. They are
+used to construct a fair experiment around the thesis contributions rather than
+presented as original merely because they appear in the same architecture. This
+novelty boundary is important in a field where anatomy-guided contextual grading,
+cross-sequence attention and graph-based disc modelling have already been reported
+\cite{chai2026anatomy,nguyen2026crossspine,baur2024automated}. The question is not
+whether any one of those mechanisms exists elsewhere; it is whether the particular
+representation tested here---typed relationships among the benchmark's disease
+outputs, anatomical cross-sequence supervision, target-conditioned evidence
+allocation and explicit institutional transfer---adds measurable knowledge beyond
+strong matched baselines.
+
+\laterinsert{After the confirmatory experiments are locked, add no more than one
+or two sentences stating the principal empirical outcome of the thesis. This
+addition may report what was found, but must not rewrite the original problem,
+research questions or hypotheses.}
+
+% ===========================================================================
+\section{Background and Motivation}
+\label{sec:intro-background}
+
+\subsection{Clinical Motivation: A Repetitive but Structured Imaging Task}
+\label{sec:intro-clinical-motivation}
+
+Lumbar degeneration is not a single lesion. It is a family of related structural
+changes involving the intervertebral disc, facet joints, ligamentum flavum,
+vertebral endplates and the neural spaces that these structures surround. Disc
+dehydration and height loss alter load distribution; annular bulging or herniation
+may encroach on the canal and foramina; posterior element hypertrophy may further
+reduce the space available to neural tissue. These changes are assessed at several
+levels, most commonly from L1--L2 through L5--S1, and their significance depends on
+which anatomical compartment is narrowed.
+
+Three stenotic compartments are especially relevant to the benchmark task used in
+this thesis. Central canal stenosis concerns the thecal sac and cauda equina,
+foraminal narrowing concerns the exiting nerve roots, and subarticular or lateral
+recess stenosis concerns the traversing roots. Their visual criteria are related but
+not identical, and neither are the acquisitions from which they are best judged.
+Central canal and lateral recess morphology depend heavily on axial T2 information,
+whereas neural foraminal assessment benefits particularly from sagittal or
+parasagittal T1 because perineural fat provides the relevant contrast
+\cite{hallinan2021deep,schizas2010qualitative,lee2010a}. A model that treats all
+sequences as equivalent therefore ignores a clinical property of the task before
+learning has even begun.
+
+The labels themselves are another source of complexity. Morphological grading
+systems convert continuous anatomical variation into ordinal categories. Human
+agreement is strongest for some compartments and weaker for others: the reliability
+study of Lurie et al. found substantially better inter-reader agreement for central
+canal stenosis than for foraminal and subarticular findings
+\cite{lurie2008reliability}. This matters methodologically. If the reference standard
+contains boundary uncertainty, model evaluation must distinguish gross errors from
+one-grade disagreements and must interpret performance relative to the reliability
+of the grading instrument. Apparent model error and reference-standard disagreement
+are not always separable.
+
+This combination---high examination volume, repeated level-wise assessment,
+complementary sequence evidence and imperfect categorical boundaries---makes lumbar
+MRI a suitable domain for artificial intelligence, but only if the automation is
+framed correctly. The objective is not to replace full clinical interpretation.
+Symptoms, neurological findings, prior imaging and management context remain outside
+the information available to an image-only grading system. The narrower objective is
+to make a defined radiological grading task more consistent, measurable and
+portable. Reader-assistance studies support this framing: deep-learning assistance
+has been shown to reduce reporting time and improve or preserve inter-reader
+agreement, with the greatest gains often occurring among less experienced readers
+\cite{lim2022improved}. This thesis therefore treats the system as a potential
+component of decision support, not as an autonomous treatment decision-maker.
+
+\subsection{Technical Motivation: From Classification to Structured Prediction}
+\label{sec:intro-technical-motivation}
+
+The evolution of lumbar MRI automation has progressively narrowed the unit of
+prediction. Early work often asked whether a lesion or abnormality was present in an
+image. Subsequent systems localised discs, graded individual levels, and shared
+encoders across several pathologies. Public benchmark design has now made the task
+more explicit. The RSNA Lumbar Degenerative Imaging Spine Classification resource,
+published as LumbarDISC, contains 2,697 patients and 8,593 MRI series collected
+across eight institutions in six countries \cite{richards2026the}. The associated
+challenge requires five condition/laterality targets at five lumbar levels, producing
+25 ordinal outputs per study \cite{rsna2024rsna,richards2026the}. A correct model
+therefore does not simply output ``mild'', ``moderate'' or ``severe'' for an image;
+it attaches one of those grades to a particular condition at a particular level and,
+for lateral compartments, a particular side.
+
+This target structure exposes a limitation in the prevailing formulation. Most
+systems share image features but ultimately emit independent output heads. Shared
+features allow several tasks to benefit from a common representation, but a
+prediction at L4--L5 does not explicitly inform an uncertain prediction at L3--L4;
+a confident left foraminal prediction does not interact structurally with its right
+counterpart; and the central, foraminal and subarticular targets at one motion
+segment do not exchange typed messages simply because they coexist anatomically.
+The representation is therefore multi-task but not fully relational.
+
+Graph learning provides a natural language for testing whether those relationships
+carry useful information. Graph neural networks are not novel by themselves, and a
+lumbar application has already reconstructed an individual disc as a point cloud and
+graded it with a graph network \cite{baur2024automated}. That precedent is important
+because it prevents an unjustified claim that ``using a graph in lumbar MRI'' is new.
+The unresolved question is narrower: whether the \emph{prediction targets} can be
+represented as nodes connected by clinically motivated relation types, and whether
+those relations improve grading beyond independent heads, an ordered level
+transformer and a homogeneous graph. The distinction between a graph over points
+within one disc and a graph over disease--anatomy targets across the spine is the
+novelty boundary this thesis tests.
+
+A second technical motivation concerns multimodal evidence. Recent methods have
+already shown that cross-view and cross-sequence attention can improve lumbar
+assessment \cite{batra2025mscan,nguyen2026crossspine}, while anatomy-guided
+inter-level context has also become an active direction \cite{chai2026anatomy}.
+These developments mean that novelty cannot rest on ``using multiple sequences'' or
+``using attention''. The remaining question is whether evidence allocation should be
+\emph{conditioned on the target and the patient}, and whether one trained model can
+remain operational when an expected sequence is unavailable or present but of poor
+quality. A fixed fusion rule assumes the same contribution of sagittal T1, sagittal
+T2/STIR and axial T2 for every target and every study. Clinical sequence--pathology
+correspondence makes that assumption doubtful.
+
+A third motivation is representation learning. Generic ImageNet pretraining is
+convenient but does not exploit the particular correspondence available in MRI: the
+same anatomical level can be observed under different contrasts and planes. Earlier
+spinal work demonstrated that self-supervision derived from patient-level or
+longitudinal information can reduce dependence on manual labels
+\cite{jamaludin2017selfsupervised}, and disc-centric contrastive work continues that
+line \cite{acharya2026disccentric}. DICOM geometry makes a stronger, directly
+anatomical pairing possible. If sagittal and axial observations can be matched in
+patient space, then the correspondence itself can serve as supervision without
+pretending that the images should look visually alike.
+
+Finally, there is a translational motivation. Systematic reviews repeatedly find
+that internally impressive medical-imaging models underperform when re-evaluated
+outside their development distribution \cite{compte2023are,wang2024machine}.
+Lumbar-specific external validations show the same pattern, with fine-grained
+grading generally less portable than localisation or detection
+\cite{mcsweeney2023external,zhang2023deep}. A model intended for eventual use in
+Iraq or the wider region therefore cannot be justified solely by performance on a
+multinational benchmark. The model must be transported to a genuinely independent
+hospital cohort, its zero-shot degradation measured before local tuning, and the
+amount of local annotation required to recover performance quantified explicitly.
+That annotation--performance curve is more actionable than a single statement that
+``domain adaptation improved accuracy''.
+
+\subsection{Why the Problem Should Be Addressed Now}
+\label{sec:intro-why-now}
+
+Three developments make the present study timely. First, LumbarDISC supplies a
+large, multi-institutional and anatomically structured benchmark whose target schema
+is rich enough to test relational modelling rather than generic image
+classification \cite{richards2026the}. Second, public anatomical resources such as
+SPIDER reduce the need to claim localisation or segmentation as the central
+contribution \cite{vandergraaf2024lumbar}. Third, the current methodological
+literature is sufficiently mature to provide strong controls: multi-view
+cross-attention, anatomy-guided contextual models, contemporary CNN and transformer
+backbones, self-supervised pretraining, calibration and parameter-efficient transfer
+all exist as comparators or supporting tools. The research can therefore ask a more
+precise question than whether a new architecture attains a high score.
+
+The resulting opportunity is methodological rather than merely computational. The
+field now has enough data and enough baseline competence to test whether explicit
+clinical structure provides value over capacity alone. If a typed target graph,
+anatomical self-supervision or disease-conditioned router fails to outperform its
+control, that negative result is still informative. Conversely, if a gain disappears
+when topology is shuffled, when a simpler transformer is matched for capacity, or
+when the model is transported to another hospital, the interpretation must change.
+This insistence on falsifiable components is part of the motivation for the study,
+not an afterthought added to evaluation.
+
+% ===========================================================================
+\section{Problem Statement}
+\label{sec:intro-problem}
+
+Despite rapid progress in automated lumbar MRI analysis, four connected
+methodological problems remain.
+
+\subsection{Problem 1: The Output Space Is Structured but Commonly Treated as Independent}
+\label{sec:intro-problem-relational}
+
+The benchmark output space contains ordered lumbar levels, multiple conditions at
+each level and bilateral counterparts. These targets arise from one connected
+anatomical system, yet the dominant design predicts them independently after a
+shared encoder. This separation is convenient for implementation but does not test
+whether adjacent-level context, within-level co-occurrence or bilateral relations
+carry predictive information. Existing graph work in lumbar MRI does not resolve
+this question because its graph is constructed within a disc rather than across the
+disease targets \cite{baur2024automated}. CrossSpine introduces anatomical priors
+and level-specific behaviour but still does not formulate the full 25 target outputs
+as a typed communication graph \cite{nguyen2026crossspine}. The first problem is
+therefore not the absence of contextual modelling in general; it is the absence of a
+controlled test of explicit disease--anatomy relations among the prediction targets.
+
+A relational model also carries a specific risk: useful context can become
+``information contagion''. A severe lesion at one level should not cause the model
+to elevate an adjacent normal level simply because degeneration often co-occurs.
+Any graph proposed as a solution must therefore preserve local visual evidence,
+include non-relational and homogeneous controls, and be stress-tested on naturally
+isolated lesions. Without those controls, improved aggregate performance would not
+establish that the anatomical topology is beneficial.
+
+\subsection{Problem 2: Sequence Fusion Is Usually Fixed While Evidence Is Target- and Quality-Dependent}
+\label{sec:intro-problem-routing}
+
+Sagittal T1, sagittal T2/STIR and axial T2 are complementary acquisitions. The
+foramina, central canal and lateral recess are not equally well represented in each
+view, and routine data may be incomplete or technically degraded. Strong recent
+systems address multi-view fusion through cross-attention
+\cite{batra2025mscan,nguyen2026crossspine}, but a remaining deployment question is
+whether one model can dynamically allocate evidence by condition, level, patient and
+sequence quality. A model trained only on complete, high-quality benchmark studies
+may fail when one sequence is missing, truncated or motion-corrupted. Missingness
+and corruption are also different problems: an absent sequence can be masked,
+whereas a degraded sequence remains present and can attract misleading attention.
+The second problem is therefore to learn adaptive sequence allocation without
+turning the router into an unexamined source of instability.
+
+\subsection{Problem 3: Cross-Sequence Correspondence Is Available but Underused as Supervision}
+\label{sec:intro-problem-ssl}
+
+Self-supervised learning can reduce dependence on costly expert labels, but common
+contrastive objectives construct positive pairs through augmentations of the same
+image. Multi-sequence MRI contains a more domain-specific relationship: different
+acquisitions can depict the same anatomical level even when their intensity pattern,
+orientation and diagnostic role differ. DICOM patient-space geometry provides the
+physical correspondence required to identify those pairs. Prior spinal
+self-supervision demonstrates the value of metadata-derived or longitudinal
+relationships \cite{jamaludin2017selfsupervised}, but anatomical cross-sequence
+correspondence has not been established as the supervision signal for the target
+formulation studied here.
+
+The problem is not solved simply by forcing all sequence representations to become
+identical. T1 and T2 contrasts contain sequence-specific diagnostic information, so
+excessive invariance could improve embedding alignment while damaging grading. The
+study must therefore separate the self-supervised projection space from downstream
+features and test explicitly whether sequence-specific information survives
+pretraining.
+
+\subsection{Problem 4: Internal Accuracy Does Not Establish Transportability or Clinical Error Alignment}
+\label{sec:intro-problem-transfer}
+
+The strongest evidence against uncritical internal benchmarking is the repeated
+performance decline under external validation
+\cite{compte2023are,mcsweeney2023external,zhang2023deep}. Scanner manufacturer,
+field strength, resolution, axial prescription, preprocessing and patient mix can
+all change. More subtly, the reference standard may change: a public benchmark may
+use structured expert annotation while a hospital's routine reports reflect local
+reporting habits and may omit findings that were not considered clinically salient.
+An external performance drop can therefore combine imaging-domain shift,
+localisation failure and reference-standard shift.
+
+A defensible transfer study must measure zero-shot performance before local tuning,
+keep the local test set fixed, separate it from the adaptation pool, and harmonise
+the local reference standard as far as resources allow. The present work therefore
+uses the Rizgary Hospital cohort for external evaluation rather than for iterative
+architecture development. The principal local comparison is restricted to central
+canal stenosis, for which a defensible overlap with the public benchmark can be
+created; local disc bulge, protrusion and extrusion remain a separate morphology
+task rather than being relabelled as stenosis.
+
+The error objective also requires care. Severity grades are ordinal, and distant
+under-grading is clinically different from adjacent disagreement. Yet the literature
+does not establish that ordinal losses automatically improve classification:
+Niemeyer et al. found several ordinal formulations unable to outperform standard
+cross-entropy for Pfirrmann grading \cite{niemeyer2021a}. At the same time, reducing
+Severe$\rightarrow$Normal/Mild errors by simply shifting the model toward predicting
+Severe would create an unacceptable false-positive burden. The fourth problem is
+therefore to evaluate error direction, calibration and selective prediction without
+converting radiological grading into an unsupported claim of treatment utility.
+
+\subsection{Integrated Problem Statement}
+\label{sec:intro-integrated-problem}
+
+Taken together, the research problem can be stated as follows:
+
+\begin{quote}
+Current automated lumbar MRI grading systems can localise anatomy and predict
+per-level disease severity with increasingly strong internal performance, but the
+prevailing formulation does not fully exploit the relational structure of the
+25-target output space, does not explicitly learn target- and quality-dependent
+sequence allocation, underuses DICOM-defined cross-sequence anatomical
+correspondence as a self-supervised signal, and provides limited evidence on how
+these design choices behave under true institutional transfer. A controlled
+methodology is therefore required to determine whether explicitly modelling these
+properties improves grading, robustness, label efficiency and portability beyond
+strong matched baselines, while preserving local evidence and respecting the
+uncertainty of the clinical reference standard.
+\end{quote}
+
+\laterinsert{If implementation reveals a previously unrecognised but reproducible
+problem that materially changes the framing---for example a systematic DICOM
+geometry failure mode across a substantial cohort---add a short factual paragraph
+here and document the protocol amendment. Do not add a new problem merely because a
+proposed contribution underperformed.}
+
+% ===========================================================================
+\section{Research Gap and Novelty Boundary}
+\label{sec:intro-gap}
+
+Chapter~\ref{ch:litreview} develops the evidence in detail; the purpose here is to
+state the gap concisely enough to define the thesis.
+
+\subsection{Gap A: Explicit Relational Modelling of Disease--Anatomy Targets}
+\label{sec:intro-gap-graph}
+
+The reviewed literature contains multi-task systems, inter-level attention,
+anatomical priors and one lumbar graph model, but no reviewed study constructs the
+benchmark's level--condition--laterality targets as a heterogeneous graph with typed
+relations for adjacent levels, within-level condition coexistence and bilateral
+symmetry. Baur et al. use a graph within one reconstructed disc
+\cite{baur2024automated}; Nguyen et al. introduce level-specific priors and
+cross-sequence attention without target-to-target graph communication
+\cite{nguyen2026crossspine}; Chai et al. demonstrate anatomy-guided contextual
+multi-level modelling without the disease-target graph formulation proposed here
+\cite{chai2026anatomy}. The intended contribution is therefore not ``graph neural
+networks for lumbar MRI'' but a controlled test of an explicit typed graph over the
+prediction targets themselves.
+
+\subsection{Gap B: Anatomically Aligned Self-Supervision and Disease-Conditioned Evidence Routing}
+\label{sec:intro-gap-sequence}
+
+The literature establishes both the complementarity of MRI sequences and the value
+of self-supervised pretraining, but these strands remain only partially connected in
+lumbar grading. Anatomical correspondence across sequences is usually treated as a
+preprocessing requirement for fusion rather than as supervision. At the same time,
+multisequence systems generally learn a common fusion mechanism rather than a
+condition- and quality-dependent allocation that is deliberately challenged under
+missing and corrupted modalities. The thesis therefore tests two linked ideas: that
+DICOM geometry can define cross-sequence positive relationships, and that a single
+model can use the resulting features through a target-conditioned router whose
+failure modes are directly measurable.
+
+\subsection{Gap C: Quantified Transfer and Adaptation Under a Harmonised External Task}
+\label{sec:intro-gap-transfer}
+
+Existing external validations establish that transport is difficult, but they
+usually report one transported model at one point in the adaptation process---often
+with no adaptation at all. The operational question for a receiving hospital is
+instead how performance changes before adaptation and how quickly it recovers as
+local labels are supplied. The literature reviewed for this thesis contains no
+Middle Eastern evaluation of the same scope and no quantified parameter-efficient
+annotation curve for this lumbar target formulation. The gap is therefore not
+simply ``lack of external validation''; it is lack of a staged zero-shot-to-few-shot
+transfer experiment with fixed local testing, controlled annotation budgets and
+explicit reference-standard harmonisation.
+
+\subsection{Supporting Gap: Directional Error and Calibrated Uncertainty}
+\label{sec:intro-gap-error}
+
+Ordinal severity and asymmetric error are clinically meaningful, but ordinal
+objectives have not consistently outperformed categorical baselines
+\cite{niemeyer2021a}. Calibration is also rarely reported in lumbar MRI despite the
+known overconfidence of modern neural networks \cite{guo2017calibration}. These are
+therefore treated as supporting questions rather than headline novelty. A
+cost-sensitive objective is retained only if it reduces clinically consequential
+under-grading without creating indiscriminate Severe false positives, and selective
+prediction is evaluated as a model behaviour rather than proof of a validated
+clinical workflow.
+
+The novelty claim throughout the thesis will remain appropriately bounded. The
+phrasing ``to our knowledge'' or ``in the reviewed literature'' is used where
+necessary, and the final claim will be updated against the literature available at
+the time of submission. A new paper that adopts one element of the proposed system
+does not invalidate the PhD if the controlled experimental question remains
+distinct; it does, however, change how originality must be described.
+
+\laterinsert{Immediately before thesis submission, update this novelty boundary
+against publications appearing after the current literature-search cut-off. Record
+which claims remain original and which should be reframed as independent validation,
+extension or comparative evidence.}
+
+% ===========================================================================
+\section{Research Aim}
+\label{sec:intro-aim}
+
+The overall aim of this PhD is:
+
+\begin{quote}
+\emph{to determine whether explicitly modelling anatomical relationships among
+lumbar disease targets, anatomically aligned evidence across MRI sequences, and
+target-dependent sequence availability improves the accuracy, robustness, label
+efficiency and cross-institutional portability of automated lumbar spine MRI
+severity grading, relative to strong non-relational and fixed-fusion baselines.}
+\end{quote}
+
+The aim is intentionally phrased as a determination rather than a promise of
+superiority. The thesis succeeds scientifically if it establishes under controlled
+conditions where these mechanisms help, where they fail, and what their limits are.
+
+% ===========================================================================
+\section{Research Objectives}
+\label{sec:intro-objectives}
+
+The aim is operationalised through the following objectives.
+
+\begin{enumerate}
+  \item To construct a reproducible patient-level lumbar MRI analysis pipeline that
+        preserves DICOM patient-space geometry, performs reliable level
+        localisation, and supplies identical anatomically defined regions of
+        interest to all grading baselines and proposed models.
+
+  \item To establish competitive independent and contextual grading baselines on
+        the public LumbarDISC development data, including fixed fusion,
+        cross-attention and ordered inter-level context where reproducibility
+        permits, so that improvements cannot be attributed to a weak comparator.
+
+  \item To develop and evaluate anatomically aligned cross-sequence
+        self-supervision in which positive relationships are defined by the same
+        patient and lumbar level across MRI sequences using DICOM geometry.
+
+  \item To quantify whether this anatomical self-supervision improves supervised
+        grading under 10\%, 25\%, 50\% and 100\% label availability and whether it
+        preserves sequence-specific diagnostic information.
+
+  \item To develop and evaluate disease-conditioned adaptive sequence routing that
+        learns patient- and target-dependent weights over available MRI evidence
+        while explicitly representing sequence availability and acquisition quality.
+
+  \item To test the router under both missing-sequence and corrupted-sequence
+        conditions, and to compare its behaviour with concatenation, averaging and
+        ordinary cross-attention under matched inputs and training budgets.
+
+  \item To construct a heterogeneous disease--anatomy graph over the 25
+        level--condition--laterality targets, with typed adjacent-level,
+        same-level cross-condition and bilateral relations, and to compare it with
+        independent heads, an ordered level transformer, a homogeneous graph,
+        ungated message passing and shuffled topology.
+
+  \item To test whether relational reasoning introduces adjacent-level false
+        positives in naturally isolated lesions and to retain the graph only where
+        any performance or robustness benefit is not purchased by clinically
+        incoherent information propagation.
+
+  \item To compare categorical, ordinal and clinically asymmetric cost-sensitive
+        grading objectives, together with probability calibration and uncertainty
+        analysis, while explicitly reporting both severe under-grading and severe
+        over-grading.
+
+  \item To quantify zero-shot transfer from the multinational public benchmark to
+        the independent Rizgary Hospital cohort on the shared central-canal grading
+        task, separating localisation, image-domain and reference-standard effects
+        as far as the retrospective data allow.
+
+  \item To estimate an annotation--performance recovery curve using controlled
+        local adaptation sizes $N\in\{10,25,50,100\}$ and to compare where a limited
+        trainable-parameter budget is most effectively placed.
+
+  \item To report all principal comparisons with patient-level uncertainty,
+        repeated training where feasible, contribution-specific ablations, negative
+        results and explicit methodological limitations.
+\end{enumerate}
+
+These objectives define a staged experiment rather than a monolithic architecture.
+A component is not retained because it appears in the proposal; it is retained only
+if the corresponding experiment demonstrates a reproducible contribution or a
+meaningful robustness, calibration or interpretability advantage.
+
+% ===========================================================================
+\section{Research Questions}
+\label{sec:intro-rqs}
+
+The research questions are fixed prospectively and correspond directly to the
+methodological tests in Chapter~\ref{ch:methodology}.
+
+\begin{description}
+  \item[RQ1 --- Relational disease modelling.] Does representing lumbar disease
+  targets as a typed heterogeneous graph improve grading over independent target
+  heads, an ordered five-level transformer and a homogeneous graph, and are any
+  gains concentrated where single-target evidence is weakest?
+
+  \item[RQ2 --- Anatomically aligned self-supervision.] Does cross-sequence
+  pretraining based on DICOM-defined anatomical correspondence improve grading,
+  label efficiency and transfer compared with ImageNet initialisation, generic
+  medical pretraining and ordinary augmentation-based contrastive learning?
+
+  \item[RQ3 --- Disease-conditioned modality routing.] Can one model learn
+  target- and patient-dependent sequence weights while remaining robust to both
+  missing and quality-degraded MRI sequences, without requiring a separately
+  trained network for every combination of sagittal T1, sagittal T2/STIR and axial
+  T2?
+
+  \item[RQ4 --- Cross-institutional transfer.] What is the zero-shot degradation
+  when a benchmark-trained model is applied to a previously unseen Middle Eastern
+  clinical cohort, how much of that degradation is attributable to localisation
+  versus grading/reference-standard shift, and how does performance recover as the
+  amount of local annotation available for adaptation increases?
+
+  \item[RQ5 --- Clinically asymmetric error and uncertainty.] Do ordinal and
+  cost-sensitive objectives reduce clinically consequential distant errors,
+  particularly Severe$\rightarrow$Normal/Mild, and can calibrated uncertainty
+  support selective prediction without overstating clinical safety?
+\end{description}
+
+These questions are intentionally answerable by negative as well as positive
+results. If a typed graph performs no better than a homogeneous graph, RQ1 is still
+answered. If anatomical self-supervision improves label efficiency but not external
+transfer, RQ2 yields a more limited but still informative result. This design avoids
+defining doctoral success as the requirement that every proposed component win.
+
+% ===========================================================================
+\section{Research Hypotheses}
+\label{sec:intro-hypotheses}
+
+The study uses directional hypotheses where the literature justifies a prediction,
+but avoids arbitrary target accuracies that would have no defensible basis before
+implementation.
+
+\begin{description}
+  \item[H1 --- Anatomical self-supervision.] Anatomical cross-sequence
+  self-supervision will improve label-efficient grading and cross-institutional
+  robustness relative to generic pretraining, particularly when only a fraction of
+  benchmark labels is used.
+
+  \item[H2 --- Adaptive routing.] Disease-conditioned routing with explicit
+  availability masking, modality dropout and quality-aware gating will degrade less
+  under missing-sequence and corruption experiments than fixed concatenation or
+  ordinary cross-attention trained only on clean complete studies.
+
+  \item[H3 --- Heterogeneous relational structure.] A typed heterogeneous graph
+  will outperform independent target heads and a homogeneous graph if the proposed
+  anatomical edge types carry useful information; performance under a shuffled-edge
+  control should deteriorate if the topology itself matters.
+
+  \item[H4 --- External degradation.] Zero-shot performance on the Rizgary Hospital
+  cohort will be lower than internal benchmark performance because of scanner,
+  protocol, population, localisation and reference-standard shift; the magnitude
+  and pattern of that degradation are treated as findings rather than as failure of
+  the research programme.
+
+  \item[H5 --- Annotation-dependent recovery.] Local adaptation will improve
+  performance as annotation increases, but no predetermined percentage of recovery
+  is required. The shape of the recovery curve and the location in the network at
+  which limited adaptation is most effective are empirical outcomes.
+
+  \item[H6 --- Asymmetric grading error.] Cost-sensitive and ordinal objectives may
+  reduce distant Severe$\rightarrow$Normal/Mild errors even if they do not improve
+  aggregate macro-F1; any reduction must be evaluated against false-positive Severe
+  predictions and against the cross-entropy baseline
+  \cite{niemeyer2021a}.
+\end{description}
+
+The hypotheses will not be rewritten after inspection of the held-out public or
+Rizgary test results. If an implementation decision changes the operational test of
+a hypothesis, that change will be entered into the protocol changelog with its date
+and rationale.
+
+% ===========================================================================
+\section{Conceptual Framework}
+\label{sec:intro-conceptual}
+
+The thesis can be understood as a progression from \emph{local evidence} to
+\emph{structured evidence} and finally to \emph{transported evidence}.
+
+At the first level, a model receives anatomically localised image evidence for a
+single level and target. This is the baseline condition: if local evidence alone is
+sufficient, more complex mechanisms should not be retained. At the second level,
+the model is permitted to combine complementary MRI sequences, but the combination
+must respect anatomical correspondence and sequence availability. Anatomical
+self-supervision asks whether the same structure under different acquisitions can
+produce a more label-efficient representation, while disease-conditioned routing
+asks how strongly each sequence should contribute to a given target.
+
+At the third level, a target is no longer treated as an isolated endpoint. Its
+representation becomes a node in a typed graph whose relations correspond to three
+known structures of the lumbar grading problem: the ordered chain of levels,
+coexisting compartments at a level, and bilateral pairing. Message passing is soft
+rather than deterministic; no rule states that disease at one level forces disease
+at its neighbour. The graph is therefore a hypothesis about useful context, not a
+hard-coded disease progression model.
+
+At the fourth level, predictions are evaluated as ordinal and probabilistic outputs.
+The model is judged not only by aggregate discrimination but by error distance,
+Severe-class performance, calibration and the false-positive cost of any
+cost-sensitive objective. This stage asks whether a statistically improved model is
+also better aligned with the shape of clinically consequential grading error.
+
+The final level is institutional transport. The representation, router, graph and
+output head developed on public data are frozen before external evaluation. The
+Rizgary Hospital cohort then asks a different question from internal validation:
+what remains true when the acquisition and reporting environment changes? Only
+after zero-shot performance has been measured is local adaptation permitted. This
+ordering prevents the local test cohort from becoming an informal development set.
+
+Conceptually, the thesis therefore tests the proposition
+
+\begin{equation}
+\text{robust grading}
+\;=\;
+f(\text{local anatomy},\;\text{cross-sequence evidence},\;
+\text{target relations},\;\text{uncertainty},\;\text{domain}),
+\label{eq:intro-conceptual}
+\end{equation}
+
+where the equation is explanatory rather than a literal computational model. Each
+term corresponds to a controlled experiment, and no term is assumed necessary until
+its ablation supports that conclusion.
+
+% ===========================================================================
+\section{Significance of the Study}
+\label{sec:intro-significance}
+
+\subsection{Scientific Significance}
+\label{sec:intro-significance-scientific}
+
+The principal scientific significance lies in changing the unit of reasoning from
+an isolated image label to a structured set of disease targets. Many improvements in
+medical imaging can be produced by additional parameters, larger backbones or more
+aggressive tuning. Such gains are difficult to interpret mechanistically. By
+contrast, this thesis attaches each proposed contribution to a specific hypothesis
+and a destructive control: anatomical edges are compared with homogeneous and
+shuffled topology; adaptive routing is compared with fixed fusion and challenged by
+missing and corrupted modalities; anatomical self-supervision is compared with
+generic pretraining and tested for over-invariance. The resulting evidence can show
+not merely whether the full model scored higher, but \emph{why} it did or did not.
+
+This matters because recent lumbar literature already demonstrates sophisticated
+contextual models \cite{chai2026anatomy,batra2025mscan,nguyen2026crossspine}. The
+research contribution cannot therefore be the generic use of attention, graphs or
+multiple sequences. Its value lies in isolating the anatomical assumptions and
+measuring them against alternatives under one controlled pipeline.
+
+\subsection{Methodological Significance}
+\label{sec:intro-significance-methodological}
+
+The study places unusually strong emphasis on validity controls. Patient identity,
+not slice or target, defines the data split; self-supervised learning is prohibited
+from seeing held-out patients; localisation is evaluated separately from grading;
+zero-shot transfer is measured before adaptation; the external reference standard is
+kept distinct from routine report extraction; and every claimed model contribution
+requires an ablation. These choices respond directly to recurring weaknesses in the
+medical-imaging literature, where leakage, non-comparable splits and weak external
+validation can produce optimistic performance estimates
+\cite{compte2023are,wang2024machine}.
+
+The transfer design is methodologically significant for a second reason. The local
+hospital cohort is not used simply as another test set. The experiment attempts to
+disentangle localisation failure, image-domain shift and reference-standard shift,
+then measures recovery as local labels are added. This converts ``generalisation''
+from a binary claim into a measurable process.
+
+\subsection{Translational and Regional Significance}
+\label{sec:intro-significance-regional}
+
+The regional significance follows from the use of an independent Iraqi hospital
+cohort that was not curated to mirror the public benchmark. Models developed on
+large international datasets are often assumed to transfer into settings whose
+scanner mix, acquisition practice, disease prevalence and reporting conventions were
+not represented in development. Testing that assumption is particularly important
+for institutions that do not have the resources to reproduce a large annotation
+campaign locally. If useful performance can be recovered from tens rather than
+hundreds of local annotations, that is a practical finding; if not, the negative
+result is equally important because it quantifies the annotation burden required for
+responsible transfer.
+
+The study does not claim that one external hospital represents all of Iraq or the
+Middle East. Rizgary Hospital provides evidence of transport to one genuinely
+independent setting. Regional generalisation would require additional hospitals and
+is therefore a future study rather than an inference drawn from one centre.
+
+\subsection{Clinical Significance and its Boundary}
+\label{sec:intro-significance-clinical}
+
+The intended clinical significance is improved technical support for structured MRI
+grading: consistency, reproducibility, calibrated confidence and explicit handling
+of incomplete imaging. The thesis does not claim that this will improve treatment
+outcomes, referral decisions or radiologist productivity. Those claims require a
+prospective reader-assistance or impact study, as demonstrated by work that measures
+reader performance directly \cite{lim2022improved}. The present study therefore
+uses language such as ``decision-support potential'' and ``technical portability'',
+not ``clinical benefit''.
+
+\laterinsert{After Chapter 4 is complete, replace this placeholder with a brief
+statement of which significance claims were actually supported. For example, state
+whether the main benefit was discrimination, robustness, label efficiency,
+calibration or transfer. Do not infer patient benefit from model metrics.}
+
+% ===========================================================================
+\section{Proposed Contributions}
+\label{sec:intro-contributions}
+
+At the protocol stage, the contributions below collectively form the proposed \textbf{AMOG-Net} framework and are \emph{proposed contributions}.
+They become demonstrated thesis contributions only if the experiments support them.
+
+\subsection{Contribution 1: Anatomically Aligned Cross-Sequence Self-Supervision}
+\label{sec:intro-contrib-ssl}
+
+The first proposed contribution uses DICOM-defined patient-space correspondence to
+construct positive relationships between different MRI sequences depicting the same
+patient and lumbar level. The objective is not to invent a new generic contrastive
+loss; established contrastive or non-contrastive objectives may be used. The
+contribution under test is the anatomical definition of correspondence and its value
+for label efficiency, grading and transport. A dedicated preservation experiment
+checks whether alignment erases sequence-specific diagnostic information.
+
+\subsection{Contribution 2: Disease-Conditioned and Quality-Aware Sequence Routing}
+\label{sec:intro-contrib-routing}
+
+The second proposed contribution allows one study to be fused differently for
+different disease targets. Routing depends on target identity, patient features,
+sequence availability and quality evidence, and is evaluated under genuine or
+simulated missingness and corruption. The contribution is not the existence of a
+softmax gate or mixture-of-experts mechanism; it is the target-conditioned allocation
+of clinically complementary evidence and the explicit robustness evaluation that
+accompanies it.
+
+\subsection{Contribution 3: Heterogeneous Disease--Anatomy Graph Reasoning}
+\label{sec:intro-contrib-graph}
+
+The third proposed contribution represents the 25 benchmark outputs as nodes in a
+heterogeneous graph. Typed edges encode adjacent-level, within-level cross-condition
+and bilateral relations. The graph includes a mechanism for preserving local
+evidence when neighbour messages are unhelpful and is evaluated against independent,
+ordered-transformer, homogeneous, ungated and shuffled-topology controls. A focal
+isolated-lesion test determines whether relational reasoning improves uncertain
+predictions without artificially spreading disease to adjacent normal levels.
+
+\subsection{Contribution 4: A Structured Cross-Institutional Transfer Evaluation}
+\label{sec:intro-contrib-transfer}
+
+The translational contribution is an experimental design rather than a new network
+layer. The selected public-data model is evaluated zero-shot on a fixed Rizgary
+Hospital test set before any local adaptation. A separate local adaptation pool is
+then sampled at controlled annotation sizes and used to compare constrained update
+strategies. The analysis is strengthened by a verified-localisation control and,
+where resources permit, harmonised independent reader grading of central canal
+stenosis. This design estimates both the cost of transport and the cost of recovery.
+
+\subsection{Supporting Contributions}
+\label{sec:intro-contrib-supporting}
+
+Ordinal and cost-sensitive objectives, calibration, uncertainty estimation and
+parameter-efficient adaptation support the principal contributions but are not
+claimed as original methods. Their value lies in testing whether the proposed
+structured model behaves sensibly under clinically relevant error definitions and
+limited local annotation. They are retained only when their contribution is
+measurable.
+
+\laterinsert{At final submission, replace ``proposed contributions'' with a concise
+``demonstrated contributions'' subsection listing only components supported by the
+locked experiments. Components that failed should be reported as negative findings,
+not retrospectively removed from the research history.}
+
+% ===========================================================================
+\section{Scope and Delimitations}
+\label{sec:intro-scope}
+
+Clear boundaries are necessary because lumbar MRI supports a much broader clinical
+and computational agenda than one PhD can test.
+
+\subsection{Clinical Scope}
+\label{sec:intro-scope-clinical}
+
+The primary public task is degenerative lumbar disease severity grading at five
+levels from L1--L2 through L5--S1. On LumbarDISC, the full target space contains
+central canal stenosis, left and right neural foraminal narrowing, and left and
+right subarticular stenosis, each graded as Normal/Mild, Moderate or Severe
+\cite{richards2026the}. The study does not attempt to diagnose every cause of low
+back pain, infer symptoms, determine surgical candidacy or predict long-term patient
+outcomes.
+
+The primary local transfer task is narrower. Rizgary Hospital reports support a
+defensible central-canal comparison more readily than the complete benchmark schema.
+The confirmatory external analysis is therefore restricted to central canal stenosis
+at the five lumbar levels unless new expert grading expands the local reference
+standard. Disc bulge, protrusion and extrusion are retained as a separate local
+morphology task and are not heuristically converted into stenosis grades.
+
+\subsection{Imaging Scope}
+\label{sec:intro-scope-imaging}
+
+The principal imaging inputs are sagittal T1, sagittal T2/STIR and axial T2 MRI.
+Other sequences may appear in clinical studies but do not define the primary model
+unless a justified later protocol amendment is made. DICOM geometry is preserved
+because cross-plane correspondence is part of the scientific design. PNG or other
+rendered formats may be used for visual inspection but do not replace the geometric
+metadata required for alignment.
+
+\subsection{Methodological Scope}
+\label{sec:intro-scope-method}
+
+Anatomical localisation and segmentation are enabling technologies. They are
+measured and controlled because a poor crop can invalidate grading, but a new
+localisation architecture is not the headline doctoral contribution. Likewise,
+backbone selection is controlled rather than treated as a novelty competition. The
+research may use ResNet-, EfficientNet-, Swin- or other contemporary encoders, but
+the primary backbone is frozen before the main contribution-specific ablations.
+
+The graph topology is defined anatomically rather than discovered freely from the
+test data. Adjacent levels, same-level conditions and bilateral counterparts form the
+pre-specified relation families. Learning the globally optimal topology is a
+different research problem and is excluded from the primary scope.
+
+\subsection{Data and Institutional Scope}
+\label{sec:intro-scope-data}
+
+Model development uses the public LumbarDISC benchmark and, where permitted, SPIDER
+for anatomical localisation or segmentation support. The locally held labelled
+competition subset contains approximately 1,975 studies at the protocol stage;
+\torecord{final public development, validation and held-out counts after quality
+control}. The local project inventory currently identifies 299 narrative reports
+and 294 candidate matched multi-sequence cases, while a wider raw DICOM inventory
+contains additional studies. These numbers are not presented as the final cohort
+until one-to-one reconciliation is complete:
+\torecord{final Rizgary case-flow counts and reasons for exclusion}.
+
+Rizgary Hospital is a single external institution. The study can therefore support a
+claim of transport to that independent setting, not universal Middle Eastern
+performance. Additional regional hospitals would be required for a multicentre
+regional generalisation claim.
+
+\subsection{Ethical and Governance Scope}
+\label{sec:intro-scope-ethics}
+
+The local component is retrospective and does not alter patient care. Formal use of
+the local data remains conditional on the relevant institutional permissions:
+\toconfirm{hospital/ethics approval reference, date and responsible institution};
+\toconfirm{retrospective consent or waiver basis}; and
+\toconfirm{permitted compute environment, including whether external cloud/GPU
+processing is authorised}. Identifiable raw DICOM is not supplied to students or
+external compute; a controlled de-identified research copy is required before local
+analysis.
+
+\subsection{Evaluation Scope}
+\label{sec:intro-scope-evaluation}
+
+The thesis evaluates technical grading performance, robustness, calibration,
+computational cost and cross-institutional portability. The unit of statistical
+independence is the patient. It does not claim prospective clinical impact,
+radiologist replacement or treatment benefit. Reader-assistance evaluation is a
+logical future study if the technical system proves sufficiently reliable.
+
+% ===========================================================================
+\section{Assumptions and Operational Definitions}
+\label{sec:intro-definitions}
+
+The following terms are used consistently throughout the thesis.
+
+\begin{longtable}{p{3.6cm}p{10.0cm}}
+\toprule
+\textbf{Term} & \textbf{Operational meaning in this thesis}\\
+\midrule
+\endfirsthead
+\toprule
+\textbf{Term} & \textbf{Operational meaning in this thesis}\\
+\midrule
+\endhead
+Lumbar level & One of L1--L2, L2--L3, L3--L4, L4--L5 or L5--S1.\\
+Target & A level--condition--laterality output on LumbarDISC; 25 targets per study at full benchmark scope.\\
+Severity grade & Normal/Mild, Moderate or Severe, encoded as an ordered three-class outcome.\\
+Local evidence & Image-derived representation for one target before graph message passing.\\
+Anatomical correspondence & Physical correspondence between acquisitions defined through DICOM patient-space geometry and lumbar localisation, not through image appearance alone.\\
+Sequence routing & Learned allocation of weight over available MRI sequence features for a specific patient and target.\\
+Missing modality & An expected MRI sequence is absent and explicitly unavailable to the model.\\
+Degraded modality & A sequence is present but technically compromised, for example by motion, truncation, noise, slice loss or poor coverage.\\
+Heterogeneous graph & A graph whose nodes are disease--anatomy targets and whose edges belong to clinically defined relation types.\\
+Zero-shot transfer & Evaluation of the frozen public-data model on the fixed local test set before local fine-tuning, threshold selection or local calibration.\\
+Few-shot adaptation & Model adaptation using only the separate local adaptation pool under pre-specified annotation budgets.\\
+Reference-standard shift & Difference between the process used to generate labels in the benchmark and the process used to establish the local external reference.\\
+Selective prediction & Model abstention or referral based on uncertainty; this is a technical behaviour, not evidence of a validated clinical workflow.\\
+\bottomrule
+\end{longtable}
+
+These definitions are intentionally narrower than ordinary-language usage. In
+particular, ``external validation'' does not mean that a model has been proven safe
+for deployment, and ``uncertainty'' does not mean that the network has measured a
+patient's clinical risk.
+
+% ===========================================================================
+\section{Overview of the Research Design}
+\label{sec:intro-design-overview}
+
+The research is a retrospective, multi-dataset medical-imaging methods study. Its
+logic is cumulative, but the conclusions remain component-specific.
+
+\begin{enumerate}
+  \item \textbf{Data and anatomy foundation.} Public data are inventoried,
+        partitioned by patient, reconstructed in DICOM patient space, anatomically
+        localised and converted into disease-specific 2.5D regions of interest.
+
+  \item \textbf{Strong baseline establishment.} An independent ROI classifier and
+        competitive multiview/context baselines establish what can be achieved
+        without the proposed relational formulation.
+
+  \item \textbf{Representation experiment.} Anatomically aligned cross-sequence
+        self-supervision is evaluated against generic and medical pretraining under
+        several label fractions and sequence-specific preservation probes.
+
+  \item \textbf{Fusion experiment.} Disease-conditioned sequence routing is tested
+        against fixed and attention-based fusion under complete, missing and
+        corrupted sequence conditions.
+
+  \item \textbf{Relational experiment.} Homogeneous and heterogeneous target graphs
+        are compared with independent and ordered-transformer controls, including
+        shuffled topology and isolated-lesion stress testing.
+
+  \item \textbf{Output and uncertainty experiment.} Categorical, ordinal and
+        cost-sensitive objectives are evaluated together with calibration and
+        uncertainty, with both under-grading and over-grading reported.
+
+  \item \textbf{External transport experiment.} The selected public-data model is
+        frozen and evaluated zero-shot on the fixed Rizgary Hospital test set. A
+        verified-ROI control and harmonised reader reference are used where feasible
+        to interpret the source of degradation.
+
+  \item \textbf{Adaptation experiment.} Controlled local annotation budgets are
+        sampled from a separate adaptation pool to estimate how quickly performance
+        recovers and where a limited trainable-parameter budget is most effective.
+\end{enumerate}
+
+This order deliberately prevents the final architecture from becoming an indivisible
+engineering object. Each stage introduces one assumption that can be rejected
+without invalidating the remainder of the thesis. The final model is therefore the
+simplest configuration supported by the evidence, not necessarily the configuration
+containing every proposed module.
+
+% ===========================================================================
+\section{Expected Outcomes and Criteria for Scientific Success}
+\label{sec:intro-success}
+
+The protocol does not define success as reaching a predetermined accuracy. Such a
+threshold would be difficult to justify because performance depends on target,
+severity distribution, reference-standard reliability and the final patient split.
+Scientific success is instead defined by whether the research questions can be
+answered under controlled conditions.
+
+For RQ1, success means establishing whether typed anatomical relations add value
+beyond capacity-matched controls and whether they avoid adjacent-level
+contamination. A null result is informative if the comparison is sufficiently
+powered and the topology controls are valid. For RQ2, success means establishing
+whether anatomical cross-sequence pairing improves label efficiency, transfer or
+neither, while documenting whether sequence-specific information is preserved. For
+RQ3, success means quantifying robustness under missing and degraded modalities and
+determining whether adaptive routing adds value over simpler fusion. For RQ4,
+success means producing an interpretable zero-shot transfer estimate and a controlled
+adaptation curve, even if the external drop is large. For RQ5, success means
+characterising the trade-off between severe under-grading, severe over-grading and
+probability reliability rather than selecting a loss solely because it raises one
+aggregate metric.
+
+At final submission, the thesis will distinguish three categories explicitly:
+\emph{supported contributions}, \emph{negative findings}, and \emph{unresolved
+questions}. This is preferable to rewriting the original proposal so that only
+successful components appear to have been planned.
+
+\laterinsert{After all confirmatory analyses are complete, insert a short table or
+paragraph mapping RQ1--RQ5 to their final empirical answers. Keep detailed metrics
+in the results chapter; Chapter 1 should contain only the high-level answer.}
+
+% ===========================================================================
+\section{Thesis Organisation}
+\label{sec:intro-organisation}
+
+At the current protocol stage, the thesis is organised around the progression from
+problem definition to evidence.
+
+\textbf{Chapter 1 --- Introduction} defines the clinical and methodological
+motivation, research problem, gaps, aim, objectives, research questions, hypotheses,
+proposed contributions, significance and scope of the thesis.
+
+\textbf{Chapter 2 --- Literature Review} examines the clinical grading systems that
+define the reference labels, MRI sequence--pathology correspondence, localisation
+and segmentation, backbone and contextual architectures, class imbalance and
+ordinal grading, public datasets, external validation, interpretability and the
+specific gaps that motivate the present study.
+
+\textbf{Chapter 3 --- Methodology} translates those gaps into a protocol-grade
+experimental design. It defines the public and local cohorts, leakage controls,
+DICOM reconstruction, localisation and ROI construction, self-supervised
+pretraining, adaptive routing, heterogeneous graph reasoning, grading objectives,
+calibration, ablations, external validation, domain adaptation, statistical analysis
+and reproducibility safeguards.
+
+\textbf{Chapter 4 --- Results and Analysis} will report the staged E0--E8
+experiments, including component-specific ablations, robustness analyses,
+calibration, zero-shot external transfer, few-shot adaptation and failure analysis.
+\laterinsert{Once the results are complete, update the Chapter 4 description to
+reflect the final retained experiment groups without changing the prospective
+research questions.}
+
+\textbf{Chapter 5 --- Discussion and Conclusions} will interpret the findings
+against the literature, distinguish demonstrated contributions from negative
+results, state limitations, discuss implications for transport to other institutions
+and identify the next studies required before any clinical-impact claim.
+
+\toconfirm{final institutional thesis structure if the university requires results
+and discussion as separate chapters, publication-based chapters, or an additional
+conclusion chapter}. The scientific ordering above should remain recognisable even
+if the administrative chapter numbering changes.
+
+% ===========================================================================
+\section{Rules for Completing Prospective Placeholders}
+\label{sec:intro-placeholders}
+
+Because this chapter is written before completion of implementation, several fields
+are intentionally prospective. The following rules govern their later completion.
+
+\begin{enumerate}
+  \item \textbf{[TO CONFIRM]} is used only for institutional or governance facts
+        that are currently unknown, such as an approval reference or permitted
+        compute environment. These fields are replaced only with documented facts.
+
+  \item \textbf{[TO RECORD AFTER IMPLEMENTATION]} is used for executed technical or
+        cohort quantities that cannot responsibly be specified before the pipeline
+        runs, such as final quality-controlled sample counts.
+
+  \item \textbf{[LATER INTEGRATION]} is used for a small number of places where the
+        final thesis may state the principal findings or update the novelty boundary.
+        These additions may report evidence; they must not alter the prospective
+        research questions or make an unsuccessful hypothesis disappear.
+
+  \item Any substantive protocol change made after results become visible is
+        documented with date, reason and affected analysis. Confirmatory and
+        exploratory analyses remain distinguishable.
+
+  \item The introduction will not be retrofitted to imply that the final retained
+        architecture was inevitable. The final thesis should preserve the fact that
+        ACSSL, adaptive routing, heterogeneous graph reasoning and supporting losses
+        were hypotheses subjected to testing.
+\end{enumerate}
+
+These rules turn placeholders into a transparency mechanism rather than an invitation
+to hindsight bias.
+
+% ===========================================================================
+\section{Chapter Summary}
+\label{sec:intro-summary}
+
+This chapter has defined the thesis as a study of structured and transferable lumbar
+MRI grading rather than as a competition between image backbones. The clinical task
+is inherently multi-level, multi-condition, bilateral and multi-sequence, while its
+reference labels are ordinal and imperfectly reproducible. The technical literature
+has established that localisation should precede grading, that sophisticated
+multiview systems can perform strongly on public data, and that external performance
+frequently degrades. Those achievements narrow rather than remove the research gap.
+
+The thesis therefore asks whether three explicit structural mechanisms add value:
+anatomically aligned cross-sequence self-supervision, disease-conditioned and
+quality-aware sequence routing, and a typed heterogeneous graph over
+level--condition--laterality targets. These mechanisms are evaluated component by
+component against strong controls rather than bundled into a single architecture and
+assumed beneficial. Supporting ordinal, cost-sensitive and uncertainty methods are
+used to test the clinical shape of error without being advertised as standalone
+novelty.
+
+The translational component separates model development from external evaluation.
+LumbarDISC supplies the public development benchmark; SPIDER may support anatomical
+localisation; and the independent Rizgary Hospital cohort is reserved for zero-shot
+central-canal transfer and controlled local adaptation. The local reference process
+is treated explicitly as a potential source of shift rather than assumed equivalent
+to the public benchmark. Clinical impact remains outside the scope until a separate
+reader-assistance or prospective study is conducted.
+
+The aim, objectives, RQ1--RQ5 and H1--H6 stated here form the prospective frame for
+Chapters~\ref{ch:litreview} and~\ref{ch:methodology}. The remainder of the thesis is
+therefore not required to prove that every proposed mechanism succeeds. It is
+required to determine, with reproducible evidence, which assumptions survive
+controlled testing and institutional transfer.
+
+\laterinsert{At final submission, add a two- or three-sentence high-level summary of
+the answers to RQ1--RQ5, preserving the distinction between supported contributions,
+negative results and limitations.}
+
+% ===========================================================================
+\printbibliography[heading=bibintoc,title={References}]
+
+\end{document}
