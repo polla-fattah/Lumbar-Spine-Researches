@@ -88,7 +88,91 @@ flowchart TD
 
 ---
 
-## 4. Directory Structure of the Plan
+## 4. Data Governance, Ethics and Access
+
+> [!NOTE]
+> Items marked **[CONFIRM]** need the exact institutional wording before this pack is
+> submitted. The substance is correct; only the formal phrasing is provisional.
+
+### 4.1 Provenance and authority
+
+This research is **commissioned by and conducted for Rizgary Teaching Hospital**, which
+supplied the imaging and radiology reports from its own clinical archive. It is not a
+university-initiated secondary-use study. **[CONFIRM]** the formal instrument under which
+the work proceeds — service agreement, hospital research committee approval, or
+institutional review board reference — and cite it here by number and date.
+
+The cohort is retrospective: MRI examinations already acquired in the course of routine
+clinical care for patients presenting with lumbar symptoms. No imaging was acquired for
+research purposes, no patient underwent any additional procedure, and the work carries no
+clinical risk to the individuals whose data it uses.
+
+**[CONFIRM]** the consent basis — whether the hospital relies on a waiver of individual
+consent for retrospective de-identified analysis, on broad consent recorded at
+presentation, or on another basis under national regulation.
+
+### 4.2 The public benchmark
+
+The RSNA LumbarDISC data used for model development is a **publicly released research
+dataset**, distributed already de-identified by the Radiological Society of North America
+for exactly this purpose. Its use carries no separate patient-consent obligation. The
+programme complies with the challenge's published terms of use, and **[CONFIRM]** whether
+those terms permit use in hospital-commissioned rather than purely academic work.
+
+### 4.3 Current de-identification status — action required
+
+**The local DICOM archive is not yet de-identified.** An audit of the delivered data found
+patient name, date of birth, sex and study date populated in **every one of 25,110 DICOM
+files across 341 studies**. The radiology reports, by contrast, were already anonymised
+before delivery.
+
+A de-identification tool (`tools/deidentify_dicom.py`) has been written and dry-run
+against the full archive. It removes direct identifiers, reduces dates to the year,
+strips private tags, and writes a clean copy while leaving originals untouched. The
+linkage file mapping case identifiers back to patient identity is written **outside** the
+project directory by design.
+
+**The following must be complete before any student is given access:**
+
+| Step | Status |
+| :--- | :--- |
+| De-identification tool written and dry-run verified | Done |
+| Clean copy generated | **Outstanding** |
+| Linkage file secured under restricted access | **Outstanding** |
+| Students work only from the de-identified copy | **Policy — to be enforced** |
+
+### 4.4 Access control
+
+- Identifiable data remains within hospital-controlled storage and is not distributed.
+- Students receive the **de-identified copy only**, and no student requires access to the
+  linkage file for any project described in this plan.
+- The repository excludes all patient data by configuration, so imaging cannot enter
+  version control accidentally.
+- **[CONFIRM]** whether hospital policy permits processing on external cloud compute. This
+  constrains Phase 2 of the PhD, where multi-sequence model training may exceed local GPU
+  capacity — see the compute risk in [`01_SELAR_PHD_ROADMAP.md`](01_SELAR_PHD_ROADMAP.md).
+
+### 4.5 Publication and data sharing
+
+Published outputs will report aggregate results only; no individual patient data, and no
+image from which a patient could be identified, will appear in any manuscript.
+
+Should the cohort later be released publicly as a data descriptor — noted as a candidate
+output in [`08_PUBLICATION_PLAN.md`](08_PUBLICATION_PLAN.md) — that constitutes a
+materially different level of disclosure from internal research use and would require
+**separate hospital approval**, a stricter de-identification standard including UID
+regeneration, and review for burned-in pixel annotation. It is not covered by any
+existing permission and must not be assumed.
+
+### 4.6 Clinical data, if obtained
+
+[`05_MSC4_CLINICAL_PROGNOSTICS_ROADMAP.md`](05_MSC4_CLINICAL_PROGNOSTICS_ROADMAP.md)
+depends on symptom and outcome records that have **not been confirmed to exist** and are
+not part of the current delivery. Linking clinical records to imaging is a broader
+disclosure than imaging alone, and **[CONFIRM]** would require its own approval before any
+such linkage is attempted. That project is therefore listed but not staffed.
+
+## 5. Directory Structure of the Plan
 
 All detailed individual roadmaps are stored in `c:\Users\polla\Drives\PollaFattah\UNi\Research\Students\Selar\Project\plan\`:
 
@@ -106,7 +190,7 @@ All detailed individual roadmaps are stored in `c:\Users\polla\Drives\PollaFatta
 
 ---
 
-## 5. Open Item — Paper 1 Is Gated on Four Components
+## 6. Open Item — Paper 1 Is Gated on Four Components
 
 > [!IMPORTANT]
 > **This is a sequencing question, not a disagreement between documents.**

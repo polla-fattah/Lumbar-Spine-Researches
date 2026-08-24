@@ -91,23 +91,27 @@ available to the project** and should be written as soon as the cohort is clean.
 1. **Anatomy-Aware Automatic Localization of Lumbar Spine Structures for Disease Grading**
    **Core question:** Can automatic segmentation/localization reliably identify L1–L2 through L5–S1 and extract disease-specific ROIs from multisequence MRI?
    **Method:** 3D/2.5D segmentation or heatmap localization using vertebrae, discs, canal and DICOM spatial coordinates, followed by automatic ROI extraction.
-   **Novelty requirement:** I would *not* publish merely "we used U-Net for segmentation." Segmentation of the lumbar spine is already mature, and a very recent August 2026 study specifically showed that segmentation pretraining improves label-efficient lumbar degeneration grading. ([arXiv][1]) Therefore our contribution should be **disease-aware localization and cross-sequence anatomical alignment**, not segmentation by itself.
+   **Novelty requirement:** it is not sufficient to publish merely "we used U-Net for segmentation." Segmentation of the lumbar spine is already mature, and a very recent August 2026 study specifically showed that segmentation pretraining improves label-efficient lumbar degeneration grading. ([arXiv][1]) The contribution must therefore be **disease-aware localization and cross-sequence anatomical alignment**, not segmentation by itself.
    **Targets** — Reach: MICCAI (main track). Target: *Computers in Biology and Medicine*. Floor: *Biomedical Signal Processing and Control*.
    **Publication strength:** ★★★☆☆
 
 2. **Anatomically Aligned Cross-Sequence Self-Supervised Learning for Lumbar MRI**
-   This is one of my favourite papers from the PhD. Instead of conventional ImageNet pretraining, we create a new contrastive/self-supervised algorithm in which Sagittal T1, Sagittal T2/STIR and Axial T2 regions corresponding to the **same patient and same spinal level** are treated as anatomically related views. The model learns that different-looking MRI sequences are representations of the same underlying anatomy. LumbarDISC provides exactly the type of multisequence, multilevel data that makes this possible. ([arXiv][2])
+   This is among the strongest candidates in the set. Instead of conventional ImageNet pretraining, it creates a new contrastive/self-supervised algorithm in which Sagittal T1, Sagittal T2/STIR and Axial T2 regions corresponding to the **same patient and same spinal level** are treated as anatomically related views. The model learns that different-looking MRI sequences are representations of the same underlying anatomy. LumbarDISC provides exactly the type of multisequence, multilevel data that makes this possible. ([arXiv][2])
    **Possible title:** *Cross-Sequence Anatomical Contrastive Learning for Label-Efficient Lumbar Spine MRI Analysis*.
-   This could investigate 10%, 20%, 50% and 100% label availability and determine whether anatomical pretraining reduces dependence on expert grading. The recent segmentation-pretraining work makes label efficiency especially current, but our **cross-sequence anatomical correspondence objective would be substantially different**. ([arXiv][1])
+   This could investigate 10%, 20%, 50% and 100% label availability and determine whether anatomical pretraining reduces dependence on expert grading. The recent segmentation-pretraining work makes label efficiency especially current, but the **cross-sequence anatomical correspondence objective here is substantially different**. ([arXiv][1])
    **Targets** — Reach: *Medical Image Analysis*. Target: *IEEE JBHI* or MICCAI. Floor: *Artificial Intelligence in Medicine*.
    **Publication strength:** ★★★★☆
 
 3. **Disease-Specific Adaptive Multi-View MRI Fusion with Missing-Sequence Robustness**
    **Core question:** Do different lumbar diseases require different MRI sequences, and can the network learn this automatically?
    Instead of assuming that every condition benefits equally from T1, sagittal T2 and axial T2, the model learns condition-specific weights:
-   
-   where g(c,m) is the learned importance of sequence m for condition c. During training, we deliberately remove modalities using **modality dropout**, so the model remains operational when a sequence is unavailable.
-   Existing work such as M-SCAN already shows that sagittal/axial multi-view cross-attention is powerful for spinal canal stenosis, so merely implementing cross-attention would no longer be novel enough. ([arXiv][3]) Our contribution would instead be **condition-dependent adaptive fusion + arbitrary missing-sequence robustness across all degenerative targets**.
+
+   ```
+   F_c  =  sum over m of  g(c,m) * F_m
+   ```
+
+   where g(c,m) is the learned importance of sequence m for condition c. During training, modalities are deliberately removed using **modality dropout**, so the model remains operational when a sequence is unavailable.
+   Existing work such as M-SCAN already shows that sagittal/axial multi-view cross-attention is powerful for spinal canal stenosis, so merely implementing cross-attention would no longer be novel enough. ([arXiv][3]) The contribution is instead **condition-dependent adaptive fusion + arbitrary missing-sequence robustness across all degenerative targets**.
    **Possible title:** *Disease-Adaptive Multi-Sequence Fusion with Missing-Modality Robustness for Lumbar Degenerative MRI Classification*.
    **Targets** — Reach: *Medical Image Analysis*. Target: *Artificial Intelligence in Medicine*. Floor: *Scientific Reports*.
    **Publication strength:** ★★★★☆
@@ -156,13 +160,13 @@ available to the project** and should be written as soon as the cohort is clean.
    the dissertation still stands on the component papers.
    **Publication strength:** ★★★★★
 
-There is also an **optional early review/systematic-review paper** on *anatomy-aware AI for lumbar MRI: segmentation, localization, classification and structured disease grading*. But I would not count that as one of the PhD's principal scientific contributions; a broad 2025 survey has already covered modern medical-image segmentation with lumbar-spine emphasis, so ours would need a much narrower structured-diagnosis focus to add value. ([arXiv][7])
+There is also an **optional early review/systematic-review paper** on *anatomy-aware AI for lumbar MRI: segmentation, localization, classification and structured disease grading*. This should not, however, count as one of the PhD's principal scientific contributions: a broad 2025 survey has already covered modern medical-image segmentation with lumbar-spine emphasis, so any review from this programme would need a much narrower structured-diagnosis focus to add value. ([arXiv][7])
 
-### How I would organize the PhD
+### Recommended structure
 
-I would aim for **five essential original papers**, with Papers 2–6 above forming the scientific core. Paper 1 is useful groundwork and Paper 7 is the integrative flagship paper. Importantly, I would **not force seven publications by slicing one experiment into tiny papers**. If some components are not independently substantial, combine them.
+The programme should target **five essential original papers**, with Papers 2–6 above forming the scientific core. Paper 1 is useful groundwork and Paper 7 is the integrative flagship paper. Critically, seven publications must **not** be forced by slicing one experiment into small papers. If some components are not independently substantial, combine them.
 
-The strongest publication trajectory in my view is:
+The strongest publication trajectory is:
 
 **Anatomical SSL → Adaptive Multi-View Fusion → Graph Transformer → Ordinal/Uncertainty → External Validation → Integrated AMOG-Net.**
 

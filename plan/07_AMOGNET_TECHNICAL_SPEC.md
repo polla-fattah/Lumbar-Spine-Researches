@@ -1,12 +1,33 @@
-Yes. I think there is a much stronger PhD direction here, but I would **change the research problem itself**, not merely replace ResNet50/EfficientNet/Swin with newer models.
+# AMOG-Net — Technical Specification
 
-The current MSc thesis essentially performs direct image-level three-class classification and explicitly avoids anatomical segmentation/localization.  Its main experiment compares existing architectures under multi-sequence versus Sagittal-T2-only input. 
+**Anatomy-Guided Multi-View Ordinal Graph Learning for Lumbar Spine Degenerative Disease Classification**
 
-For a PhD, I would instead propose a system that understands the **structured anatomy of the lumbar spine**.
+Supervisor: Dr. Polla Abdulhamid Fattah · Candidate: Selar
+Companion to [`01_SELAR_PHD_ROADMAP.md`](01_SELAR_PHD_ROADMAP.md), which schedules the work this document specifies.
 
-# Proposed PhD direction
+---
 
-## Anatomy-Guided Multi-View Ordinal Graph Learning for Lumbar Spine Degenerative Disease Classification
+## Rationale for the research problem
+
+An existing MSc thesis on this dataset performs direct image-level three-class
+classification and explicitly avoids anatomical segmentation and localisation. Its main
+experiment compares established architectures under multi-sequence versus
+Sagittal-T2-only input.
+
+That is a legitimate MSc question, and it is being published separately. It is not,
+however, a sufficient basis for a doctorate: it selects among existing methods rather
+than questioning the formulation they share. Substituting a newer backbone —
+ResNet50 for Swin, Swin for Mamba — would not change that.
+
+This specification therefore **changes the research problem** rather than the model. It
+proposes a system that represents the structured anatomy of the lumbar spine explicitly,
+on the argument developed in Chapter 2 that the field's prevailing formulation — grading
+each level, condition and side as an independent prediction — discards real anatomical
+structure.
+
+---
+
+## Proposed system
 
 A possible working name is:
 
@@ -16,7 +37,7 @@ The central research question becomes:
 
 > **Can an AI model improve lumbar degenerative disease grading by explicitly modeling spinal anatomy, relationships between adjacent disc levels, relationships between multiple degenerative conditions, and the ordinal nature of disease severity while integrating complementary MRI sequences?**
 
-That is much stronger than:
+This is a materially stronger question than:
 
 > Which performs better, ResNet or Swin?
 
@@ -26,7 +47,7 @@ That is much stronger than:
 
 LumbarDISC is not fundamentally a generic Normal/Mild–Moderate–Severe image classification dataset. The published dataset contains multisequence MRI from 2,697 patients and 8,593 series collected across eight institutions in six countries. Disease is graded at individual intervertebral levels, involving the spinal canal, neural foramina and subarticular recesses. ([arXiv][1])
 
-So I would predict **25 anatomical-condition targets per examination**:
+The system predicts **25 anatomical-condition targets per examination**:
 
 | Level | Targets                                                |
 | ----- | ------------------------------------------------------ |
@@ -42,15 +63,15 @@ Each target then receives:
 
 This gives a structured output:
 
-[
-5;levels × 5;conditions = 25;severity\ predictions
-]
+```
+5 levels x 5 conditions  =  25 severity predictions
+```
 
 This is already scientifically much more meaningful than assigning one generic severity label to an MRI slice.
 
 ---
 
-# 2. The architecture I would propose
+# 2. Proposed architecture
 
 Conceptually:
 
@@ -76,7 +97,7 @@ The important novelty is in the middle, not just the choice of backbone.
 
 # 3. Stage A — preserve the original 3D DICOM geometry
 
-I would **not** make DICOM → ordinary PNG the primary representation.
+DICOM must **not** be reduced to ordinary PNG as the primary representation.
 
 Use:
 
@@ -124,9 +145,9 @@ Then convert these locations into DICOM patient coordinates.
 
 This gives:
 
-[
-p_l(x,y,z)
-]
+```
+p_l(x, y, z)     heat-map probability for disc level l
+```
 
 for level (l).
 
@@ -136,9 +157,9 @@ A modern segmentation model could be used for this stage, but the PhD contributi
 
 # 5. Stage C — condition-specific ROI generation
 
-Now something quite important happens.
+A key design decision follows.
 
-Don't give every disease classifier exactly the same image.
+Each disease classifier must not receive the same image.
 
 Different conditions should receive anatomically appropriate evidence.
 
@@ -165,23 +186,17 @@ The published dataset itself distinguishes spinal-canal, foraminal and subarticu
 
 Therefore the model becomes **disease-aware before classification even begins**.
 
-That's a major methodological improvement.
+This is a substantive methodological improvement.
 
 ---
 
 # 6. Use 2.5D rather than one 2D slice
 
-Instead of:
+Instead of a single slice `I(L4-L5)`, the model receives a stack:
 
-[
-I_{L4-L5}
-]
-
-feed:
-
-[
-[I_{-2},I_{-1},I_0,I_{+1},I_{+2}]
-]
+```
+[ I(-2), I(-1), I(0), I(+1), I(+2) ]
+```
 
 around the target location.
 
@@ -191,13 +206,13 @@ This is already a strong direction in lumbar MRI work. Recent M-SCAN research, f
 
 So **2.5D itself is not sufficiently novel for the PhD**.
 
-We need to go further.
+Further contribution is required.
 
 ---
 
 # 7. Novel Component I — Cross-Sequence Anatomical Contrastive Learning
 
-This is one place where I think a genuinely interesting contribution can be developed.
+This is one of the clearest opportunities for an original contribution.
 
 Before supervised disease training, teach the network:
 
@@ -213,11 +228,9 @@ should have related latent representations even though their visual appearance i
 
 Define:
 
-[
-z^{T1}*{L4-L5},
-z^{T2Sag}*{L4-L5},
-z^{T2Ax}_{L4-L5}
-]
+```
+z_T1(L4-L5),   z_T2sag(L4-L5),   z_T2ax(L4-L5)
+```
 
 and introduce a contrastive loss that pulls anatomically corresponding representations together:
 
@@ -230,7 +243,7 @@ L_AC  =  -log [ exp( sim(z_i, z_i+) / tau )
   tau    temperature
 ```
 
-But I would make it **anatomically hierarchical**.
+The objective is made **anatomically hierarchical**.
 
 Same patient + same level + different sequence
 → strongest positive.
@@ -252,7 +265,7 @@ rather than ordinary image contrastive learning.
 
 Recent medical imaging research strongly supports self-supervised representation learning, including structure-aware approaches, so the concept is scientifically well grounded. ([CVPR Open Access][5])
 
-The **lumbar-specific cross-sequence anatomical correspondence objective** is where I would investigate novelty.
+The **lumbar-specific cross-sequence anatomical correspondence objective** is where the novelty lies.
 
 ---
 
@@ -282,25 +295,25 @@ So construct **25 graph nodes**.
 
 For example:
 
-[
+```
 v_{L4-L5,Canal}
-]
+```
 
-[
+```
 v_{L4-L5,LeftForamen}
-]
+```
 
-[
+```
 v_{L4-L5,RightForamen}
-]
+```
 
-[
+```
 v_{L4-L5,LeftSubarticular}
-]
+```
 
-[
+```
 v_{L4-L5,RightSubarticular}
-]
+```
 
 Each node contains the MRI features extracted for that anatomical target.
 
@@ -310,9 +323,9 @@ Each node contains the MRI features extracted for that anatomical target.
 
 **Longitudinal anatomical edges**
 
-[
-L3-L4 \leftrightarrow L4-L5
-]
+```
+L3-L4 leftrightarrow L4-L5
+```
 
 These allow neighbouring levels to exchange information.
 
@@ -320,19 +333,19 @@ These allow neighbouring levels to exchange information.
 
 At one level:
 
-[
+```
 Canal
-\leftrightarrow
+leftrightarrow
 Foraminal
-\leftrightarrow
+leftrightarrow
 Subarticular
-]
+```
 
 **Bilateral edges**
 
-[
-Left\ Foramen \leftrightarrow Right\ Foramen
-]
+```
+Left\ Foramen leftrightarrow Right\ Foramen
+```
 
 and similarly for subarticular narrowing.
 
@@ -404,23 +417,23 @@ P(Y>Normal)≈0
 
 Moderate:
 
-[
-P(Y>Normal)≈1,\quad
+```
+P(Y>Normal)≈1,quad
 P(Y>Moderate)≈0
-]
+```
 
 Severe:
 
-[
-P(Y>Normal)≈1,\quad
+```
+P(Y>Normal)≈1,quad
 P(Y>Moderate)≈1
-]
+```
 
 Ordinal deep-learning methods are specifically designed for disease severity problems, and recent medical-imaging work shows that treating severity as ordered rather than categorical can materially change model behaviour. ([arXiv][7])
 
 ---
 
-# 10. I would go even further: asymmetric ordinal loss
+# 10. Asymmetric ordinal loss
 
 Make:
 
@@ -440,12 +453,12 @@ For example define a cost matrix:
 
 Then:
 
-[
+```
 L =
 L_{ordinal}
 +
-\lambda L_{cost}
-]
+lambda L_{cost}
+```
 
 This directly attacks the major weakness we found in the MSc thesis: poor Moderate and Severe performance hidden behind high overall accuracy.
 
@@ -453,7 +466,7 @@ This directly attacks the major weakness we found in the MSc thesis: poor Modera
 
 # 11. Novel Component IV — adaptive missing-sequence fusion
 
-I would not repeat the MSc design of:
+The MSc design is deliberately not repeated:
 
 > train one all-sequence model
 > versus
@@ -538,9 +551,9 @@ For instance, a Severe prediction at L4–L5 that is consistent with neighbourin
 
 # 13. The complete proposed model
 
-I would therefore define the PhD model roughly as:
+The full model is therefore defined as:
 
-[
+```
 MRI
 →
 Localization
@@ -548,39 +561,39 @@ Localization
 2.5D\ ROIs
 →
 MultiView\ Encoder
-]
+```
 
-[
+```
 →
 Anatomical\ Contrastive\ Representation
-]
+```
 
-[
+```
 →
 Adaptive\ CrossSequence\ Attention
-]
+```
 
-[
+```
 →
 Anatomical\ Graph\ Transformer
-]
+```
 
-[
+```
 →
 Ordinal\ Severity\ Heads
-]
+```
 
-[
+```
 →
 Uncertainty\ Calibration
-]
+```
 
 producing:
 
-[
+```
 25×
 {severity,\ probability,\ uncertainty}.
-]
+```
 
 That is a substantially different research methodology.
 
@@ -615,7 +628,7 @@ That is a meaningful methodological distinction. ([arXiv][4])
 
 The architecture alone does not make it PhD research.
 
-I would design the evidence around a progressive ablation:
+The evidence is structured around a progressive ablation:
 
 | Experiment | Model                                |
 | ---------- | ------------------------------------ |
@@ -677,7 +690,7 @@ parameters, FLOPs, VRAM, inference time and training cost.
 
 # 17. The strongest validation would be an external cohort
 
-This is where I think you could elevate it from an algorithm thesis into very strong PhD work.
+This is what would elevate the work from an algorithm thesis into a strong doctoral contribution.
 
 LumbarDISC itself is already multinational and multicenter. ([arXiv][1])
 
@@ -697,9 +710,9 @@ It would also expose scanner/vendor/protocol shift.
 
 ---
 
-# 18. What I would claim as the PhD novelty
+# 18. Claimed novelty
 
-I would keep the claimed novelty disciplined. Something approximately like this could eventually be defensible:
+The claimed novelty is kept deliberately disciplined:
 
 > **A unified anatomy-aware framework for multilevel, multi-condition lumbar degenerative disease grading that combines disease-specific multi-view MRI representations with relational modeling of lumbar anatomy and ordinal severity learning.**
 
@@ -714,15 +727,9 @@ That is starting to look like a **PhD research programme**, not simply a bigger 
 
 ---
 
-## What I would personally choose
+## The central contribution
 
-If I were shaping this into a dissertation, I would make the **Graph + Ordinal + Multi-view anatomical model** the central PhD contribution.
-
-I would *not* make "Mamba versus Transformer versus CNN" the thesis.
-
-Those models will come and go.
-
-The deeper research idea is:
+The **graph, ordinal and multi-view anatomical model** is the central PhD contribution. A comparison of backbones -- Mamba against Transformer against CNN -- is deliberately not the thesis: those architectures will be superseded, whereas the research idea is durable:
 
 > **The spine is not a collection of independent pictures. It is a structured anatomical system, and the diseases, vertebral levels, left/right anatomy and MRI sequences are related. Can encoding those relationships explicitly produce more accurate, robust and clinically meaningful AI grading?**
 
