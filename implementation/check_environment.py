@@ -1,14 +1,6 @@
-"""
-System Diagnostic & Environment Scanner (Phase 1)
-Author: Dr. Polla Fattah / Selar's PhD Research Team
-Project: AMOG-Net Lumbar Spine MRI Automated Grading
-
-This script checks:
-1. Python version and OS platform
-2. Hardware availability (CPU, RAM, GPU, VRAM, CUDA/cuDNN)
-3. Essential medical imaging and deep learning python packages
-4. Generates ENVIRONMENT_REPORT.md and environment_report.json in reports/
-"""
+# System & Virtual Environment Diagnostic Scanner (Phase 1)
+# Author: Dr. Polla Fattah / Selar's PhD Research Team
+# Project: AMOG-Net Lumbar Spine MRI Automated Grading
 
 import sys
 import os
@@ -44,7 +36,30 @@ PACKAGES_TO_CHECK = [
     ("statsmodels", "Statistical Hypotheses Testing")
 ]
 
+def is_virtual_environment():
+    in_venv = (sys.prefix != sys.base_prefix)
+    in_conda = 'CONDA_DEFAULT_ENV' in os.environ
+    
+    if in_conda:
+        env_type = "Conda"
+        env_name = os.environ.get('CONDA_DEFAULT_ENV', 'lumbar_phd')
+    elif in_venv:
+        env_type = "venv"
+        env_name = os.path.basename(sys.prefix)
+    else:
+        env_type = "Global Python"
+        env_name = "None (System Global)"
+        
+    return {
+        "is_isolated": in_venv or in_conda,
+        "env_type": env_type,
+        "env_name": env_name,
+        "sys_prefix": sys.prefix,
+        "sys_executable": sys.executable
+    }
+
 def check_system():
+    env_info = is_virtual_environment()
     report = {
         "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
         "python_version": platform.python_version(),
@@ -52,6 +67,7 @@ def check_system():
         "system_architecture": platform.architecture()[0],
         "processor": platform.processor() or "Unknown",
         "cpu_count_logical": os.cpu_count() or 1,
+        "virtual_environment": env_info,
         "gpu_available": False,
         "gpus": [],
         "packages": {}
@@ -113,6 +129,14 @@ def generate_markdown_report(report, reports_dir):
     lines.append(f"**Generated At:** `{report['timestamp']}`  ")
     lines.append(f"**OS Platform:** `{report['os_platform']}` (`{report['system_architecture']}`)  ")
     lines.append(f"**Python Version:** `{report['python_version']}`  ")
+    
+    env_info = report["virtual_environment"]
+    if env_info["is_isolated"]:
+        lines.append(f"**Virtual Environment:** [OK] Active (`{env_info['env_type']}: {env_info['env_name']}`)  ")
+    else:
+        lines.append(f"**Virtual Environment:** [WARN] None (`Global System Python`)  ")
+        
+    lines.append(f"**Python Executable:** `{env_info['sys_executable']}`  ")
     lines.append("")
     lines.append("---")
     lines.append("")
@@ -167,6 +191,15 @@ def generate_markdown_report(report, reports_dir):
     lines.append("## Installation & Action Plan for Student (Selar)")
     lines.append("")
 
+    if not env_info["is_isolated"]:
+        lines.append("⚠️ **Virtual Environment Notice:** You are currently running in Global System Python.")
+        lines.append("It is recommended to activate a `venv` or `conda` environment before installing dependencies:")
+        lines.append("```bash")
+        lines.append("python -m venv venv")
+        lines.append(".\\venv\\Scripts\\activate   # On Windows")
+        lines.append("```")
+        lines.append("")
+
     if report["missing_packages_count"] == 0:
         lines.append("[OK] **All required packages are installed and ready for Phase 1 & 2!**")
     else:
@@ -182,7 +215,8 @@ def generate_markdown_report(report, reports_dir):
         lines.append("```")
 
     with open(md_path, "w", encoding="utf-8") as f:
-        f.write("\n".join(lines))
+        f.write(chr(10).join(lines))
+#
     
     return md_path
 
@@ -207,6 +241,12 @@ def main():
     print(f"\nPython Version : {report['python_version']}")
     print(f"OS Platform    : {report['os_platform']}")
     
+    env_info = report["virtual_environment"]
+    if env_info["is_isolated"]:
+        print(f"Environment    : Active ({env_info['env_type']}: {env_info['env_name']})")
+    else:
+        print(f"Environment    : [NOTICE] Running in Global Python (venv/conda recommended)")
+        
     if report.get("gpu_available"):
         print(f"GPU Detected   : YES ({report['gpu_count']} GPU(s))")
         for g in report["gpus"]:

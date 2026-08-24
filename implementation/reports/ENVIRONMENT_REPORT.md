@@ -1,7 +1,9 @@
 # System Diagnostic & Environment Availability Report
-**Generated At:** `2026-08-25 02:27:58`  
+**Generated At:** `2026-08-25 02:29:31`  
 **OS Platform:** `Windows-11-10.0.26200-SP0` (`64bit`)  
 **Python Version:** `3.13.2`  
+**Virtual Environment:** [WARN] None (`Global System Python`)  
+**Python Executable:** `C:\Python313\python.exe`  
 
 ---
 
@@ -40,6 +42,13 @@
 ---
 
 ## Installation & Action Plan for Student (Selar)
+
+⚠️ **Virtual Environment Notice:** You are currently running in Global System Python.
+It is recommended to activate a `venv` or `conda` environment before installing dependencies:
+```bash
+python -m venv venv
+.\venv\Scripts\activate   # On Windows
+```
 
 [WARN] **7 required packages are missing.**
 

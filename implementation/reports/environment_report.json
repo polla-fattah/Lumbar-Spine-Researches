@@ -1,10 +1,17 @@
 {
-  "timestamp": "2026-08-25 02:27:58",
+  "timestamp": "2026-08-25 02:29:31",
   "python_version": "3.13.2",
   "os_platform": "Windows-11-10.0.26200-SP0",
   "system_architecture": "64bit",
   "processor": "Intel64 Family 6 Model 191 Stepping 2, GenuineIntel",
   "cpu_count_logical": 24,
+  "virtual_environment": {
+    "is_isolated": false,
+    "env_type": "Global Python",
+    "env_name": "None (System Global)",
+    "sys_prefix": "C:\\Python313",
+    "sys_executable": "C:\\Python313\\python.exe"
+  },
   "gpu_available": false,
   "gpus": [],
   "packages": {
@@ -110,7 +117,7 @@
     }
   },
   "ram_total_gb": 31.7,
-  "ram_available_gb": 12.55,
+  "ram_available_gb": 12.95,
   "pytorch_version": "2.9.0+cpu",
   "cuda_available": false,
   "missing_packages_count": 7,
