@@ -1258,7 +1258,10 @@ The strongest positive relation is:
 
 meaning the same patient and same anatomical level in two different sequences.
 Correspondence is established through the DICOM reconstruction and level
-localiser, not through nearest image appearance.
+localiser, not through nearest image appearance. To prevent artifact-degraded
+sequences from corrupting the contrastive representation, positive pairs are
+dynamically weighted by sequence quality scores $q_{p,m}$ (Section~\ref{sec:method-qc}),
+excluding pairs where $q_{p,m} < \tau_{\mathrm{quality}}$.
 
 An optional softer relation may be tested for adjacent levels from the same
 patient, because neighbouring levels share biomechanical context. It is not
@@ -1873,7 +1876,12 @@ A graph contribution is not considered clinically coherent if an aggregate gain
 is accompanied by a material, reproducible increase in adjacent-level
 false-positive contamination. This stress test is therefore part of the
 acceptance criterion for retaining relational message passing in the final
-integrated system.
+integrated system. To safeguard against gate collapse caused by heavy class
+imbalance (where residual gating parameters $\boldsymbol{\gamma}$ lazily suppress
+relational propagation to zero), gate activation distributions
+$(\mu_{\boldsymbol{\gamma}}, \sigma_{\boldsymbol{\gamma}})$ are tracked across
+training iterations, with an auxiliary entropy-maximization loss penalty applied
+if average gating falls below an operational threshold.
 
 \subsection{External Graph-Scope Sensitivity}
 \label{sec:method-external-graph-scope}
@@ -1982,7 +1990,10 @@ so that Severe$\rightarrow$Normal/Mild is more costly than
 Severe$\rightarrow$Moderate. The exact numerical values are not invented by the
 model developer. They are either aligned with a defensible benchmark/clinical
 weighting or selected through a sensitivity analysis across a small
-pre-specified family of matrices.
+pre-specified family of matrices. Specifically, baseline values for $C$ are
+initialized to mirror the RSNA challenge evaluation weights ($1:2:4$ ratio for
+Normal/Mild, Moderate, and Severe grades), directly aligning the training penalty
+with the benchmark's clinical risk metric.
 
 One implementation uses the expected cost under the predicted distribution:
 
@@ -2499,6 +2510,11 @@ compared:
         high-capacity reference only where $N$ and compute make this defensible.
 \end{enumerate}
 
+To evaluate the local morphology transfer task (disc bulge, protrusion,
+extrusion) under extreme sample constraints ($N \le 25$), linear probing on
+frozen ACSSL representations is evaluated as a standalone baseline, comparing
+its transfer performance against full fine-tuning to directly test Hypothesis H1.
+
 This design avoids assuming in advance that graph-only or encoder-only
 adaptation is correct. The trainable parameter count is reported for every
 strategy, and performance is interpreted jointly with that count. The exact
@@ -2779,6 +2795,11 @@ Subgroup analysis is conducted only where sample size permits and includes:
   \item acquisition resolution or slice thickness;
   \item presence/absence of individual sequences.
 \end{itemize}
+
+To prevent reporting unstable point estimates on small strata, quantitative
+metrics (weighted $\kappa$, AUROC) are computed only for subgroups containing
+a predefined minimum sample size ($N \ge 30$); strata with $N < 30$ are
+reported exclusively via descriptive counts and raw confusion matrices.
 
 Sparse cells are reported descriptively rather than subjected to unstable
 significance testing. The subgroup analysis is intended to expose failure modes,
