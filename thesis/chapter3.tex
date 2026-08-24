@@ -1,0 +1,2553 @@
+% ===========================================================================
+%  Chapter 3 -- Methodology
+%  Disease-Adaptive Heterogeneous Graph Learning with Anatomically Aligned
+%  Multi-Sequence MRI Representations
+%
+%  PROTOCOL-GRADE VERSION
+%  This chapter is written prospectively because the full PhD experiment has not
+%  yet been completed. After implementation, convert prospective statements to
+%  past tense and replace all [TO CONFIRM] / [TO RECORD] fields with the executed
+%  protocol and observed cohort counts. Do not silently fill them from intention.
+%
+%  Compiles standalone:   pdflatex chapter3 ; biber chapter3 ; pdflatex chapter3
+%
+%  To fold into a larger thesis instead, delete everything from \documentclass
+%  down to \begin{document}, and the \printbibliography/\end{document} at the
+%  foot, then \input{chapter3} from the main thesis.
+% ===========================================================================
+
+\documentclass[12pt,a4paper]{report}
+
+\usepackage{lmodern}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage[english]{babel}
+\usepackage{microtype}
+\usepackage[margin=2.5cm]{geometry}
+\usepackage{setspace}
+\onehalfspacing
+
+\usepackage{amsmath,amssymb}
+\usepackage{booktabs}
+\usepackage{longtable}
+\usepackage{array}
+\usepackage{graphicx}
+\usepackage[hidelinks]{hyperref}
+
+\usepackage[
+  backend=biber,
+  style=numeric-comp,
+  sorting=none,
+  maxbibnames=6,
+  minbibnames=3,
+  giveninits=true,
+  doi=true,
+  url=false,
+  isbn=false
+]{biblatex}
+
+% Same bibliography used by Chapter 2.
+\addbibresource{../lumbar_spine_mri_ai_literature_inventory.bib}
+
+\AtEveryBibitem{%
+  \clearfield{note}%
+  \clearfield{comment}%
+  \clearfield{annotation}%
+  \clearfield{abstract}%
+  \clearfield{file}%
+}
+
+\newcommand{\toconfirm}[1]{\textbf{[TO CONFIRM: #1]}}
+\newcommand{\torecord}[1]{\textbf{[TO RECORD AFTER IMPLEMENTATION: #1]}}
+
+\begin{document}
+
+\chapter{Methodology}
+\label{ch:methodology}
+
+% ===========================================================================
+\section{Introduction and Methodological Position}
+\label{sec:method-intro}
+
+Chapter~\ref{ch:litreview} established that automated lumbar MRI grading has
+moved beyond the stage at which novelty can be claimed from replacing one image
+backbone with another. Anatomical localisation, multi-sequence regions of
+interest, inter-level context and ordinal grading have all been demonstrated in
+recent work. The methodological question in this thesis is therefore not whether
+a sufficiently large network can classify lumbar MRI. It is whether the
+\emph{structure of the prediction problem} can be represented more faithfully:
+which disease is being graded, at which level and side, which MRI sequence
+contains the relevant evidence, how neighbouring targets are related, and how
+the resulting model behaves when moved to a hospital whose scanners, protocols,
+population and reporting conventions were not represented during development.
+
+The study is designed as a staged, controlled experimental programme around
+three methodological contributions and one translational validation programme.
+The first contribution is an anatomically aligned cross-sequence
+self-supervised representation in which positive relationships are defined by
+DICOM patient-space correspondence rather than by generic image similarity.
+The second is a disease-conditioned sequence router that learns how much each
+available MRI sequence contributes to each anatomical target and is trained
+explicitly to remain operational when one or more sequences are absent. The
+third is a heterogeneous disease--anatomy graph whose nodes correspond to
+level--condition--laterality targets and whose typed edges encode anatomical
+adjacency, within-level relationships and bilateral symmetry. The translational
+programme then separates development from deployment: the model is trained on a
+public multinational benchmark, frozen, evaluated zero-shot on an independent
+Rizgary Teaching Hospital cohort, and only afterwards adapted with controlled
+amounts of local labelled data.
+
+Several components are deliberately treated as \emph{enabling technology}
+rather than as doctoral contributions. Anatomical localisation, segmentation,
+2.5D region construction, conventional convolutional or transformer encoders,
+class-imbalance handling, ordinal losses and calibration are all necessary to
+make the comparison scientifically fair, but none is advertised as new by
+itself. This distinction follows directly from the novelty boundary established
+in Chapter~\ref{ch:litreview}: the thesis tests a new formulation of the
+structured task rather than presenting a collection of familiar modules as if
+their combination alone constituted originality.
+
+The chapter is written as a protocol-grade methodology. Wherever an
+implementation choice has not yet been fixed by evidence, it is specified as a
+controlled comparison rather than invented retrospectively. Wherever an
+institutional fact remains unresolved---for example the final number of
+Rizgary studies surviving data reconciliation or the formal ethics reference---
+it is marked explicitly. This is intentional. A doctoral methodology should
+describe what is known, what is pre-specified and what will be decided by a
+transparent rule; it should not convert planning assumptions into apparently
+observed facts.
+
+\subsection{Research Questions}
+\label{sec:method-rqs}
+
+The five research questions derived in Chapter~\ref{ch:litreview} are
+operationalised as follows.
+
+\begin{description}
+  \item[RQ1 --- Relational disease modelling.] Does representing lumbar disease
+  targets as a typed heterogeneous graph improve grading over independent target
+  heads, an ordered five-level transformer and a homogeneous graph, and are any
+  gains concentrated where single-target evidence is weakest?
+
+  \item[RQ2 --- Anatomically aligned self-supervision.] Does cross-sequence
+  pretraining based on DICOM-defined anatomical correspondence improve grading,
+  label efficiency and transfer compared with ImageNet initialisation, generic
+  medical pretraining and ordinary augmentation-based contrastive learning?
+
+  \item[RQ3 --- Disease-conditioned modality routing.] Can one model learn
+  target- and patient-dependent sequence weights while remaining robust to
+  arbitrary missing-sequence configurations, without requiring a separately
+  trained network for every combination of sagittal T1, sagittal T2/STIR and
+  axial T2?
+
+  \item[RQ4 --- Cross-institutional transfer.] What is the zero-shot degradation
+  when a benchmark-trained model is applied to a previously unseen Middle
+  Eastern clinical cohort, and how does performance recover as the amount of
+  local annotation available for adaptation increases?
+
+  \item[RQ5 --- Clinically asymmetric error and uncertainty.] Do ordinal and
+  cost-sensitive objectives reduce clinically consequential distant errors,
+  particularly Severe$\rightarrow$Normal/Mild, and can calibrated uncertainty
+  support selective prediction without overstating clinical safety?
+\end{description}
+
+The order is not arbitrary. RQ2 and RQ3 determine how evidence is represented;
+RQ1 determines how target predictions communicate; RQ5 determines how the
+ordered output and its uncertainty are represented; and RQ4 asks whether those
+choices survive the transition from a benchmark to real local clinical data.
+
+\subsection{Design Principles}
+\label{sec:method-principles}
+
+Six principles govern all experiments.
+
+\textbf{First, anatomy precedes grading.} Every classifier and ablation receives
+the same anatomically localised input so that a comparison of representations is
+not confounded by one model being given a better crop than another. This follows
+the consistent evidence that localisation is a precondition of reliable
+per-level grading \cite{lu2018deepspine,pan2021automatically,batra2025mscan}.
+
+\textbf{Second, DICOM geometry is preserved.} The primary scientific
+representation is reconstructed from DICOM patient-space coordinates. PNG
+conversion may be used for visual inspection but is not the basis of
+cross-sequence alignment, because it discards the spatial metadata required to
+determine which axial slices correspond to a sagittal disc level.
+
+\textbf{Third, patient identity defines independence.} No images, slices,
+levels, sides or sequences from one patient may cross between training,
+validation and test partitions. The unit of statistical independence for
+uncertainty intervals and resampling is the patient, not the image or the disc
+level.
+
+\textbf{Fourth, the external cohort is not a tuning set.} The primary model is
+developed without Rizgary images. Zero-shot performance is measured before any
+local tuning. Few-shot adaptation then uses a separately defined local
+adaptation pool while evaluation remains on a fixed local test set.
+
+\textbf{Fifth, every claimed contribution requires an ablation.} A complete
+model score does not establish that anatomical self-supervision, routing or
+graph topology contributed anything. Each component is added and removed under
+a controlled experiment, and a negative result is reported as such.
+
+\textbf{Sixth, clinical interpretation is bounded by the reference standard.}
+The model is trained to reproduce radiological grades whose inter-reader
+reliability is imperfect. Performance is therefore interpreted against human
+agreement and not as evidence that the network has discovered a more objective
+biological truth.
+
+% ===========================================================================
+\section{Overall Research Design}
+\label{sec:method-design}
+
+\subsection{Study Type}
+\label{sec:method-study-type}
+
+The project is a retrospective, multi-dataset medical-imaging methods study with
+three linked stages: public benchmark development, controlled methodological
+ablation, and independent cross-institutional transfer. It does not prospectively
+alter patient care and does not use model output to make treatment decisions.
+The Rizgary component is an external retrospective evaluation of imaging and
+radiology reports already acquired in routine clinical care.
+
+The core development dataset is the RSNA Lumbar Degenerative Imaging Spine
+Classification benchmark (LumbarDISC), which contains multi-sequence MRI and
+expert per-level severity labels \cite{rsna2024rsna,richards2026the}. SPIDER is
+used as an anatomical localisation/segmentation resource where its licence and
+task definition permit \cite{vandergraaf2024lumbar}. The local Rizgary cohort is
+reserved for external transfer and domain-adaptation analysis rather than being
+mixed into the benchmark training data.
+
+This separation is central to the inference the study is intended to support. A
+random split of one pooled dataset can estimate internal generalisation under
+that dataset's acquisition distribution. It cannot answer whether a model
+trained on international benchmark data transports to a different hospital.
+The latter requires the hospital to remain unseen during development.
+
+\subsection{Unit of Analysis}
+\label{sec:method-unit}
+
+The primary unit of prediction on LumbarDISC is a
+\emph{level--condition--laterality target}. At five disc levels
+(L1--L2, L2--L3, L3--L4, L4--L5 and L5--S1), the benchmark defines five targets:
+central canal stenosis, left and right neural foraminal narrowing, and left and
+right subarticular stenosis. Full benchmark scope therefore contains
+$5\times5=25$ targets per examination. Each target receives the ordered label
+Normal/Mild, Moderate or Severe \cite{richards2026the}.
+
+The unit of \emph{statistical independence}, however, remains the patient.
+Twenty-five outputs from the same examination are correlated measurements, not
+twenty-five independent observations. This distinction affects data splitting,
+confidence intervals, significance tests and error analysis throughout the
+chapter.
+
+For the local Rizgary cohort, the target space is narrower. The reports contain
+disc morphology and central-canal descriptions but do not reproduce the entire
+RSNA schema reliably. The primary cross-institutional comparison is therefore
+restricted to the five central-canal targets, L1--L2 through L5--S1, for which a
+defensible overlap can be created. Bulge, protrusion and extrusion are analysed
+as a separate local morphology task rather than being relabelled as if they were
+RSNA stenosis grades. Foraminal and subarticular transfer are excluded unless
+the local reference standard is expanded by new expert grading.
+
+\subsection{Experimental Staging}
+\label{sec:method-staging}
+
+The methodology is intentionally cumulative:
+
+\begin{enumerate}
+  \item establish reproducible DICOM reconstruction, patient-level splits,
+  localisation and an independent ROI baseline;
+  \item establish anatomically correct cross-sequence correspondence;
+  \item test disease-conditioned sequence routing and missing-modality training;
+  \item test anatomically aligned cross-sequence self-supervision;
+  \item test homogeneous and heterogeneous graph reasoning against independent
+        target prediction;
+  \item test ordinal/cost-sensitive output heads and probability calibration;
+  \item freeze the selected public-data model and perform zero-shot external
+        evaluation at Rizgary;
+  \item adapt with prespecified numbers of local cases and estimate the
+        annotation--performance recovery curve.
+\end{enumerate}
+
+The staging protects the thesis from a common failure mode of complex medical AI
+systems: if the final model underperforms, a monolithic experiment cannot reveal
+whether the failure arose from localisation, fusion, representation, graph
+reasoning, loss design or domain shift. Here each stage creates a measurable
+intermediate object and a direct baseline.
+
+\subsection{Pre-Specified Hypotheses}
+\label{sec:method-hypotheses}
+
+The principal hypotheses are directional but not expressed as arbitrary target
+accuracies.
+
+\begin{description}
+  \item[H1] Anatomical cross-sequence self-supervision will improve
+  label-efficient grading and cross-institutional robustness relative to generic
+  pretraining, particularly when only a fraction of benchmark labels is used.
+
+  \item[H2] Disease-conditioned routing with modality dropout will degrade less
+  under missing-sequence experiments than fixed concatenation or ordinary
+  cross-attention trained only on complete studies.
+
+  \item[H3] A typed heterogeneous graph will outperform independent target heads
+  and a homogeneous graph if the anatomical edge types carry useful relational
+  information; performance under a shuffled-edge control should deteriorate if
+  the topology itself matters.
+
+  \item[H4] Zero-shot performance on Rizgary will be lower than internal
+  benchmark performance because of scanner, protocol, population and reference-
+  standard shift; the magnitude and pattern of that drop are treated as findings
+  rather than failures of the project.
+
+  \item[H5] Local adaptation will improve performance as annotation increases,
+  but no predetermined percentage of ``recovery'' is required. The shape of the
+  recovery curve is the result.
+
+  \item[H6] Cost-sensitive/ordinal objectives may reduce distant
+  Severe$\rightarrow$Normal/Mild errors even if they do not improve aggregate
+  macro-F1; plain cross-entropy remains the mandatory baseline because previous
+  lumbar work has shown that ordinal objectives do not automatically help
+  \cite{niemeyer2021a}.
+\end{description}
+
+% ===========================================================================
+\section{Data Sources}
+\label{sec:method-data}
+
+\subsection{Public Development Cohort: LumbarDISC}
+\label{sec:method-lumbardisc}
+
+The primary development data are drawn from the publicly released RSNA 2024
+Lumbar Spine Degenerative Classification dataset. The published LumbarDISC
+resource comprises 2,697 patients and 8,593 MRI series collected across eight
+institutions in six countries \cite{richards2026the}. The locally held labelled
+competition training subset contains approximately 1,975 studies and is used for
+core development. The distinction between the published cohort size and the
+available labelled subset is retained explicitly throughout the thesis rather
+than treating the two numbers as interchangeable.
+
+Eligible benchmark examinations contain sagittal T2-like imaging, sagittal T1
+and axial T2, with expert severity grading at the five lumbar levels
+\cite{rsna2024rsna,richards2026the}. Coordinate/localiser annotations are also
+available for relevant disease locations. These properties make the dataset
+appropriate for all three methodological contributions: it is multi-sequence,
+level-resolved, multi-target, geographically heterogeneous and sufficiently
+large to separate representation learning from local external validation.
+
+The benchmark serves three roles:
+
+\begin{enumerate}
+  \item supervised development of per-target grading;
+  \item construction of anatomically corresponding cross-sequence training pairs;
+  \item internal/site-aware robustness analysis before the model is exposed to
+        Rizgary.
+\end{enumerate}
+
+All dataset versions, downloaded files, checksums where feasible and the final
+patient split lists will be archived in the reproducibility record. The exact
+number of studies remaining after local quality-control exclusions will be
+\torecord{final LumbarDISC development, validation and held-out counts}.
+
+\subsection{Public Anatomical Resource: SPIDER}
+\label{sec:method-spider}
+
+SPIDER provides manually delineated lumbar anatomy on sagittal MRI from multiple
+hospitals, including vertebrae, intervertebral discs and spinal canal
+\cite{vandergraaf2024lumbar}. It is used only for anatomical localisation,
+segmentation benchmarking or pretraining where permitted by its licence. It is
+not used to manufacture disease labels that are absent from the dataset.
+
+The practical purpose is to avoid making localisation the doctoral novelty.
+Rather than spend the main experimental budget designing another segmentation
+network, the thesis will use or reproduce a strong established anatomical model
+and quantify its localisation error. If a SPIDER-pretrained model is used to
+initialise the localiser, the external disease-grading experiments remain
+separate because the disease targets originate in LumbarDISC.
+
+\subsection{Independent Local Cohort: Rizgary Teaching Hospital}
+\label{sec:method-rizgary}
+
+The local cohort consists of lumbar MRI examinations and corresponding English
+radiology reports supplied by Rizgary Teaching Hospital. Current project
+inventory identifies 299 narrative reports and 294 candidate cases with matching
+multi-sequence imaging, while a wider raw DICOM audit contains additional
+studies. These counts are not treated as final until a one-to-one cohort
+reconciliation is complete.
+
+The raw imaging inspected during protocol development confirms the sequence
+families required by the thesis---sagittal T1, sagittal T2 and axial T2---and
+preserves standard DICOM spatial metadata. A sample examination was acquired on
+a Siemens Avanto 1.5-T system; scanner/vendor distribution across the full local
+cohort will be reported after complete metadata extraction rather than inferred
+from one case.
+
+The local cohort is valuable precisely because it is not curated to reproduce
+the public benchmark. Its scanner, acquisition protocol, prevalence, reporting
+language and label completeness differ from LumbarDISC. Those differences are
+the domain shift the transfer experiment is intended to measure, not nuisances
+to be eliminated by silently harmonising labels or discarding difficult cases.
+
+\subsection{Local Radiology Reports and Historical Spreadsheet}
+\label{sec:method-local-reports}
+
+The narrative radiology reports are the primary textual source for the local
+reference standard. The existing spreadsheet is treated as a secondary
+historical transcription aid rather than as unquestioned ground truth. It
+contains patient-level variables and comma-separated level references, but it
+does not constitute a complete level-resolved RSNA-style matrix and has known
+transcription inconsistencies. The methodology therefore reconstructs the local
+reference matrix from source reports and uses the spreadsheet only for
+cross-checking.
+
+The canonical local matrix will preserve, at minimum:
+
+\begin{itemize}
+  \item pseudonymous case identifier;
+  \item lumbar level;
+  \item central-canal stenosis severity where explicitly stated;
+  \item disc bulge, protrusion and extrusion as separate morphology fields;
+  \item foraminal findings and side only where explicitly stated;
+  \item nerve-root pressure/impingement where reported;
+  \item an explicit missing/not-reported state distinct from a negative finding.
+\end{itemize}
+
+This last distinction is essential. Absence of a phrase in a narrative report is
+not automatically equivalent to ``normal''. A field may be unreported because
+the radiologist considered it clinically irrelevant, because reporting practice
+varied, or because the report was not structured around that compartment.
+``Not reported'' is therefore encoded separately and excluded from target-
+specific external evaluation unless a clinician has explicitly adjudicated the
+absence as normal.
+
+\subsection{Cohort Reconciliation}
+\label{sec:method-reconciliation}
+
+Before any local model evaluation, a case-flow table will reconcile the raw
+archive, reports and analysable imaging. For each candidate case the audit will
+record:
+
+\begin{itemize}
+  \item whether a report exists;
+  \item whether sagittal T1 exists and is usable;
+  \item whether sagittal T2/STIR exists and is usable;
+  \item whether axial T2 exists and is usable;
+  \item whether DICOM geometry is internally consistent;
+  \item whether a central-canal reference label can be derived;
+  \item whether laterality-dependent labels are available;
+  \item whether the case is duplicated or represents repeat imaging;
+  \item the reason for any exclusion.
+\end{itemize}
+
+The final thesis will report the flow from raw studies to the fixed external
+test cohort, rather than presenting the current 299/294/raw-study counts without
+explanation. Repeat examinations from one patient, if identified, remain in the
+same partition to preserve patient independence.
+
+% ===========================================================================
+\section{Ethics, Governance and De-Identification}
+\label{sec:method-ethics}
+
+The Rizgary component uses retrospective clinical data. No MRI is acquired for
+the purposes of this study, no patient undergoes an additional intervention, and
+model output is not returned to the clinical record. Nevertheless, the data are
+sensitive medical information and are subject to institutional governance.
+
+The final thesis will state the formal approval mechanism and reference:
+\toconfirm{hospital research committee/IRB approval number, date and responsible
+institution}. It will also state the legal/ethical basis for retrospective use:
+\toconfirm{consent waiver, broad consent or other applicable basis}. These items
+must be completed before the local study is described as ethically approved.
+
+The raw local DICOM archive contains direct identifiers and therefore cannot be
+given to students or uploaded to external compute in its original state.
+De-identification is performed on a controlled copy before analysis. At minimum,
+the process removes direct patient identifiers, replaces case identifiers with
+study pseudonyms, strips or audits private tags, and handles dates according to
+the approved policy while preserving only the temporal information required for
+scientific analysis. The de-identification procedure must also check for
+burned-in identifiers where applicable. The re-identification key, if one must
+exist for hospital governance, is stored separately from the research
+repository and is not available to the model-training pipeline.
+
+External/cloud processing of local images is prohibited unless explicitly
+allowed by hospital policy:
+\toconfirm{whether external cloud/GPU processing is permitted and under what
+conditions}. Public benchmark data are handled according to their published
+licence and competition terms.
+
+Only aggregate results are reported. Illustrative local images may be included
+in the thesis only after de-identification review and only if institutional
+permission permits publication. The local cohort is not assumed to be publicly
+shareable; any future data release would require separate approval and a more
+stringent disclosure review.
+
+
+% ===========================================================================
+\section{Reference Standard and Target Encoding}
+\label{sec:method-reference}
+
+\subsection{Benchmark Target Representation}
+\label{sec:method-benchmark-targets}
+
+For LumbarDISC, the target set is represented explicitly rather than collapsed
+into a generic three-class image label. Let the five lumbar levels be
+\[
+\mathcal{L}=\{L1\!-\!L2,L2\!-\!L3,L3\!-\!L4,L4\!-\!L5,L5\!-\!S1\},
+\]
+and let the five condition/laterality targets be
+\[
+\mathcal{C}=\{
+\mathrm{Canal},
+\mathrm{LF},
+\mathrm{RF},
+\mathrm{LSA},
+\mathrm{RSA}
+\},
+\]
+where LF/RF denote left/right neural foraminal narrowing and LSA/RSA
+left/right subarticular stenosis. One examination therefore has the target set
+\[
+\mathcal{T}=\mathcal{L}\times\mathcal{C}, \qquad |\mathcal{T}|=25.
+\]
+
+For target $t\in\mathcal{T}$ the observed grade is
+\[
+y_t\in\{0,1,2\},
+\]
+corresponding to Normal/Mild, Moderate and Severe. Encoding the targets in this
+form is not merely convenient notation. The pair $(l,c)$ is retained throughout
+data loading, feature extraction, graph construction and evaluation, which
+prevents a severity label from losing the anatomical meaning that generated it.
+
+Where the benchmark provides an absent or unusable annotation, a target mask
+$m_t\in\{0,1\}$ is carried alongside the grade. Masked targets do not contribute
+to the supervised loss. Missing labels are never imputed from neighbouring
+levels for the main experiments, because doing so would introduce exactly the
+relational assumption the thesis is intended to test.
+
+\subsection{Local Reference Matrix}
+\label{sec:method-local-reference}
+
+The Rizgary reference standard is constructed at the same anatomical level but
+not forced into the same disease schema. A canonical row represents one
+case--level pair. The minimum schema is:
+
+\begin{center}
+\begin{tabular}{p{2.4cm}p{2.0cm}p{8.1cm}}
+\toprule
+\textbf{Field} & \textbf{Type} & \textbf{Interpretation}\\
+\midrule
+Case ID & categorical & pseudonymous patient/study identifier\\
+Level & categorical & L1--L2 through L5--S1\\
+Canal stenosis & ordinal/missing & explicit report-derived severity, if stated\\
+Bulge & binary/missing & circumferential/generalised bulge stated at level\\
+Protrusion & binary/missing & protrusion stated at level\\
+Extrusion & binary/missing & extrusion stated at level\\
+Foraminal finding & categorical/missing & narrowing/pressure effect if stated\\
+Laterality & left/right/bilateral/NR & side only where stated\\
+Nerve-root effect & categorical/missing & pressure, displacement or compression\\
+Other morphology & text/coded & migration, dehydration, height loss and related findings\\
+\bottomrule
+\end{tabular}
+\end{center}
+
+The local matrix keeps \emph{not reported} (NR) separate from \emph{explicitly
+absent}. This rule is especially important for foraminal and subarticular
+findings, because local reporting completeness differs from the structured RSNA
+annotation scheme. A target is eligible for external evaluation only when the
+reference standard provides a defensible class label.
+
+\subsection{Report Extraction and Human Verification}
+\label{sec:method-report-verification}
+
+Automated report extraction, if available from the parallel clinical-NLP work,
+may accelerate construction of the matrix but does not define the gold
+standard. The final labels used for Selar's external evaluation are manually
+verified against the original report text.
+
+A two-stage verification procedure is preferred:
+
+\begin{enumerate}
+  \item \textbf{Structured extraction audit.} Every non-normal/non-empty finding
+  is traced back to the exact report phrase, level and laterality. Multi-level
+  expressions such as ``L2--3 and L4--5, L5--S1 shows circumferential disc
+  bulge'' are expanded into separate level records without changing their
+  meaning.
+
+  \item \textbf{Clinical reliability subset.} A pre-specified stratified subset
+  of local studies is independently re-read by two qualified readers using an
+  explicit grading sheet. Disagreements are adjudicated by a more senior reader
+  where available. Inter-reader agreement is reported with weighted
+  $\kappa$ for ordinal grades and ordinary agreement/appropriate $\kappa$ for
+  binary morphology. The size of the re-read subset will be fixed before model
+  results are examined, based on reader availability and the precision required
+  for the agreement estimate.
+\end{enumerate}
+
+If a second-reader study cannot be completed, the report-derived matrix remains
+usable as a real-world reference standard, but the absence of independent
+regrading is stated explicitly as a limitation and no claim is made that local
+labels reproduce the RSNA grading protocol exactly.
+
+\subsection{Schema Alignment Between LumbarDISC and Rizgary}
+\label{sec:method-schema-alignment}
+
+Cross-institutional evaluation requires equality of \emph{task}, not merely
+similar words. The mapping is therefore conservative.
+
+\begin{center}
+\begin{tabular}{p{4.1cm}p{4.0cm}p{5.0cm}}
+\toprule
+\textbf{LumbarDISC target} & \textbf{Rizgary evidence} & \textbf{Transfer status}\\
+\midrule
+Central canal stenosis & level-resolved mild/moderate/severe statements where present
+& Primary external target\\
+Left/right foraminal narrowing & pressure/narrowing often incompletely lateralised
+& Exclude unless laterality and grade are adequate or freshly re-read\\
+Left/right subarticular stenosis & not routinely represented in current reports
+& Exclude unless new expert annotation is created\\
+Disc bulge/protrusion/extrusion & directly described locally but not an RSNA stenosis target
+& Separate local morphology task\\
+\bottomrule
+\end{tabular}
+\end{center}
+
+No local disc-herniation morphology is converted into a stenosis grade by
+heuristic rule. Likewise, ``pressure on exit foramina'' is not automatically
+treated as a left/right foraminal severity label unless the report or expert
+review supplies the information required by that target. This prevents
+apparent external validation from being created by label re-interpretation.
+
+% ===========================================================================
+\section{Data Partitioning and Leakage Control}
+\label{sec:method-splits}
+
+\subsection{Patient-Level Independence}
+\label{sec:method-patient-split}
+
+All splits are made at patient/study level before slice extraction or data
+augmentation. For a patient $p$, every sagittal series, every axial series,
+every disc level, every side and every augmented crop belongs to one and only
+one partition. A programmatic assertion is run before training to confirm that
+the intersection of patient identifiers across partitions is empty.
+
+The split record is version-controlled as a list of pseudonymous IDs. Data
+loaders consume those fixed lists rather than performing a new random split each
+time the training script is executed.
+
+\subsection{Public Development, Validation and Held-Out Evaluation}
+\label{sec:method-public-split}
+
+Where the available public dataset exposes institution identifiers, a
+site-aware evaluation is preferred because it tests a more meaningful shift
+than a random split. The exact public partitioning scheme will be chosen
+according to the metadata available in the held dataset and will be frozen
+before model comparison. At minimum there will be:
+
+\begin{itemize}
+  \item a development/training partition;
+  \item a validation partition for hyperparameter choice, early stopping and
+        calibration;
+  \item a held-out public evaluation partition not used for model selection.
+\end{itemize}
+
+If site identifiers permit leave-one-site-out or institution-held-out analysis,
+that analysis is reported in addition to the ordinary benchmark split. It is not
+a replacement for Rizgary, because the local hospital introduces a different
+reporting/reference-standard domain as well as a different imaging domain.
+
+\subsection{Fixed Local Test Set and Adaptation Pool}
+\label{sec:method-local-split}
+
+The local transfer study is protected against adaptation leakage by separating
+Rizgary into two parts \emph{before} the public model is evaluated:
+
+\begin{enumerate}
+  \item a \textbf{fixed local test set}, which is never used for adaptation,
+        calibration or threshold selection; and
+  \item a \textbf{local adaptation pool}, from which the $N=10,25,50,100$
+        few-shot subsets are sampled.
+\end{enumerate}
+
+The exact number allocated to each part will be determined after the audited
+class distribution is known. The split will be stratified by central-canal
+severity and lumbar level where feasible without producing clinically
+implausible or extremely small strata. The fixed local test set is used for the
+zero-shot baseline and for every subsequent adapted model, making the recovery
+curves directly comparable.
+
+For each adaptation size $N$, several independent stratified subsets are sampled
+from the adaptation pool. Results are averaged across these draws with variance
+reported, because one set of ten cases can be unrepresentative by chance. The
+test set itself never changes across adaptation sizes.
+
+\subsection{Prevention of Information Leakage During Self-Supervision}
+\label{sec:method-ssl-leakage}
+
+Self-supervised learning does not remove the need for split discipline. A model
+pretrained on the held-out test patients, even without labels, has already seen
+their anatomy and acquisition characteristics. Therefore anatomical
+self-supervision uses only the development partition during internal
+experiments. The held-out public test set and fixed Rizgary test set remain
+unseen in both supervised and self-supervised training.
+
+The same restriction applies to intensity normalisation parameters and learned
+harmonisation models: any transformation whose parameters are estimated from
+data is fitted on the training/development partition and then applied unchanged
+to validation/test data.
+
+% ===========================================================================
+\section{DICOM Reconstruction and Quality Control}
+\label{sec:method-dicom}
+
+\subsection{Series Identification}
+\label{sec:method-series-identification}
+
+Each study is first organised by DICOM \texttt{SeriesInstanceUID}. Candidate
+series are classified into sagittal T1, sagittal T2/STIR and axial T2 using a
+combination of DICOM metadata and image-orientation checks. Series descriptions
+are informative but not trusted alone because naming conventions differ across
+institutions. The classifier therefore considers fields such as
+\texttt{SeriesDescription}, \texttt{ProtocolName}, sequence parameters where
+available, and the orientation derived from \texttt{ImageOrientationPatient}.
+
+Ambiguous or duplicated candidate series are flagged for manual review rather
+than selected by filename order. The selected series identifiers are stored in
+a manifest so that every experiment uses the same source series.
+
+\subsection{Patient-Space Geometry}
+\label{sec:method-geometry}
+
+For each DICOM slice, the image plane is reconstructed from
+\texttt{ImagePositionPatient}, \texttt{ImageOrientationPatient} and
+\texttt{PixelSpacing}. Let $\mathbf{s}$ be the patient-space location of the
+upper-left pixel, $\mathbf{r}$ and $\mathbf{c}$ the row and column direction
+cosines, and $\Delta_r,\Delta_c$ the corresponding pixel spacings. The physical
+coordinate of pixel $(i,j)$ is
+
+\begin{equation}
+\mathbf{x}(i,j)=
+\mathbf{s}
++i\,\Delta_r\,\mathbf{r}
++j\,\Delta_c\,\mathbf{c}.
+\label{eq:dicom-patient-coordinate}
+\end{equation}
+
+The slice normal is
+
+\begin{equation}
+\mathbf{n}=\mathbf{r}\times\mathbf{c}.
+\label{eq:slice-normal}
+\end{equation}
+
+Slices are ordered by projection onto $\mathbf{n}$ rather than by filename.
+Spacing between consecutive slice origins is inspected for discontinuities.
+This procedure preserves patient coordinates across sagittal and axial
+acquisitions, allowing a level localised in one plane to be projected into the
+other.
+
+For a sagittal target point $\mathbf{q}$ and candidate axial slice $k$ with
+origin $\mathbf{s}_k$ and normal $\mathbf{n}_k$, the perpendicular distance to
+that slice plane is
+
+\begin{equation}
+d_k =
+\left|
+\mathbf{n}_k^\top(\mathbf{q}-\mathbf{s}_k)
+\right|.
+\label{eq:plane-distance}
+\end{equation}
+
+The nearest anatomically corresponding axial slices are the slices with the
+smallest $d_k$, subject to coverage and orientation checks. The method is an
+implementation of physical correspondence, not a learned registration shortcut,
+and follows the geometric principle used by prior lumbar pipelines
+\cite{pan2021automatically,batra2025mscan}.
+
+\subsection{Orientation Standardisation}
+\label{sec:method-orientation}
+
+Volumes are reoriented to a common anatomical convention for tensor processing
+while retaining the transform to original patient coordinates. Left/right must
+never be inferred after arbitrary array transposition; all laterality-dependent
+targets are checked against the DICOM orientation transform. This is particularly
+important for foraminal and subarticular labels, where a left/right inversion
+would create a scientifically silent but catastrophic error.
+
+\subsection{Voxel Spacing and Resampling}
+\label{sec:method-resampling}
+
+The acquisition spacing varies by institution, scanner and plane. Inputs are
+therefore resampled only after anatomical coordinates have been reconstructed.
+The target spacing is chosen from the training-set distribution so that it
+preserves structures relevant to grading without creating unnecessary memory
+cost. Sagittal and axial streams may use different in-plane resolutions because
+their native geometry and diagnostic roles differ.
+
+Interpolation uses a continuous method (e.g.\ linear or higher-order interpolation)
+for MR intensities and nearest-neighbour interpolation for discrete masks or
+labels. Original spacing is retained in metadata for any measurement reported
+in millimetres. The exact target spacing will be \torecord{final sagittal and
+axial resampling spacings selected from the development cohort}.
+
+\subsection{Intensity Processing}
+\label{sec:method-intensity}
+
+MRI intensities are not quantitatively standardised across scanners. The
+preprocessing therefore removes gross scale differences without imposing a
+global histogram learned from test data. A default pipeline is:
+
+\begin{enumerate}
+  \item suppress non-finite values and obvious padding/background values;
+  \item define a foreground mask from the body/spine region;
+  \item clip extreme foreground intensities using training-derived robust
+        percentiles;
+  \item perform per-volume or per-ROI robust z-score normalisation;
+  \item optionally compare with bias-field correction or histogram
+        standardisation as a robustness ablation.
+\end{enumerate}
+
+Any learned harmonisation is fitted only on the development data. The external
+Rizgary zero-shot result is reported both with the baseline preprocessing and,
+if a separate harmonisation experiment is conducted, with that method clearly
+labelled as an intervention rather than folded into the zero-shot definition.
+
+\subsection{Quality-Control Flags}
+\label{sec:method-qc}
+
+Automated QC records the following per series:
+
+\begin{itemize}
+  \item slice count and ordering consistency;
+  \item missing or duplicated instance positions;
+  \item orientation consistency within series;
+  \item in-plane spacing and slice spacing;
+  \item field of view and lumbar coverage;
+  \item intensity dynamic range;
+  \item severe motion or truncation where detectable;
+  \item presence of all sequences required by the particular experiment.
+\end{itemize}
+
+Cases failing geometry checks are not silently forced into the pipeline. They
+are reviewed, excluded with a recorded reason, or assigned to a robustness
+analysis if the failure itself represents a realistic missing-data condition.
+A final inclusion/exclusion table will report every such decision.
+
+% ===========================================================================
+\section{Anatomical Localisation and ROI Construction}
+\label{sec:method-localisation}
+
+\subsection{Role of Localisation}
+\label{sec:method-localisation-role}
+
+Localisation exists to make the subsequent comparison fair. The thesis does not
+claim that identifying L1--L2 through L5--S1 is itself novel; Chapter~2 showed
+that this problem is mature and that strong systems already attain highly
+reliable level assignment \cite{pan2021automatically}. The requirement here is
+that the localiser be accurate enough that representation and graph experiments
+are not dominated by wrong crops.
+
+An established model is therefore preferred. Candidate implementations include
+a SPIDER-pretrained nnU-Net-style segmentation network
+\cite{isensee2021nnunet,vandergraaf2024lumbar}, a heatmap-regression detector,
+or another state-of-the-art anatomical parser available when implementation
+begins. The choice is made on validation localisation error and robustness, not
+on whether it is architecturally fashionable.
+
+\subsection{Outputs}
+\label{sec:method-localisation-output}
+
+The localiser produces, for each study:
+
+\begin{itemize}
+  \item centres of L1--L2 through L5--S1 in patient coordinates;
+  \item vertebral/disc/canal masks or landmarks where the selected model provides
+        them;
+  \item a confidence or quality flag for each detected level;
+  \item the transform between voxel coordinates and DICOM patient space.
+\end{itemize}
+
+A failed or low-confidence localisation is retained as a distinct failure mode.
+It is not corrected manually for the primary automated pipeline without being
+reported, because doing so would inflate downstream grading performance by
+removing a real deployment error.
+
+\subsection{Localisation Evaluation}
+\label{sec:method-localisation-eval}
+
+Where point annotations are available, centre localisation error is measured in
+millimetres:
+
+\begin{equation}
+e_l = \|\hat{\mathbf{q}}_l-\mathbf{q}_l\|_2.
+\label{eq:localisation-error}
+\end{equation}
+
+Mean/median error and percentile distributions are reported by level.
+Percentage-of-correct-keypoint (PCK) or an equivalent tolerance-based measure is
+also reported at pre-specified physical thresholds. Where full masks are
+available, Dice and surface-distance metrics are reported. These results are
+separated from disease grading, consistent with the literature showing that
+detection/localisation and fine-grained grading generalise differently.
+
+\subsection{Disease-Specific 2.5D Regions of Interest}
+\label{sec:method-roi}
+
+One rectangular crop is not assumed to be equally appropriate for every target.
+The crop definition is conditioned on anatomical compartment.
+
+For central canal stenosis, the model receives sagittal T2/STIR context around
+the disc level together with corresponding axial T2 slices. For neural
+foraminal narrowing, the sagittal T1 stream receives greater parasagittal
+coverage and the ROI is side-aware, with sagittal T2 retained as complementary
+context. For subarticular stenosis, axial T2 supplies the dominant local
+evidence with sagittal context. These choices follow the clinical sequence--
+pathology correspondence established in Chapter~2 rather than being learned
+from arbitrary crop templates.
+
+Each 2.5D stream contains a small ordered stack around the anatomically closest
+slice,
+
+\[
+\mathcal{I}_l =
+\{I_{k-r},\ldots,I_k,\ldots,I_{k+r}\},
+\]
+
+where $k$ is the level-centred slice and $r$ is a small radius determined on the
+development set. A five-slice stack ($r=2$) is the initial reference
+configuration because it captures through-plane context at modest memory cost;
+the final radius is reported after sensitivity testing rather than treated as
+a novel contribution.
+
+Crops are defined in physical dimensions where possible, then resampled to the
+network input resolution. This avoids a fixed 100-pixel crop representing
+different anatomical widths on scanners with different pixel spacing.
+
+\subsection{ROI Quality Control}
+\label{sec:method-roi-qc}
+
+A validation subset is visually inspected using overlays of the detected level,
+crop boundary and corresponding axial slices. The inspection records:
+
+\begin{itemize}
+  \item correct lumbar level;
+  \item inclusion of the relevant canal/foramen/recess;
+  \item correct left/right orientation;
+  \item adequate axial coverage;
+  \item crop truncation;
+  \item correspondence failure caused by unusual axial angulation.
+\end{itemize}
+
+The purpose is not to manually curate the full dataset but to detect systematic
+geometry errors before they propagate into model training.
+
+% ===========================================================================
+\section{Baseline Representation and Sequence Encoders}
+\label{sec:method-baseline}
+
+\subsection{Independent ROI Classifier}
+\label{sec:method-e0}
+
+The mandatory baseline (E0) is an independent ROI classifier. Each target is
+graded from its anatomically localised input without communication with other
+targets. This represents the prevailing formulation criticised in
+Chapter~\ref{ch:litreview} and provides the reference against which relational
+reasoning is measured.
+
+The baseline uses a well-characterised image encoder such as ResNet
+\cite{he2016deep}, EfficientNet \cite{tan2019efficientnet}, Swin
+\cite{liu2021swin}, or another contemporary backbone selected before final
+experiments. The purpose is not to prove that one family is universally
+superior. A primary backbone is selected for the ablation ladder so that
+representation, routing and graph changes are measured under one stable
+feature extractor. A second backbone may be used in a model-agnosticity check
+for the strongest contribution.
+
+\subsection{Sequence-Specific Feature Extraction}
+\label{sec:method-sequence-encoders}
+
+Each available MRI sequence is processed by a sequence-specific encoder
+$E_m(\cdot)$,
+
+\begin{equation}
+\mathbf{f}_{p,l,m}=E_m(\mathcal{I}_{p,l,m}),
+\label{eq:sequence-encoder}
+\end{equation}
+
+for patient $p$, level $l$ and modality/sequence $m$. The encoders may share
+architecture while keeping separate normalisation statistics and weights, or
+may partially share weights if an explicit ablation shows that doing so is
+beneficial. Separate encoders are the default because T1, sagittal T2/STIR and
+axial T2 have different contrast and orientation statistics.
+
+To keep comparisons fair, the dimensionality of the output representation is
+held constant across fusion methods. Fixed concatenation, simple averaging and
+ordinary cross-attention all consume the same per-sequence features.
+
+\subsection{Controlled Backbone Selection}
+\label{sec:method-backbone-control}
+
+Backbone choice is selected on the validation partition before the central
+novelty experiments and then held fixed. The candidate comparison will use
+identical crops, augmentations, optimiser budget and patient split. If one
+backbone is selected because it gives the most stable validation performance
+rather than the absolute highest point estimate, that decision is recorded.
+
+This design prevents the thesis from becoming a repeated architecture search.
+The main questions concern anatomical self-supervision, adaptive modality
+allocation and target-level relational reasoning. A backbone is a controlled
+feature extractor in those experiments.
+
+
+% ===========================================================================
+\section{Core Contribution I: Anatomically Aligned Cross-Sequence Self-Supervision}
+\label{sec:method-ssl}
+
+\subsection{Rationale}
+\label{sec:method-ssl-rationale}
+
+Conventional self-supervised vision learning defines related views by applying
+augmentations to one image. That is useful but does not exploit a distinctive
+property of multi-sequence MRI: sagittal T1, sagittal T2/STIR and axial T2 can
+look very different while representing the same underlying patient and spinal
+level. DICOM geometry supplies the correspondence directly.
+
+The proposed objective therefore treats anatomical identity, rather than visual
+similarity, as the primary source of positive pairs. For patient $p$, level
+$l$, and two sequences $m_a$ and $m_b$, embeddings
+$\mathbf{z}_{p,l,m_a}$ and $\mathbf{z}_{p,l,m_b}$ are encouraged to encode a
+shared anatomical representation even though acquisition plane and contrast may
+differ.
+
+This idea is evaluated as a representation-learning hypothesis, not assumed to
+be beneficial. The literature already shows that generic and longitudinal
+self-supervision can reduce label dependence
+\cite{jamaludin2017selfsupervised,chen2020simple}; the experiment here asks
+whether explicitly anatomical cross-sequence correspondence is a stronger
+signal for lumbar grading.
+
+\subsection{Projection Head}
+\label{sec:method-ssl-projection}
+
+Each sequence feature is mapped through a projection head $P_m$:
+
+\begin{equation}
+\mathbf{z}_{p,l,m}=
+\frac{
+P_m(\mathbf{f}_{p,l,m})
+}{
+\|P_m(\mathbf{f}_{p,l,m})\|_2
+}.
+\label{eq:ssl-projection}
+\end{equation}
+
+The projection space is used for the self-supervised objective; the encoder
+features before projection are retained for downstream grading. This prevents
+the representation used for contrastive geometry from constraining the final
+classifier unnecessarily.
+
+\subsection{Positive-Pair Construction}
+\label{sec:method-positive-pairs}
+
+The strongest positive relation is:
+
+\[
+(p,l,m_a)\sim(p,l,m_b),
+\qquad m_a\neq m_b,
+\]
+
+meaning the same patient and same anatomical level in two different sequences.
+Correspondence is established through the DICOM reconstruction and level
+localiser, not through nearest image appearance.
+
+An optional softer relation may be tested for adjacent levels from the same
+patient, because neighbouring levels share biomechanical context. It is not
+included in the primary objective by default. Treating L3--L4 and L4--L5 as
+equivalent positives would risk erasing genuine level-specific pathology, so
+any adjacent-level term is isolated as a separate ablation.
+
+Different patients at the same level are not defined as positives in the main
+objective, because common anatomical level does not imply common disease state.
+They may be used in a secondary supervised-contrastive variant once labels are
+available, but this is conceptually distinct from the proposed anatomical
+self-supervision.
+
+\subsection{Contrastive Objective}
+\label{sec:method-ssl-objective}
+
+For anchor embedding $\mathbf{z}_i$ and its cross-sequence positive
+$\mathbf{z}_{i^+}$, the reference InfoNCE-style loss is
+
+\begin{equation}
+\mathcal{L}_{\mathrm{ACSSL}}(i)
+=
+-\log
+\frac{
+\exp(\mathrm{sim}(\mathbf{z}_i,\mathbf{z}_{i^+})/\tau)
+}{
+\sum_{j\in\mathcal{B}\setminus\{i\}}
+\exp(\mathrm{sim}(\mathbf{z}_i,\mathbf{z}_j)/\tau)
+},
+\label{eq:acssl}
+\end{equation}
+
+where $\mathrm{sim}$ is cosine similarity, $\tau$ is a temperature parameter
+and $\mathcal{B}$ is the contrastive batch. When more than one anatomically
+valid positive exists, the numerator is extended to the set of positives rather
+than choosing one arbitrarily.
+
+False negatives are a concern because two different patients may have very
+similar normal anatomy. The implementation will therefore compare ordinary
+InfoNCE with a variant that does not force all non-positive samples to be hard
+negatives, such as a multi-positive or non-contrastive consistency objective.
+The novelty claim is tied to the \emph{anatomical pairing}, not to a particular
+brand of contrastive loss.
+
+\subsection{Label-Efficiency Experiment}
+\label{sec:method-label-efficiency}
+
+The primary test of RQ2 uses fixed fractions of the labelled development set:
+10\%, 25\%, 50\% and 100\%. For each fraction:
+
+\begin{enumerate}
+  \item the encoder is initialised from the candidate pretraining strategy;
+  \item the same supervised grading head is fitted;
+  \item patient splits and target distribution are held fixed;
+  \item several random labelled subsets are evaluated where computationally
+        feasible;
+  \item macro-F1, weighted $\kappa$, severe-class recall and calibration are
+        compared.
+\end{enumerate}
+
+The competing initialisations are:
+
+\begin{itemize}
+  \item training from random initialisation;
+  \item ImageNet initialisation;
+  \item generic medical/volumetric pretraining where a suitable public model is
+        available;
+  \item ordinary augmentation-based self-supervision;
+  \item the proposed anatomically aligned cross-sequence self-supervision.
+\end{itemize}
+
+A successful result is not defined as beating every baseline at every label
+fraction. The useful scientific question is where anatomical pairing helps,
+where it does not, and whether any benefit is largest under label scarcity or
+domain shift.
+
+\subsection{Transfer Test of the Representation}
+\label{sec:method-ssl-transfer}
+
+The public-data model used for zero-shot Rizgary evaluation is trained once with
+and once without anatomical self-supervision while the downstream architecture
+is held constant. If the anatomically pretrained model loses less performance
+externally despite comparable internal performance, that would support the
+claim that the representation is less tied to dataset-specific appearance. If
+both models degrade equally, the self-supervised contribution is limited to
+label efficiency rather than domain robustness.
+
+% ===========================================================================
+\section{Core Contribution II: Disease-Conditioned Adaptive Sequence Routing}
+\label{sec:method-routing}
+
+\subsection{Problem Formulation}
+\label{sec:method-routing-problem}
+
+A conventional multi-sequence model applies the same fusion rule to every
+target. That assumption is clinically implausible because the sequences are not
+equally informative for each anatomical compartment. Sagittal T1 is particularly
+useful for foraminal fat obliteration, sagittal T2/STIR for disc/canal context,
+and axial T2 for canal and lateral recess morphology. The router turns that
+known heterogeneity into a learnable, testable mechanism.
+
+For patient $p$, target $t=(l,c)$ and available modalities
+$\mathcal{M}_p$, let $\mathbf{f}_{p,l,m}$ be the feature from modality $m$.
+The fused target feature is
+
+\begin{equation}
+\mathbf{u}_{p,t}
+=
+\sum_{m\in\mathcal{M}_p}
+g_{p,t,m}\,
+\mathbf{f}_{p,l,m},
+\label{eq:routed-feature}
+\end{equation}
+
+where the non-negative routing weights satisfy
+
+\begin{equation}
+\sum_{m\in\mathcal{M}_p} g_{p,t,m}=1.
+\label{eq:routing-simplex}
+\end{equation}
+
+The gate is conditioned on target identity and patient features:
+
+\begin{equation}
+g_{p,t,m}
+=
+\mathrm{softmax}_{m\in\mathcal{M}_p}
+\left(
+G[
+\mathbf{f}_{p,l,m},
+\mathbf{e}_{c},
+\mathbf{e}_{l},
+\mathbf{a}_{p}
+]
+\right),
+\label{eq:routing-gate}
+\end{equation}
+
+where $\mathbf{e}_{c}$ and $\mathbf{e}_{l}$ are learnable condition and level
+embeddings and $\mathbf{a}_{p}$ denotes optional acquisition/context metadata
+that is available without leaking the target label. The initial implementation
+uses a lightweight MLP or target-conditioned attention gate. A more complex
+mixture-of-experts router is considered only if the simpler mechanism is
+insufficient.
+
+\subsection{Explicit Availability Mask}
+\label{sec:method-routing-mask}
+
+Missing sequences are represented by an availability mask
+$a_{p,m}\in\{0,1\}$. Logits for unavailable modalities are masked before the
+softmax:
+
+\begin{equation}
+g_{p,t,m}=0 \quad \mathrm{if}\quad a_{p,m}=0.
+\label{eq:routing-missing-mask}
+\end{equation}
+
+The remaining weights are renormalised over the modalities that actually
+exist. A missing sequence is therefore not represented by an all-zero image
+whose meaning the network must infer. Availability is explicit in the model.
+
+\subsection{Modality Dropout}
+\label{sec:method-modality-dropout}
+
+During training, complete studies are stochastically converted into incomplete
+ones by removing one or more sequence streams. The dropout distribution includes:
+
+\begin{itemize}
+  \item all three sequences;
+  \item sagittal T1 + sagittal T2;
+  \item sagittal T2 + axial T2;
+  \item sagittal T1 + axial T2 where clinically meaningful;
+  \item each single-sequence configuration as an edge case.
+\end{itemize}
+
+The sampling probabilities are tuned so that the model sees enough complete
+studies to learn complementary fusion while also receiving substantial exposure
+to incomplete inputs. The exact probabilities are \torecord{final modality-
+dropout schedule selected on validation data}.
+
+No external test case is artificially repaired by copying another sequence into
+a missing slot. The model's purpose is to remain functional under genuine
+absence, not to conceal it.
+
+\subsection{Routing Consistency}
+\label{sec:method-routing-consistency}
+
+An optional consistency term encourages the prediction from an incomplete
+modality set to remain close to the complete-study prediction when the removed
+modality is non-essential:
+
+\begin{equation}
+\mathcal{L}_{\mathrm{miss}}
+=
+D\!\left(
+p_{\theta}(y\mid x_{\mathrm{full}}),
+p_{\theta}(y\mid x_{\mathrm{subset}})
+\right),
+\label{eq:missing-consistency}
+\end{equation}
+
+where $D$ is a divergence such as KL divergence or Jensen--Shannon divergence.
+This term is not applied blindly: for targets known to depend strongly on a
+specific sequence, forcing invariance to its removal could suppress legitimate
+diagnostic information. The term is therefore ablated by target and compared
+with modality-dropout training alone.
+
+\subsection{Routing Baselines}
+\label{sec:method-routing-baselines}
+
+RQ3 is evaluated against four progressively stronger controls:
+
+\begin{enumerate}
+  \item fixed feature concatenation;
+  \item simple equal-weight averaging;
+  \item ordinary cross-attention over available sequence features;
+  \item disease-conditioned routing without modality dropout;
+  \item disease-conditioned routing with modality dropout.
+\end{enumerate}
+
+For each method, encoder capacity, ROI inputs and training budget are matched as
+closely as possible. Missing-sequence robustness is evaluated on the same
+patients under the same artificial absence pattern.
+
+\subsection{Interpreting Routing Weights}
+\label{sec:method-routing-interpretation}
+
+The gate weights are model allocations, not causal estimates of sequence
+importance. A high axial T2 weight does not prove that axial T2 caused a correct
+decision. Clinical plausibility is assessed in two complementary ways.
+
+First, aggregate routing weights are summarised by target. The expected pattern
+is that foraminal targets allocate more weight to sagittal T1 and subarticular/
+canal targets more to axial T2, but this expectation is not built into the gate
+as a hard prior.
+
+Second, controlled input ablation tests whether removing the sequence with high
+routing weight causes a greater performance loss than removing a low-weight
+sequence. Agreement between learned allocation and intervention strengthens the
+interpretation; disagreement is reported rather than rationalised post hoc.
+
+% ===========================================================================
+\section{Core Contribution III: Heterogeneous Disease--Anatomy Graph}
+\label{sec:method-graph}
+
+\subsection{Graph Construction}
+\label{sec:method-graph-construction}
+
+The proposed graph represents \emph{prediction targets}, not pixels and not a
+3D disc surface. At full LumbarDISC scope, the node set is
+
+\begin{equation}
+V=\{v_{l,c}:l\in\mathcal{L},\,c\in\mathcal{C}\},
+\qquad |V|=25.
+\label{eq:graph-nodes}
+\end{equation}
+
+Each node begins with the routed visual representation for that target together
+with embeddings that identify level and condition:
+
+\begin{equation}
+\mathbf{h}^{(0)}_{l,c}
+=
+[
+\mathbf{u}_{l,c}
+\Vert
+\mathbf{e}_{l}
+\Vert
+\mathbf{e}_{c}
+].
+\label{eq:node-initial}
+\end{equation}
+
+The graph topology is defined anatomically before training. It is not learned
+from correlations in the test data.
+
+\subsection{Typed Edge Families}
+\label{sec:method-edge-types}
+
+Three primary edge types are used.
+
+\textbf{Adjacent-level edges} connect the same target type across neighbouring
+lumbar levels, for example
+
+\[
+v_{L3-L4,\mathrm{Canal}}
+\leftrightarrow
+v_{L4-L5,\mathrm{Canal}}.
+\]
+
+These encode the ordered chain of lumbar motion segments.
+
+\textbf{Same-level cross-condition edges} connect anatomical compartments that
+coexist at one level, for example central canal to left/right foraminal and
+subarticular targets. The edge expresses that the targets share local
+morphology, not that one grade deterministically implies another.
+
+\textbf{Bilateral edges} connect left and right counterparts of the same
+condition, for example
+
+\[
+v_{L4-L5,\mathrm{LF}}
+\leftrightarrow
+v_{L4-L5,\mathrm{RF}}.
+\]
+
+This represents bilateral anatomical symmetry without forcing equal grades.
+
+Additional cross-type edges are added only if clinically justified in the
+pre-specified topology. A denser graph is not automatically a better graph; the
+study tests whether explicit relation types add value over homogeneous message
+passing.
+
+\subsection{Relation-Aware Message Passing}
+\label{sec:method-message-passing}
+
+For layer $q$, node $i$ receives messages from neighbours $j\in\mathcal{N}(i)$.
+A relation-aware attention formulation is
+
+\begin{align}
+\mathbf{q}_i &= W_Q\mathbf{h}^{(q)}_i,\\
+\mathbf{k}_{j,r} &= W^r_K\mathbf{h}^{(q)}_j,\\
+\mathbf{v}_{j,r} &= W^r_V\mathbf{h}^{(q)}_j,
+\end{align}
+
+with attention
+
+\begin{equation}
+\alpha_{ijr}
+=
+\mathrm{softmax}_{j,r}
+\left(
+\frac{
+\mathbf{q}_i^\top\mathbf{k}_{j,r}
+}{
+\sqrt{d}
+}
++b_r
+\right),
+\label{eq:relational-attention}
+\end{equation}
+
+and update
+
+\begin{equation}
+\tilde{\mathbf{h}}^{(q+1)}_i
+=
+\sum_{(j,r)\in\mathcal{N}(i)}
+\alpha_{ijr}\mathbf{v}_{j,r}.
+\label{eq:graph-message}
+\end{equation}
+
+Residual connection, normalisation and feed-forward transformation produce the
+final layer output. Relation-specific transformations $W^r_K,W^r_V$ allow an
+adjacent-level neighbour to influence a node differently from its contralateral
+counterpart.
+
+The exact graph transformer implementation may be replaced by a computationally
+simpler relation-aware GAT if validation shows no benefit from the more complex
+version. The contribution is the explicit typed target graph and its controlled
+evaluation, not a requirement to use the largest graph architecture.
+
+\subsection{Graph Baselines}
+\label{sec:method-graph-baselines}
+
+The graph contribution is tested against:
+
+\begin{enumerate}
+  \item \textbf{Independent heads:} no message passing between targets.
+  \item \textbf{Ordered level transformer:} features communicate across the five
+        lumbar levels but do not form 25 typed condition/laterality nodes.
+  \item \textbf{Homogeneous graph:} the same 25 nodes and adjacency pattern but
+        one undifferentiated edge type.
+  \item \textbf{Heterogeneous graph:} typed adjacent-level, cross-condition and
+        bilateral relations.
+  \item \textbf{Random/shuffled-edge control:} graph capacity retained while
+        anatomical edges are permuted.
+\end{enumerate}
+
+The shuffled-edge control is essential. If a graph with arbitrary topology
+performs as well as the anatomical graph, the study has shown that extra
+message-passing capacity helps, not that the encoded anatomy matters.
+
+\subsection{Edge-Family Ablation}
+\label{sec:method-edge-ablation}
+
+The full graph is further decomposed:
+
+\begin{itemize}
+  \item remove adjacent-level edges;
+  \item remove same-level cross-condition edges;
+  \item remove bilateral edges;
+  \item retain only one family at a time.
+\end{itemize}
+
+Results are reported by target family. It is plausible, for example, that
+bilateral edges help lateral-compartment grading but add little to central-canal
+classification. A single average graph improvement would conceal this structure.
+
+\subsection{Graph Consistency and Uncertainty}
+\label{sec:method-graph-uncertainty}
+
+Graph information is not used to hard-code clinically deterministic rules.
+Severe stenosis at L4--L5 does not require moderate stenosis at L3--L4, and the
+model is allowed to preserve isolated pathology. Relational message passing is
+therefore soft.
+
+For uncertainty analysis, node disagreement can be measured between an
+independent-head prediction and the graph-refined prediction, or between
+neighbour-conditioned and local evidence. This disagreement is explored as an
+auxiliary signal for selective prediction, but it is not equated with calibrated
+clinical uncertainty unless validated against error.
+
+% ===========================================================================
+\section{Supporting Method: Ordinal and Cost-Sensitive Grading}
+\label{sec:method-ordinal}
+
+\subsection{Categorical Baseline}
+\label{sec:method-ce}
+
+Standard three-class cross-entropy is retained as the mandatory reference:
+
+\begin{equation}
+\mathcal{L}_{\mathrm{CE}}
+=
+-\sum_{t}m_t
+\sum_{k=0}^{2}
+\mathbb{I}(y_t=k)\log p_{t,k}.
+\label{eq:cross-entropy}
+\end{equation}
+
+Class weighting or balanced sampling is applied in separate controlled variants.
+This baseline is necessary because previous lumbar work found that explicitly
+ordinal objectives did not consistently outperform cross-entropy
+\cite{niemeyer2021a}.
+
+\subsection{Ordinal Threshold Formulation}
+\label{sec:method-ordinal-threshold}
+
+An ordinal head represents a three-grade target as two ordered threshold
+questions:
+
+\[
+P(y>0\mid\mathbf{h}), \qquad
+P(y>1\mid\mathbf{h}).
+\]
+
+A CORAL/CORN-style implementation may be used provided the ordering constraint
+is respected. The exact ordinal formulation is selected before the final
+ablation and compared directly with categorical cross-entropy under identical
+features.
+
+Performance is evaluated not only by exact class agreement but also by error
+distance:
+
+\begin{equation}
+d_t=|\hat{y}_t-y_t|.
+\label{eq:grade-distance}
+\end{equation}
+
+The proportions with $d_t=0$, $d_t=1$ and $d_t=2$ are reported separately.
+
+\subsection{Clinically Asymmetric Cost}
+\label{sec:method-cost}
+
+A cost matrix $C$ allows distant under-grading to receive a larger training
+penalty:
+
+\begin{equation}
+C=
+\begin{bmatrix}
+0 & c_{01} & c_{02}\\
+c_{10} & 0 & c_{12}\\
+c_{20} & c_{21} & 0
+\end{bmatrix},
+\label{eq:cost-matrix}
+\end{equation}
+
+with the clinically motivated condition
+
+\[
+c_{20}>c_{21},
+\]
+
+so that Severe$\rightarrow$Normal/Mild is more costly than
+Severe$\rightarrow$Moderate. The exact numerical values are not invented by the
+model developer. They are either aligned with a defensible benchmark/clinical
+weighting or selected through a sensitivity analysis across a small
+pre-specified family of matrices.
+
+One implementation uses the expected cost under the predicted distribution:
+
+\begin{equation}
+\mathcal{L}_{\mathrm{cost}}
+=
+\sum_t m_t
+\sum_{k=0}^{2}
+C_{y_t,k}\,p_{t,k}.
+\label{eq:expected-cost}
+\end{equation}
+
+The cost term is evaluated alongside, not instead of, standard calibration and
+discrimination metrics. A model is not considered better merely because it
+optimises the chosen matrix.
+
+\subsection{Class Imbalance}
+\label{sec:method-imbalance}
+
+Because severe grades are uncommon in LumbarDISC, the study compares a small
+set of established strategies rather than stacking all of them simultaneously:
+
+\begin{itemize}
+  \item unweighted cross-entropy;
+  \item inverse-frequency or effective-number class weighting;
+  \item weighted sampling;
+  \item focal loss \cite{lin2017focal};
+  \item the cost-sensitive/ordinal variant above.
+\end{itemize}
+
+MixUp/CutMix are not the default for ordinal grading because mixed labels may
+have no clinical interpretation. Geometric augmentation is constrained so that
+left/right labels are updated consistently; horizontal flipping is prohibited
+for laterality-dependent targets unless labels and orientation are transformed
+together.
+
+% ===========================================================================
+\section{Supporting Method: Calibration, Uncertainty and Selective Prediction}
+\label{sec:method-calibration}
+
+\subsection{Probability Calibration}
+\label{sec:method-temperature}
+
+Raw neural-network probabilities are not treated as calibrated confidence.
+Temperature scaling is fitted on the validation set:
+
+\begin{equation}
+p_k^{(T)}
+=
+\frac{
+\exp(z_k/T)
+}{
+\sum_j \exp(z_j/T)
+},
+\label{eq:temperature}
+\end{equation}
+
+where $T>0$ is selected without access to the test labels. Calibration is then
+evaluated with Expected Calibration Error, Brier score and reliability diagrams.
+
+\subsection{Predictive Uncertainty}
+\label{sec:method-uncertainty}
+
+The primary feasible uncertainty methods are MC dropout and/or a small deep
+ensemble. If $S$ stochastic predictions are available, the predictive mean is
+
+\begin{equation}
+\bar{\mathbf{p}}
+=
+\frac{1}{S}\sum_{s=1}^{S}\mathbf{p}^{(s)},
+\label{eq:predictive-mean}
+\end{equation}
+
+and uncertainty can be summarised by predictive entropy,
+
+\begin{equation}
+H(\bar{\mathbf{p}})
+=
+-\sum_k \bar{p}_k\log\bar{p}_k,
+\label{eq:entropy}
+\end{equation}
+
+together with between-member variance. The study reports whether uncertainty is
+higher on incorrect predictions, distant grade errors, low-agreement targets
+and external-domain cases.
+
+\subsection{Selective Prediction}
+\label{sec:method-selective}
+
+A selective system abstains when uncertainty exceeds threshold $\delta$:
+
+\[
+U(x)>\delta \Rightarrow \mathrm{refer/abstain}.
+\]
+
+Rather than choosing one arbitrary threshold, the complete risk--coverage curve
+is reported: as increasingly uncertain cases are withheld, what fraction of the
+cohort remains covered and what error remains among the retained predictions?
+The area under, or summary points from, this curve can compare methods.
+
+The terminology ``refer'' describes model behaviour only. It does not claim a
+validated clinical workflow; a prospective reader study would be required to
+show that abstention improves patient care.
+
+% ===========================================================================
+\section{Composite Training Objective}
+\label{sec:method-total-loss}
+
+The complete model may use the objective
+
+\begin{equation}
+\mathcal{L}_{\mathrm{total}}
+=
+\mathcal{L}_{\mathrm{grade}}
++\lambda_{\mathrm{ssl}}\mathcal{L}_{\mathrm{ACSSL}}
++\lambda_{\mathrm{miss}}\mathcal{L}_{\mathrm{miss}}
++\lambda_{\mathrm{cost}}\mathcal{L}_{\mathrm{cost}}
++\lambda_{\mathrm{reg}}\mathcal{L}_{\mathrm{reg}},
+\label{eq:total-loss}
+\end{equation}
+
+where $\mathcal{L}_{\mathrm{grade}}$ is categorical or ordinal supervised loss,
+$\mathcal{L}_{\mathrm{ACSSL}}$ is the anatomical cross-sequence objective,
+$\mathcal{L}_{\mathrm{miss}}$ is optional missing-modality consistency,
+$\mathcal{L}_{\mathrm{cost}}$ is the optional clinical cost term and
+$\mathcal{L}_{\mathrm{reg}}$ collects standard regularisation.
+
+Graph message passing is normally part of the forward model rather than a
+separate loss. If an explicit graph-consistency regulariser is introduced, it
+receives its own coefficient and ablation.
+
+Every non-zero $\lambda$ is treated as a hyperparameter whose contribution must
+be demonstrated. A loss term is removed if it adds no reproducible value. The
+final thesis reports the selected values and the search range:
+\torecord{$\lambda$ values, temperature, optimiser and regularisation settings}.
+
+% ===========================================================================
+\section{Optimisation and Training Protocol}
+\label{sec:method-training}
+
+\subsection{Training Phases}
+\label{sec:method-training-phases}
+
+Training is separated into conceptually distinct phases:
+
+\begin{enumerate}
+  \item \textbf{Anatomical/localisation training or loading.}
+        The localiser is trained/reproduced and then fixed for the grading
+        experiments unless a joint-training ablation is explicitly conducted.
+
+  \item \textbf{Self-supervised pretraining.}
+        Sequence encoders are trained with anatomical cross-sequence pairs using
+        development patients only.
+
+  \item \textbf{Supervised grading.}
+        Encoders are fine-tuned with the routing and graph modules on
+        LumbarDISC labels.
+
+  \item \textbf{Calibration.}
+        Temperature/uncertainty parameters are fitted on validation data after
+        model selection.
+
+  \item \textbf{External evaluation.}
+        The selected model is frozen and evaluated on the fixed Rizgary test
+        set.
+
+  \item \textbf{Few-shot adaptation.}
+        New model copies are adapted using only the local adaptation pool and
+        re-evaluated on the same fixed local test set.
+\end{enumerate}
+
+\subsection{Optimiser and Schedules}
+\label{sec:method-optimiser}
+
+AdamW is the default optimiser for transformer/graph components; SGD or AdamW
+may be compared for CNN baselines if required. Learning rate is selected on the
+validation set within a pre-specified range, with warm-up and cosine decay or a
+plateau scheduler used consistently across the main ablation. Early stopping is
+based on a prevalence-robust validation metric such as macro-F1 or weighted
+$\kappa$, not raw accuracy.
+
+The final report records:
+
+\begin{itemize}
+  \item optimiser and version;
+  \item initial learning rate and scheduler;
+  \item batch size / effective batch size;
+  \item number of epochs and early-stopping patience;
+  \item weight decay and dropout;
+  \item input resolution and slice-stack radius;
+  \item precision mode (FP32/BF16/FP16);
+  \item random seeds;
+  \item hardware and software versions;
+  \item wall-clock and GPU time.
+\end{itemize}
+
+No final hyperparameter value is fabricated in this protocol chapter; each is
+\torecord{executed training configuration and model-selection criterion}.
+
+\subsection{Augmentation}
+\label{sec:method-augmentation}
+
+Training augmentation is designed to simulate plausible MRI variability without
+altering disease anatomy. Candidate transforms include modest intensity scaling,
+gamma/contrast change, bias-field simulation, noise, small translation/rotation
+and limited elastic deformation. Aggressive transformations that distort the
+canal or foraminal morphology beyond plausible acquisition variation are
+excluded.
+
+Laterality-aware augmentation updates all side-specific labels. If a horizontal
+flip changes anatomical left/right, left and right target labels and graph node
+identity are swapped in the same transformation. Augmentation is disabled for
+validation and test data except in a separately labelled test-time-augmentation
+experiment.
+
+\subsection{Model Selection}
+\label{sec:method-model-selection}
+
+Only validation data are used to choose architecture depth, routing
+hyperparameters, loss weights, early stopping and calibration. The held-out
+public test and fixed Rizgary test sets are not inspected for iterative model
+selection. If many exploratory experiments are performed, only the pre-specified
+final comparison is used for confirmatory statistical claims; exploratory
+results are labelled as such.
+
+
+% ===========================================================================
+\section{Experimental Ladder and Ablation Programme}
+\label{sec:method-ablation}
+
+The main experiment is not one comparison between ``AMOG-Net'' and a baseline.
+It is a ladder in which each additional assumption is isolated.
+
+\begin{longtable}{p{1.1cm}p{5.0cm}p{7.2cm}}
+\toprule
+\textbf{ID} & \textbf{Configuration} & \textbf{Question isolated}\\
+\midrule
+\endfirsthead
+\toprule
+\textbf{ID} & \textbf{Configuration} & \textbf{Question isolated}\\
+\midrule
+\endhead
+E0 & Independent ROI classifier & How well can anatomically localised targets be graded without relational or adaptive fusion?\\
+E1 & + DICOM-aligned multi-sequence ROIs & What is gained by correct cross-plane correspondence under fixed fusion?\\
+E2 & + disease-conditioned sequence routing & Does target-specific routing outperform fixed fusion?\\
+E3 & + modality dropout / missing-sequence training & Does explicit training for absence improve robustness?\\
+E4 & + anatomical cross-sequence SSL & Does anatomy-defined pretraining improve representation and label efficiency?\\
+E5 & + homogeneous target graph & Does generic message passing help?\\
+E6 & + typed heterogeneous disease--anatomy graph & Do clinically defined edge types matter beyond graph capacity?\\
+E7 & + ordinal/cost-sensitive/calibrated heads & Can clinically consequential errors and probability reliability be improved?\\
+E8 & Selected complete system + external transfer & Do the selected components survive institutional shift and adapt efficiently?\\
+\bottomrule
+\end{longtable}
+
+The ordering may be adjusted for engineering practicality, but the comparisons
+themselves remain. In particular, E6 must be compared with both E5 and a
+shuffled-edge control. Otherwise any improvement can be attributed to additional
+parameters rather than anatomical topology.
+
+\subsection{Contribution-Specific Ablations}
+\label{sec:method-contribution-ablation}
+
+Three ablation families correspond directly to the doctoral contributions.
+
+\textbf{Anatomical SSL ablation} compares no SSL, generic image SSL and
+DICOM-aligned cross-sequence SSL under identical downstream training. It is
+repeated at reduced label fractions.
+
+\textbf{Routing ablation} compares fixed fusion, cross-attention, target-
+conditioned routing and target-conditioned routing with modality dropout.
+Performance is reported under complete and missing-sequence input.
+
+\textbf{Graph ablation} compares independent heads, an ordered five-level
+transformer, homogeneous graph, heterogeneous graph and random/shuffled edges.
+Edge-family removal further identifies whether adjacency, bilateral symmetry or
+same-level cross-condition interaction carries the signal.
+
+\subsection{Negative Results}
+\label{sec:method-negative-results}
+
+A component that fails to improve the pre-specified outcome is not silently
+removed from the research record. The thesis reports it, including confidence
+intervals and target-specific effects. This is particularly important for
+ordinal objectives and graph modelling, because both are theoretically
+attractive and therefore vulnerable to confirmation bias.
+
+A component enters the final integrated system only if it adds a reproducible
+benefit, improves an outcome that the thesis has defined as clinically relevant,
+or yields a meaningful robustness/calibration advantage despite similar
+aggregate discrimination.
+
+% ===========================================================================
+\section{External Validation at Rizgary}
+\label{sec:method-external}
+
+\subsection{Definition of Zero-Shot Transfer}
+\label{sec:method-zero-shot}
+
+Zero-shot transfer is defined strictly. The selected model, including encoder,
+router, graph, classifier and calibration strategy developed on public data, is
+frozen before any Rizgary test label is used. The local images are passed
+through the same preprocessing and localisation pipeline, with only
+non-learned DICOM reconstruction and pre-specified per-volume normalisation
+allowed.
+
+No local fine-tuning, threshold optimisation or calibration is permitted in the
+zero-shot result. If a local intensity harmonisation method is fitted on Rizgary
+data, that constitutes a separate domain-adaptation experiment and is labelled
+accordingly.
+
+The primary zero-shot analysis is restricted to the central-canal targets for
+which the local reports provide a defensible mapping. The principal comparison
+is therefore not the full 25-target benchmark score versus a five-target local
+score; it is public held-out versus local external performance on the
+\emph{same central-canal task}.
+
+\subsection{Quantifying Domain Shift}
+\label{sec:method-domain-shift}
+
+Performance degradation is reported as both absolute and relative change:
+
+\begin{align}
+\Delta M &= M_{\mathrm{Rizgary}}-M_{\mathrm{Public}},\\
+\Delta M_{\%} &=
+100\,
+\frac{M_{\mathrm{Rizgary}}-M_{\mathrm{Public}}}
+{M_{\mathrm{Public}}},
+\end{align}
+
+for each primary metric $M$. The thesis does not interpret a large negative
+$\Delta M$ as failed research; the size and structure of the drop are among the
+main outcomes of RQ4.
+
+The shift is decomposed by:
+
+\begin{itemize}
+  \item lumbar level;
+  \item severity class;
+  \item available sequence configuration;
+  \item scanner/vendor/field strength where the local cohort contains enough
+        variation;
+  \item slice thickness/in-plane resolution;
+  \item localisation success;
+  \item report/reference-standard confidence.
+\end{itemize}
+
+This analysis separates representational failure from data-quality failure
+where possible. For example, if grading declines but localisation remains
+stable, the pattern supports the detection-versus-grading asymmetry documented
+in Chapter~2.
+
+\subsection{Local Error Review}
+\label{sec:method-local-error-review}
+
+A blinded error audit is performed after the zero-shot metrics are locked.
+Incorrect local predictions are grouped into:
+
+\begin{itemize}
+  \item wrong level/localisation;
+  \item adjacent-grade disagreement;
+  \item distant Severe$\leftrightarrow$Normal/Mild disagreement;
+  \item apparent label/report ambiguity;
+  \item missing or atypical sequence;
+  \item image-quality/artifact issue;
+  \item plausible model error despite adequate evidence.
+\end{itemize}
+
+Where reader time permits, a subset of model/report disagreements is re-read
+without exposing the model prediction. The purpose is not to alter the test
+labels opportunistically but to estimate how much apparent model error may
+reflect reference-standard variability.
+
+% ===========================================================================
+\section{Few-Shot Domain Adaptation}
+\label{sec:method-adaptation}
+
+\subsection{Adaptation Sizes}
+\label{sec:method-adaptation-sizes}
+
+The adaptation pool is sampled at
+
+\[
+N\in\{10,25,50,100\}
+\]
+
+patient-level labelled cases, subject to the final number of eligible local
+studies. Each $N$ is sampled multiple times, stratified where feasible by
+central-canal severity. The same fixed local test set is used after every
+adaptation.
+
+The experiment therefore estimates a function
+
+\begin{equation}
+M(N)=
+\text{test performance after adaptation with }N\text{ local cases},
+\label{eq:adaptation-curve}
+\end{equation}
+
+rather than a single ``fine-tuned'' number.
+
+\subsection{Adaptation Strategies}
+\label{sec:method-adaptation-strategies}
+
+Four strategies are compared:
+
+\begin{enumerate}
+  \item \textbf{No adaptation.} The zero-shot baseline.
+  \item \textbf{Non-learned/simple harmonisation.} Intensity preprocessing is
+        adjusted using only the adaptation pool where a defensible method exists.
+  \item \textbf{Parameter-efficient adaptation.} Adapter layers or low-rank
+        updates are trained while most of the public-data representation remains
+        fixed.
+  \item \textbf{Full fine-tuning.} All or most parameters are updated, where
+        computationally feasible and where $N$ is large enough to avoid
+        immediate overfitting.
+\end{enumerate}
+
+The exact PEFT implementation is chosen after a small validation comparison and
+is not itself claimed as novel. Its role is to ask an operational question:
+how many local labels are needed when a hospital cannot afford to retrain a full
+model from scratch?
+
+\subsection{Annotation-Efficiency Summary}
+\label{sec:method-annotation-efficiency}
+
+For each method, the recovery curve reports macro-F1, weighted $\kappa$, severe
+recall and calibration as a function of $N$. A useful summary is the area under
+the performance-versus-log-annotation curve, but raw points with confidence
+intervals remain primary because the curve may be non-linear.
+
+No arbitrary threshold such as ``95\% recovery'' defines success. If 100 local
+cases recover little performance, that is a meaningful negative finding about
+transportability. If 10 cases recover most of the loss, that is evidence for
+annotation-efficient adaptation.
+
+\subsection{Avoiding Adaptation Overfit}
+\label{sec:method-adaptation-overfit}
+
+Few-shot training is particularly vulnerable to overfitting and selection bias.
+The study therefore:
+
+\begin{itemize}
+  \item repeats each $N$ across several sampled adaptation sets;
+  \item uses regularisation and early stopping based only on an adaptation
+        validation split or internal cross-validation within the adaptation
+        pool;
+  \item never selects the adaptation epoch from the fixed external test;
+  \item reports the variance across sampled local subsets;
+  \item compares PEFT with full fine-tuning rather than assuming fewer trainable
+        parameters are always superior.
+\end{itemize}
+
+% ===========================================================================
+\section{Evaluation Metrics}
+\label{sec:method-metrics}
+
+No single metric is treated as sufficient because the task is imbalanced,
+ordinal and multi-target.
+
+\subsection{Macro F1 and Balanced Accuracy}
+\label{sec:method-macro}
+
+For class $k$, precision and recall are
+
+\begin{align}
+P_k &= \frac{TP_k}{TP_k+FP_k},\\
+R_k &= \frac{TP_k}{TP_k+FN_k},
+\end{align}
+
+and
+
+\begin{equation}
+F1_k=
+2\frac{P_kR_k}{P_k+R_k}.
+\end{equation}
+
+Macro-F1 is the unweighted class mean,
+
+\begin{equation}
+F1_{\mathrm{macro}}
+=
+\frac{1}{K}\sum_{k=1}^{K}F1_k,
+\label{eq:macro-f1}
+\end{equation}
+
+so the severe class cannot be hidden by the Normal/Mild majority.
+
+Balanced accuracy is
+
+\begin{equation}
+BA=
+\frac{1}{K}\sum_{k=1}^{K}R_k.
+\label{eq:balanced-accuracy}
+\end{equation}
+
+These are primary discrimination metrics.
+
+\subsection{Quadratic Weighted Kappa}
+\label{sec:method-kappa}
+
+Quadratic weighted $\kappa$ is reported because the labels are ordered and the
+literature supplies human agreement values in $\kappa$. For observed confusion
+matrix $O$ and expected matrix $E$, with weight
+
+\[
+w_{ij}=\frac{(i-j)^2}{(K-1)^2},
+\]
+
+the statistic is
+
+\begin{equation}
+\kappa_w
+=
+1-
+\frac{
+\sum_{ij}w_{ij}O_{ij}
+}{
+\sum_{ij}w_{ij}E_{ij}
+}.
+\label{eq:weighted-kappa}
+\end{equation}
+
+Exact agreement and within-one-grade agreement are also reported so that a high
+$\kappa$ is not the only view of ordinal error.
+
+\subsection{Severe-Class Outcomes}
+\label{sec:method-severe}
+
+The clinically decisive class is reported separately:
+
+\begin{itemize}
+  \item Severe recall/sensitivity;
+  \item Severe precision;
+  \item Severe-versus-rest AUROC and AUPRC where appropriate;
+  \item Severe$\rightarrow$Normal/Mild error rate;
+  \item Severe$\rightarrow$Moderate error rate.
+\end{itemize}
+
+The separation distinguishes distant under-grading from adjacent boundary error.
+
+\subsection{AUROC and AUPRC}
+\label{sec:method-auroc}
+
+For three-class outcomes, AUROC is calculated one-versus-rest and macro-averaged.
+AUPRC is reported alongside AUROC for rare Severe classes because it is more
+sensitive to prevalence and false positives. Curves are constructed at patient-
+target level, while confidence intervals respect patient clustering.
+
+\subsection{Calibration}
+\label{sec:method-calibration-metrics}
+
+Calibration evaluation includes:
+
+\begin{itemize}
+  \item Brier score;
+  \item Expected Calibration Error (ECE);
+  \item classwise reliability diagrams;
+  \item negative log likelihood where useful;
+  \item risk--coverage curves under selective prediction.
+\end{itemize}
+
+Calibration is reported both internally and externally because a model can
+retain discrimination while becoming overconfident after domain shift.
+
+\subsection{Localisation Metrics}
+\label{sec:method-localisation-metrics}
+
+Localisation is evaluated separately using:
+
+\begin{itemize}
+  \item mean, median and 95th-percentile Euclidean error in millimetres;
+  \item PCK at physically meaningful tolerances;
+  \item Dice coefficient for available masks;
+  \item surface-distance metrics where mask quality supports them;
+  \item complete localisation-failure rate per study.
+\end{itemize}
+
+\subsection{Efficiency Metrics}
+\label{sec:method-efficiency}
+
+For each model configuration the thesis reports:
+
+\begin{itemize}
+  \item trainable and total parameter count;
+  \item FLOPs/MACs where they can be estimated consistently;
+  \item peak VRAM;
+  \item training wall time and GPU hours;
+  \item inference time per study and per target;
+  \item storage size of weights.
+\end{itemize}
+
+Efficiency comparisons use the same hardware and batch/inference conditions.
+Timing from different machines is not compared as if it were an architectural
+property.
+
+% ===========================================================================
+\section{Statistical Analysis}
+\label{sec:method-statistics}
+
+\subsection{Patient-Level Bootstrap Confidence Intervals}
+\label{sec:method-bootstrap}
+
+Confidence intervals for primary metrics are obtained by bootstrap resampling
+\emph{patients}, not individual targets. On each replicate, a patient is sampled
+with replacement and all of that patient's target predictions enter together.
+This preserves within-study dependence.
+
+The default is a sufficiently large number of replicates to stabilise the
+2.5th and 97.5th percentiles; the final number is
+\torecord{bootstrap replicate count}. Ninety-five per cent percentile or
+bias-corrected intervals are reported consistently.
+
+\subsection{Paired Model Comparisons}
+\label{sec:method-paired-tests}
+
+Ablation models are evaluated on the same patients, so comparisons are paired.
+For scalar patient-level losses or correctness indicators, a paired permutation
+test or Wilcoxon signed-rank test is used where distributional assumptions are
+not justified. AUCs are compared with an appropriate paired procedure such as
+DeLong's test when its assumptions are satisfied. Bootstrap differences are
+used for metrics without a simple analytic test.
+
+The primary quantity is the paired difference
+
+\[
+\Delta M=M_A-M_B
+\]
+
+with a 95\% confidence interval. Point estimates alone are not used to claim
+one component is superior.
+
+\subsection{Multiple Comparisons}
+\label{sec:method-multiple}
+
+The ablation programme contains many target-level analyses. A limited set of
+primary comparisons is therefore declared in advance:
+
+\begin{enumerate}
+  \item anatomical SSL versus generic/self-supervised baseline;
+  \item routed+dropout fusion versus ordinary cross-attention;
+  \item heterogeneous graph versus independent heads and homogeneous graph;
+  \item zero-shot public versus local performance;
+  \item PEFT versus no adaptation across annotation sizes.
+\end{enumerate}
+
+Target-by-target and subgroup analyses are secondary/exploratory. Where many
+formal hypotheses are tested, false-discovery-rate control is applied. The
+thesis distinguishes confirmatory comparisons from exploratory patterns instead
+of presenting every $p<0.05$ as independent evidence.
+
+\subsection{Repeated Training Seeds}
+\label{sec:method-seeds}
+
+Deep-learning optimisation is stochastic. Final ablation comparisons are
+therefore repeated across multiple fixed seeds where computationally feasible.
+The thesis reports mean and standard deviation/interval across seeds in addition
+to the patient-level test uncertainty. A one-off training run is insufficient
+to attribute a small improvement to a method.
+
+\subsection{Subgroup Analysis}
+\label{sec:method-subgroups}
+
+Subgroup analysis is conducted only where sample size permits and includes:
+
+\begin{itemize}
+  \item lumbar level;
+  \item severity;
+  \item sex/age bands where metadata and governance allow;
+  \item scanner/vendor/field strength;
+  \item acquisition resolution or slice thickness;
+  \item presence/absence of individual sequences.
+\end{itemize}
+
+Sparse cells are reported descriptively rather than subjected to unstable
+significance testing. The subgroup analysis is intended to expose failure modes,
+not to make causal claims about demographic biology.
+
+% ===========================================================================
+\section{Robustness Experiments}
+\label{sec:method-robustness}
+
+\subsection{Missing-Sequence Matrix}
+\label{sec:method-missing-matrix}
+
+The selected public-data models are evaluated under every supported sequence
+configuration. For three sequences, the core matrix includes complete input,
+three two-sequence combinations and three single-sequence configurations where
+the required anatomical target remains observable.
+
+Performance is reported per target family rather than only in aggregate. A
+model can remain strong on central canal grading while collapsing on foraminal
+narrowing when sagittal T1 is removed; an overall mean would obscure the
+clinical meaning.
+
+\subsection{Geometry Perturbation}
+\label{sec:method-geometry-robust}
+
+The reliance on DICOM coordinates creates a specific failure mode. Controlled
+perturbations therefore test sensitivity to small localisation/geometry errors:
+axial slice selection shifted by one or two slices, modest ROI-centre offsets,
+and simulated spacing variation. The purpose is not to train on corrupted
+geometry by default, but to measure how brittle the system is to the imperfect
+localisation expected in practice.
+
+\subsection{Image-Quality and Acquisition Perturbation}
+\label{sec:method-acquisition-robust}
+
+Where feasible, synthetic intensity perturbations approximating scanner shift
+are applied to the public held-out set: contrast scaling, noise, bias field and
+resolution degradation. These do not replace real external validation but help
+identify which changes reproduce the pattern observed at Rizgary.
+
+\subsection{Graph Perturbation}
+\label{sec:method-graph-robust}
+
+The graph is challenged by:
+
+\begin{itemize}
+  \item random edge deletion;
+  \item shuffled edge types;
+  \item random rewiring with matched edge count;
+  \item removal of one relation family.
+\end{itemize}
+
+A robust anatomical graph should outperform these controls without depending on
+one fragile edge. If random topology performs equivalently, the anatomical
+interpretation is rejected.
+
+% ===========================================================================
+\section{Interpretability and Failure Analysis}
+\label{sec:method-interpretability}
+
+\subsection{Local Visual Evidence}
+\label{sec:method-visual-evidence}
+
+Grad-CAM or equivalent saliency may be used as a gross sanity check that the
+encoder responds within the relevant ROI, but saliency is not presented as a
+proof of reasoning. The stronger explanations in this thesis arise from
+structural quantities that are part of the model itself:
+
+\begin{itemize}
+  \item which sequence received routing weight for a specific target;
+  \item which graph relation contributed to target refinement;
+  \item how uncertainty changed before and after relational reasoning;
+  \item how prediction changed under controlled removal of a sequence or edge.
+\end{itemize}
+
+These are still model diagnostics, not causal explanations, but they are more
+directly linked to the proposed mechanisms than a heatmap alone.
+
+\subsection{Case-Level Audit Template}
+\label{sec:method-case-audit}
+
+A fixed template is used for qualitative audit of representative correct and
+incorrect cases:
+
+\begin{itemize}
+  \item ground-truth target and grade;
+  \item predicted probability distribution and calibrated grade;
+  \item localisation overlay;
+  \item available MRI sequences;
+  \item routing weights;
+  \item dominant incoming graph relations/attention where extractable;
+  \item uncertainty;
+  \item nearest error category;
+  \item whether the discrepancy is within one grade.
+\end{itemize}
+
+Cases are sampled from predefined categories rather than cherry-picked from the
+best-looking outputs.
+
+% ===========================================================================
+\section{Reproducibility and Software Engineering}
+\label{sec:method-reproducibility}
+
+\subsection{Environment}
+\label{sec:method-environment}
+
+The implementation will use a reproducible Python/PyTorch medical-imaging
+environment with DICOM tooling such as pydicom, SimpleITK and/or MONAI.
+The final thesis records exact versions of Python, PyTorch, CUDA, cuDNN, GPU
+hardware and all key libraries. Environment specification is stored in a
+lockfile or container recipe.
+
+\subsection{Experiment Configuration}
+\label{sec:method-config}
+
+Each run is configured from a machine-readable file containing:
+
+\begin{itemize}
+  \item dataset manifest and split version;
+  \item selected sequence IDs;
+  \item preprocessing and resampling;
+  \item ROI dimensions;
+  \item encoder architecture;
+  \item SSL/routing/graph settings;
+  \item loss coefficients;
+  \item optimiser and scheduler;
+  \item seed;
+  \item checkpoint and early-stopping rule.
+\end{itemize}
+
+The configuration is copied into the run directory with metrics and model
+weights so that a table in the thesis can be traced to an executable experiment.
+
+\subsection{Data Provenance}
+\label{sec:method-provenance}
+
+Raw data are never edited in place. A manifest records the path/identifier and
+processing status of every study. Derived crops can be regenerated from the
+manifest and DICOM source, and each derived sample retains its pseudonymous
+patient, level, condition, side, sequence and source-series identifier.
+
+The local reference matrix is versioned independently of model output. If a
+label is corrected after clinical review, the change is documented and the
+affected experiments are rerun rather than silently updating test truth.
+
+\subsection{Code and Model Release}
+\label{sec:method-release}
+
+Code for the public-data methodology will be released where institutional and
+dataset licences permit. Pretrained weights are released if the training
+dataset terms allow redistribution. Local Rizgary images and report-derived
+individual-level data are not included unless a separate hospital approval
+authorises public release.
+
+The repository will include:
+
+\begin{itemize}
+  \item preprocessing and geometry reconstruction;
+  \item split-generation/verification code;
+  \item localisation/ROI pipeline;
+  \item SSL, routing and graph modules;
+  \item training and evaluation scripts;
+  \item configuration files for primary experiments;
+  \item instructions for reproducing public benchmark results.
+\end{itemize}
+
+% ===========================================================================
+\section{Methodological Safeguards and Threats to Validity}
+\label{sec:method-threats}
+
+\subsection{Reference-Standard Shift}
+\label{sec:method-threat-label}
+
+LumbarDISC uses structured expert grades; Rizgary uses routine narrative
+reports. A performance drop can therefore reflect both imaging-domain shift and
+reference-standard shift. The thesis mitigates this by restricting transfer to
+defensible overlap, auditing report labels and, where possible, re-reading a
+stratified subset. It does not claim that the two reference standards are
+identical.
+
+\subsection{Single-Centre Local External Validation}
+\label{sec:method-threat-single-centre}
+
+Rizgary is a genuinely independent institution but still only one local centre.
+External performance therefore demonstrates transport to \emph{that} setting,
+not universal Middle Eastern generalisation. The thesis states this boundary
+explicitly. A future multi-hospital regional study is required before making a
+population-wide deployment claim.
+
+\subsection{Model Complexity}
+\label{sec:method-threat-complexity}
+
+The full architecture contains several interacting components. Complexity can
+produce apparent gains merely through parameter count and tuning effort. The
+ablation ladder, matched backbone, homogeneous graph and shuffled-edge controls
+are specifically designed to separate mechanism from capacity.
+
+\subsection{Localisation Error}
+\label{sec:method-threat-localisation}
+
+The graph and routing modules cannot recover evidence absent from a bad crop.
+Localisation is therefore measured and failures are reported separately.
+Downstream results may additionally be stratified by localisation error to
+estimate how much grading depends on the enabling stage.
+
+\subsection{Class Imbalance}
+\label{sec:method-threat-imbalance}
+
+Severe grades are uncommon, so accuracy can be misleading and few-shot local
+subsets may contain few Severe examples. The primary metrics are macro-F1,
+balanced accuracy, weighted $\kappa$ and per-class recall, with patient-level
+confidence intervals. Adaptation subsets are stratified where feasible and
+their severity counts are always reported.
+
+\subsection{Hyperparameter Multiplicity}
+\label{sec:method-threat-hyperparameters}
+
+A sufficiently large search can overfit the validation set even without touching
+test data. The study limits the number of tunable components in each stage,
+uses a fixed primary backbone for the core ablation, records the search space
+and freezes choices before external testing.
+
+\subsection{Clinical Utility}
+\label{sec:method-threat-clinical}
+
+This methodology evaluates technical grading, calibration and portability. It
+does not demonstrate that radiologists become faster, safer or more accurate
+when using the model. Such a claim requires a prospective reader-assistance or
+impact study with independent clinical approval. The thesis therefore uses the
+language of ``decision-support potential'' rather than clinical benefit.
+
+% ===========================================================================
+\section{Mapping Research Questions to Evidence}
+\label{sec:method-rq-mapping}
+
+\begin{longtable}{p{1.0cm}p{4.8cm}p{4.4cm}p{3.8cm}}
+\toprule
+\textbf{RQ} & \textbf{Primary comparison} & \textbf{Primary outcomes} & \textbf{Failure interpretation}\\
+\midrule
+\endfirsthead
+\toprule
+\textbf{RQ} & \textbf{Primary comparison} & \textbf{Primary outcomes} & \textbf{Failure interpretation}\\
+\midrule
+\endhead
+RQ1 & independent/level transformer/homogeneous graph vs typed heterogeneous graph & macro-F1, $\kappa$, severe recall, edge ablations & graph topology carries little useful signal or local evidence dominates\\
+RQ2 & generic pretraining vs anatomical cross-sequence SSL at 10/25/50/100\% labels & macro-F1, $\kappa$, label efficiency, external drop & anatomy-defined positives do not improve transferable representation\\
+RQ3 & fixed fusion/cross-attention vs routing $\pm$ modality dropout & missing-sequence degradation, target-specific performance, calibration & fixed fusion is sufficient or learned routing is unstable\\
+RQ4 & public held-out vs fixed Rizgary test; no adaptation vs PEFT/full tuning & zero-shot $\Delta$, recovery curve, calibration shift & domain shift is larger or less annotation-efficient than expected\\
+RQ5 & CE vs ordinal/cost-aware objectives; calibrated vs uncalibrated prediction & Severe$\rightarrow$Normal rate, grade distance, Brier/ECE, risk--coverage & ordinal/cost formulation offers no advantage over CE\\
+\bottomrule
+\end{longtable}
+
+This table defines what evidence can answer each question. It also makes the
+thesis robust to partial negative results: RQ1 can be answered if the graph does
+not help, and RQ2 can be answered if generic pretraining is equal or superior.
+The contribution is the controlled experiment and the resulting knowledge, not
+a requirement that every proposed mechanism win.
+
+% ===========================================================================
+\section{Planned Reporting Standard}
+\label{sec:method-reporting}
+
+The final manuscript/thesis reporting will follow the current applicable
+medical-AI and diagnostic/prediction reporting checklists at the time of
+submission. At minimum the report will include:
+
+\begin{itemize}
+  \item complete cohort flow diagrams and inclusion/exclusion reasons;
+  \item reference-standard source, annotator qualifications and agreement where
+        available;
+  \item exact patient-level split logic and IDs reproducible within the approved
+        environment;
+  \item all primary metrics with confidence intervals;
+  \item per-class Severe performance and ordinal error distances;
+  \item calibration and external-domain performance;
+  \item ablations for every claimed novel component;
+  \item repeated-seed variability;
+  \item compute/hardware cost;
+  \item explicit limitations and negative results;
+  \item a statement of what was not tested clinically.
+\end{itemize}
+
+The reporting checklist itself will be versioned with the manuscript because
+CLAIM/STARD/TRIPOD+AI guidance may be updated during the candidature.
+
+% ===========================================================================
+\section{Chapter Summary}
+\label{sec:method-summary}
+
+This chapter translates the research gap of Chapter~\ref{ch:litreview} into a
+controlled experimental design. The study begins from a structured definition
+of lumbar disease: twenty-five level--condition--laterality targets on the
+public benchmark rather than a generic image-level class. DICOM patient-space
+geometry is preserved so that sagittal and axial evidence can be aligned
+physically; localisation and disease-specific 2.5D ROIs are treated as shared
+enabling technology; and all data partitions are defined at patient level.
+
+Three methodological contributions are then tested independently. Anatomically
+aligned cross-sequence self-supervision asks whether the same spinal level
+viewed under different MRI sequences provides a stronger representation-learning
+signal than generic augmentation. Disease-conditioned routing asks whether one
+model can allocate different sequence evidence to different targets while
+remaining functional when modalities are absent. The heterogeneous
+disease--anatomy graph asks whether explicit typed relations among adjacent
+levels, co-occurring compartments and bilateral targets improve grading beyond
+independent heads, an inter-level transformer or a homogeneous graph. Ordinal,
+cost-sensitive and uncertainty-aware outputs remain supporting methods and are
+retained only if their contribution is measurable.
+
+The translational design is deliberately separated from model development.
+Rizgary is not mixed into public training. A fixed local test set establishes
+zero-shot domain shift, while a separate adaptation pool supplies controlled
+few-shot subsets. The primary local comparison is restricted to central-canal
+stenosis, where the benchmark and narrative local reports can support a
+defensible common target; local herniation morphology remains a separate task
+rather than being forced into the RSNA schema.
+
+Finally, the methodology defines success as an answer to the research
+questions, not as attainment of a predetermined accuracy. A graph that adds
+nothing, an ordinal loss that fails to beat cross-entropy, or a large
+cross-institutional performance drop are all informative if demonstrated under
+the same controlled protocol. This principle is what turns the architecture
+from an engineering assembly into a doctoral experiment: every claimed
+mechanism is falsifiable, every comparison is tied to a research question, and
+the external cohort is used to test portability rather than to decorate an
+internal result.
+
+\printbibliography
+
+\end{document}
