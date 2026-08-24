@@ -2,96 +2,35 @@
 
 Welcome to the implementation codebase for **AMOG-Net** (Adaptive Multi-sequence Anatomical-Graph Network).
 
-This directory (`implementation/`) contains the system diagnostic, virtual environment manager, dependency installer, and Phase 1 reproducibility verification tools for Selar's PhD research project.
+This directory (`implementation/`) contains the automated self-healing environment setup, dependency configurator, system diagnostic, and Phase 1 reproducibility verification tools for Selar's PhD research project.
 
 ---
 
-## 💡 Environment Strategy: Virtual Environment Isolation (`venv` or `conda`)
+## ⚡ 1-Click Automated Setup Strategy (Recommended for Selar)
 
-To prevent package conflicts and ensure reproducibility, **Selar must run in an isolated Python virtual environment**. 
+You can set up your entire environment with **a single command**.
 
-Choose one of the two options below:
+The automated setup script will:
+1. **Detect / Create Virtual Environment (`venv`):** Automatically creates `venv/` if missing and switches execution into it.
+2. **Upgrade Pip & Tools:** Ensures package installation tools are up to date.
+3. **Audit & Self-Heal Dependencies:** Inspects all 20 medical AI libraries (`torch`, `pydicom`, `SimpleITK`, `monai`, `nibabel`, `albumentations`, `torch_geometric`, etc.) and automatically installs any missing packages.
+4. **Hardware & CUDA Diagnostic:** Checks GPU availability and VRAM specs.
+5. **Gate 1 Seed Determinism Test:** Runs PyTorch bit-for-bit output reproducibility verification.
+6. **Generate Executive Report:** Writes `reports/AUTO_SETUP_REPORT.md` telling you if everything passed or what action to take if a package failed.
 
-### Option A: Standard Python `venv` (Recommended for lightweight setups)
+### How to Run:
 
-**On Windows (PowerShell / Command Prompt):**
+**On Windows:**
+Double-click `run_env_check.bat` or run in terminal:
 ```bash
-# 1. Create a virtual environment named 'venv'
-python -m venv venv
-
-# 2. Activate the virtual environment
-.\venv\Scripts\activate
-
-# 3. Upgrade pip
-python -m pip install --upgrade pip
+python auto_setup_and_verify.py
 ```
 
-**On Linux / macOS (Bash / Zsh):**
+**On Linux / macOS:**
 ```bash
-# 1. Create virtual environment
-python3 -m venv venv
-
-# 2. Activate
-source venv/bin/activate
-
-# 3. Upgrade pip
-python -m pip install --upgrade pip
+chmod +x run_env_check.sh
+./run_env_check.sh
 ```
-
----
-
-### Option B: Conda / Mamba Environment (Recommended if using Anaconda)
-
-```bash
-# 1. Create environment from environment.yml
-conda env create -f environment.yml
-
-# 2. Activate environment
-conda activate lumbar_phd
-```
-
----
-
-## 🚀 Quick Start Workflow for Selar (Once Environment is Activated)
-
-Follow these 3 steps:
-
-### Step 1: Run System Diagnostic & Availability Check
-Inspect Python version, active environment (`venv`/`conda`), GPU availability, CUDA setup, and medical imaging packages:
-
-```bash
-python check_environment.py
-```
-
-This will print a diagnostic summary and generate two detailed reports:
-* `reports/ENVIRONMENT_REPORT.md` (Human-readable markdown summary)
-* `reports/environment_report.json` (Structured JSON system log)
-
----
-
-### Step 2: Install Missing Dependencies (Auto-Installer)
-If `check_environment.py` flags missing libraries, run the automated setup script:
-
-```bash
-python setup_environment.py
-```
-
-Or install dependencies manually via `requirements.txt`:
-
-```bash
-pip install -r requirements.txt
-```
-
----
-
-### Step 3: Run Gate 1 Determinism & Reproducibility Test
-Before launching any training, verify PyTorch seed determinism:
-
-```bash
-python verify_determinism.py
-```
-
-When you see `[PASS] Gate 1 Reproducibility Verified`, your environment is fully prepared for Phase 2 (LumbarDISC DICOM Manifest & Dataset Split Construction).
 
 ---
 
@@ -100,12 +39,16 @@ When you see `[PASS] Gate 1 Reproducibility Verified`, your environment is fully
 ```text
 implementation/
 ├── README.md                 # Environment guide and workflow instructions
+├── auto_setup_and_verify.py  # Master 1-click self-healing environment & Gate 1 script
+├── run_env_check.bat         # 1-Click Windows batch launcher
+├── run_env_check.sh          # 1-Click Linux/macOS shell launcher
 ├── check_environment.py      # System & virtual environment diagnostic scanner
-├── setup_environment.py      # Virtual environment helper & dependency installer
+├── setup_environment.py      # Workspace directory skeleton builder
 ├── verify_determinism.py     # Gate 1 PyTorch reproducibility and seed test script
 ├── requirements.txt          # Production pip dependency list
 ├── environment.yml           # Conda environment specification
 └── reports/                  # Auto-generated system diagnostic reports
+    ├── AUTO_SETUP_REPORT.md  # Master automated setup & self-healing log
     ├── ENVIRONMENT_REPORT.md # Markdown environment report
     └── environment_report.json # JSON system specs log
 ```
