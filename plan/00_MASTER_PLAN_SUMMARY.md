@@ -58,7 +58,33 @@ flowchart TD
 1. **Do NOT Train on Folder Names (`normal/bulge/protrusion/extrusion`):** The folder classification is lossy and contains errors (multi-level hernia co-occurrence, duplicate cases). All ground truth must derive from the audited level-resolved local matrix.
 2. **Reports are Primary; Spreadsheet is Secondary:** The manual spreadsheet (`research LSS 1.xlsx`) covers only 195 cases and contains 14 age transcription errors. The 299 narrative `.docx` reports are the single source of truth.
 3. **Target Schema Alignment (Empirical Finding):** Local reports do **not** contain RSNA's 25-target schema (subarticular stenosis appears in 0% of local reports, and laterality in only 27%). Zero-shot transfer evaluation is strictly scoped to **Spinal Canal Stenosis (5 targets)**—matching M-SCAN benchmark standards—while herniation morphology (bulge/protrusion/extrusion) is treated as a separate local multi-label task.
-4. **Phase 1 Must Precede Downstream Work:** Selar's initial NLP extraction + 100% manual verification of the 299 reports provides the foundational gold-standard matrix used by MSc Project 1, MSc Project 2, and Selar's Phase 3 evaluation.
+4. **Ground truth must be verified before any model is evaluated against it.** The 299
+   reports must be structured and manually checked before use as a reference standard.
+   This is a **quality** rule, not a **sequencing** rule — see the correction below.
+
+> [!IMPORTANT]
+> **Sequencing correction — the original dependency chain was fragile.**
+>
+> As first written, all four MSc projects waited on Selar's Phase 1, and MSc 2
+> additionally waited on Phase 2 (~month 10). That routes four students' graduations
+> through one student's research risk: if Selar's PhD slips, everything slips.
+>
+> **Revised sequencing, which removes every avoidable dependency:**
+>
+> | Project | Starts | Depends on |
+> | :--- | :--- | :--- |
+> | **MSc 1 — Epidemiology** | **Immediately** | Nothing. Extract the 299 reports by hand (~25–40 h). |
+> | **MSc 3 — Clinical NLP** | **Immediately** | Nothing. *Owns* the automated extraction and delivers the matrix to everyone else. |
+> | **MSc 2 — Protocol Optimisation** | **Immediately** | A ResNet/EfficientNet baseline, *not* AMOG-Net. |
+> | **Selar PhD** | **Immediately** | RSNA data only until Phase 3. The local cohort is not needed until month ~11. |
+> | **MSc 4 — Prognostics** | **Not yet** | Unconfirmed clinical data — see the caution in its roadmap. |
+>
+> A useful cross-check falls out of this for free: MSc 1's manual extraction and MSc 3's
+> automated extraction cover the same 299 reports, so their agreement becomes a
+> **validation result for MSc 3** rather than a scheduling conflict.
+>
+> **Move report extraction out of Selar's Phase 1 and into MSc 3.** It shortens the PhD's
+> critical path and gives MSc 3 a deliverable to own.
 
 ---
 

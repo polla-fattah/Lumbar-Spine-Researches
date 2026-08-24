@@ -81,9 +81,24 @@ gantt
 
 ## 4. Key Performance Indicators & Graduation Criteria
 
-1. **Publications:** At least 2 accepted high-impact peer-reviewed journal papers (1 CS/AI focused, 1 Medical AI focused).
+1. **Publications:** Two papers **submitted** to the named venues, with at least one
+   accepted. Acceptance timing at *IEEE TMI* / *MedIA* runs 6–12 months and is outside the
+   candidate's control, so "two accepted" is not a safe gate on a 21–24 month programme.
+   Name a fallback venue for each paper at submission time (e.g. *Computers in Biology and
+   Medicine*, *Scientific Reports*).
 2. **Open Data / Code:** Release cleaned AMOG-Net codebase with reproducible pre-trained weights.
-3. **Robustness:** Model must demonstrate statistically verified cross-institutional performance recovery ($\ge 90\%$ AUROC) on local clinical data using $\le 50$ local fine-tuning cases.
+3. **Robustness:** Characterise cross-institutional transfer quantitatively — report the
+   zero-shot degradation and the few-shot recovery curve across $N \in \{10,25,50,100\}$
+   local cases.
+
+> [!WARNING]
+> **A numeric recovery threshold must not be a graduation criterion.** An earlier version
+> of this section required $\ge 90\%$ AUROC recovery using $\le 50$ local cases. If domain
+> shift proves severe, that target may be unreachable for reasons that are a property of
+> the data rather than of the candidate's work — and the risk table below already
+> (correctly) says a large drop should be framed as the **primary scientific finding** of
+> Paper 2. Those two statements contradict one another. The finding is the contribution;
+> the number is not the bar.
 
 ---
 
@@ -94,3 +109,7 @@ gantt
 | Zero-shot performance on Rizgary drops severely (>30% F1 drop) | Medium | Frame this as the primary scientific finding of Paper 2; emphasize the Necessity of Few-Shot Domain Adaptation. |
 | Model training on RSNA cases requires excessive compute | Low | Use 2.5D ROI cropping to reduce input memory footprint; leverage mixed-precision (FP16/BF16) training. |
 | Schema mismatch on subarticular stenosis | Solved | Scope zero-shot evaluation to Spinal Canal Stenosis (5 targets), matching M-SCAN benchmarks. |
+| **AMOG-Net specifies six novel components** (localiser, 2.5D ROI, cross-sequence SSL, adaptive fusion, graph transformer, ordinal + uncertainty heads) for a 5-month build | **High** | Stage the novelty. Build and validate a working baseline (localiser + 2.5D + fusion) first, then add graph, ordinal and uncertainty as measured increments up the E0–E8 ablation ladder. A partial system that works beats six components that half-work. See [`08_PUBLICATION_PLAN.md`](08_PUBLICATION_PLAN.md). |
+| **Compute capacity unspecified** | **Medium** | Confirm GPU access before Phase 2 begins. Multi-sequence training over 1,975 studies is not laptop work. Note that hospital-owned data may restrict which cloud providers are permissible. |
+| **Local DICOMs are unanonymised** (PatientName, DOB, sex and study date populated in every study sampled) | **Medium** | De-identify before the data reaches MSc students or any external compute environment. More people touching the data raises exposure; keep the de-identification key outside the repository. |
+| **Curriculum load competes with Phase 1** | Medium | Phase A of [`09_TRAINING_CURRICULUM.md`](09_TRAINING_CURRICULUM.md) is 13–16 weeks and must precede real data work. It overlaps Phase 1 deliberately — concepts 1 and 2 are exactly what report extraction and DICOM harmonisation require. Phases B and C are learned while building, not before. |
