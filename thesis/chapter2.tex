@@ -1108,8 +1108,11 @@ even though a transformer's advantage should plausibly be largest where global
 context must substitute for missing views. Third, several comparisons rely on
 frozen pretrained features rather than fine-tuned backbones
 \cite{udomluck2026multitask,patil2026mribased}, which disadvantages transformers
-disproportionately given their weaker inductive biases. These three gaps
-motivate the experimental design of this thesis.
+disproportionately given their weaker inductive biases. These three
+limitations concern how architectures have been \emph{compared}; they are
+distinct from the five research gaps identified in
+Section~\ref{sec:lr-gap}, which concern what the field has not
+\emph{attempted}.
 
 \subsection{Transfer Learning, Pretraining, and Self-Supervision}
 \label{sec:lr-pretraining}
@@ -1874,10 +1877,13 @@ inherits them, and because they bound what can be claimed from a comparison of
 architectures or input configurations. They are not, however, the gaps this
 thesis sets out to close. Each concerns a choice \emph{within} the prevailing
 formulation---which backbone, which loss, which sequences---while leaving that
-formulation itself unexamined. The three gaps that follow question the
-formulation: that the lumbar spine is a set of independent predictions, that
-severity errors are symmetric, and that a model validated once at one
-institution has been shown to generalise.
+formulation itself unexamined. The five gaps that follow question the
+formulation itself: that the lumbar spine is a set of independent
+predictions; that anatomical correspondence between sequences is a
+preprocessing convenience rather than a training signal; that the diagnostic
+contribution of each sequence is a fixed design decision rather than
+something a model can learn; that a model validated once at one institution
+has been shown to generalise; and that severity errors are symmetric.
 
 \subsection{Gap 1: The Spine Is Modelled as Independent Predictions}
 \label{sec:lr-gap-relational}
@@ -1929,35 +1935,80 @@ mild/moderate boundary of Section~\ref{sec:lr-ordinality}, and the lateral
 compartments where human agreement itself is poorest
 \cite{lurie2008reliability}.
 
-\subsection{Gap 2: Ordinal Structure and Clinical Cost Remain Unexploited}
-\label{sec:lr-gap-ordinal}
+\subsection{Gap 2: Cross-Sequence Correspondence Is Available but Unused as a Training Signal}
+\label{sec:lr-gap-ssl}
 
-Section~\ref{sec:lr-ordinality} established two facts that sit awkwardly
-together. Errors concentrate overwhelmingly at adjacent grade boundaries---only
-0.85\% of discs differed by more than one grade in the largest external
-validation \cite{mcsweeney2023external}---so the ordinal structure is real and
-measurable. Yet the most systematic test of ordinal-aware objectives found that
-none of soft-kappa loss, ordinal cross-entropy or regression losses improved on
-plain cross-entropy \cite{niemeyer2021a}.
+Section~\ref{sec:lr-geometry} established that DICOM patient-space metadata makes
+the correspondence between sequences exactly computable: a disc level identified
+on a sagittal series determines which axial slices depict the same anatomy. That
+correspondence is currently used only for \emph{preprocessing}---to select slices
+or align crops \cite{pan2021automatically,batra2025mscan}. It has not been used
+as a \emph{supervisory signal}.
 
-The natural reading is that conventional ordinal formulations tested in isolation
-were inadequate rather than that ordinal structure is unusable. Recent work on
-LumbarDISC, including Tr{\^\i}nc et al.\ \cite{trinc2026beyond}, has evaluated
-distance-aware ordinal metrics and patient-burden scores, confirming that standard
-ordinal classification alone is no longer an unexplored standalone novelty claim.
-However, two critical dimensions remain unexploited. Ordinal objectives have
-scarcely been coupled with \emph{relational target consistency} across neighbouring
-predictions. And the \emph{asymmetry of clinical cost} has rarely been modelled at
-the loss level: grading a severe stenosis as normal is not equivalent to the
-reverse, yet standard models optimise symmetric objectives. Acharya and Kansakar
-are a notable exception in tracking severe-to-normal misclassifications
-\cite{acharya2026disccentric}, while Wu et al.\ characterise their model's error
-profile as specificity-oriented \cite{wu2026external}. The RSNA benchmark encodes
-asymmetry in its evaluation metric, but the methodological contribution lies in
-coupling cost-sensitive asymmetric losses with relational consistency and
-calibrated uncertainty for selective prediction.
+The omission is conspicuous because the field is demonstrably short of labels and
+because generic pretraining performs poorly here. Patil et al.\ found through
+ablation that frozen ImageNet-pretrained ResNet50 features added \emph{no
+measurable discriminative value} over radiomic features for Pfirrmann grading
+\cite{patil2026mribased}, and Udomluck et al.\ found DINOv2 features generalised
+worst of the extractors they compared, falling to 0.6222 accuracy externally
+\cite{udomluck2026multitask}. Natural-image pretraining transfers weakly to this
+domain, yet it remains the default initialisation.
 
-\subsection{Gap 3: Cross-Institutional Transfer Is Asserted, Not Measured}
+Where domain-specific self-supervision has been attempted, it has not exploited
+anatomy across sequences. Jamaludin et al.\ demonstrated the principle most
+directly, using \emph{longitudinal} scans---the same patient at different
+timepoints, identifiable from DICOM metadata without knowing patient
+identity---as free supervision, and reported equivalent performance from far
+fewer annotated examples \cite{jamaludin2017selfsupervised}. Acharya and Kansakar
+apply contrastive pretraining to disc-centred crops, but within a single sagittal
+sequence \cite{acharya2026disccentric}. In both cases the positive pair is
+defined by patient or by augmentation, never by the fact that two visually
+dissimilar images depict the same anatomical structure.
+
+The unexploited signal is therefore this: sagittal T1, sagittal T2 and axial T2 at
+the same spinal level in the same patient are three views of one anatomy, related
+by a geometric transform the scanner has already recorded. Treating them as
+positive pairs defines a pretraining objective grounded in anatomy rather than in
+image similarity, and one that requires no additional annotation whatsoever. No
+study in this review does so.
+
+\subsection{Gap 3: Sequence Contribution Is Assumed, Not Learned}
+\label{sec:lr-gap-routing}
+
+Section~\ref{sec:lr-sequence-matching} established that the correspondence between
+pathology and sequence is a matter of physics rather than convention: foraminal
+narrowing is assessed against perineural fat on T1, canal morphology against
+cerebrospinal fluid on axial T2. The literature applies this knowledge as a
+\emph{fixed design decision}. Hallinan et al.\ assign axial T2 to central canal
+and lateral recess grading and sagittal T1 to the foramina, hard-coded in advance
+\cite{hallinan2021deep}. Fusion architectures combine sequences through
+mechanisms whose weighting is either fixed or learned globally rather than per
+condition \cite{batra2025mscan,park2025multiview}.
+
+Nguyen et al.\ come closest, adding a weighting mechanism that prioritises the
+most diagnostically informative sequence and demonstrating that the technique is
+model-agnostic \cite{nguyen2026crossspine}. Even there the weighting is not
+conditioned on \emph{which target is being predicted}, so the model cannot learn
+that the evidence for left foraminal narrowing at L4--L5 lives in a different
+sequence from the evidence for canal stenosis at the same level.
+
+The cost of getting this wrong is documented rather than hypothetical. Nigru et
+al.\ found SpineNetV2's agreement dropping specifically for foraminal stenosis and
+disc herniation, and attributed it to the absence of transverse context in
+sagittal-only input \cite{nigru2024external}; Wu et al.\ observed the same
+pattern by target \cite{wu2026external}. A model that cannot weight sequences by
+condition inherits these failures by construction.
+
+A second and compounding limitation is brittleness. Section~\ref{sec:lr-missing}
+noted that LumbarDISC required all three sequences for inclusion
+\cite{richards2026the}, so models developed on it have never been exposed to the
+incomplete or degraded acquisitions of routine practice. The prevailing response
+is to train a separate model per input configuration, which multiplies training
+cost and leaves no single deployable system. No reviewed study learns a
+condition-specific weighting that also degrades gracefully when a sequence is
+absent or corrupted.
+
+\subsection{Gap 4: Cross-Institutional Transfer Is Asserted, Not Measured}
 \label{sec:lr-gap-transfer}
 
 Section~\ref{sec:lr-generalization} documented a consistent finding: models
@@ -1983,16 +2034,54 @@ routine use there. And parameter-efficient adaptation methods, now standard
 elsewhere in deep learning, appear nowhere in the reviewed lumbar literature
 despite being the natural tool when local data is scarce.
 
+\subsection{Gap 5: Ordinal Structure and Clinical Cost Remain Partially Unexploited}
+\label{sec:lr-gap-ordinal}
+
+Section~\ref{sec:lr-ordinality} established two facts that sit awkwardly
+together. Errors concentrate overwhelmingly at adjacent grade boundaries---only
+0.85\% of discs differed by more than one grade in the largest external
+validation \cite{mcsweeney2023external}---so the ordinal structure is real and
+measurable. Yet the most systematic test of ordinal-aware objectives found that
+none of soft-kappa loss, ordinal cross-entropy or regression losses improved on
+plain cross-entropy \cite{niemeyer2021a}.
+
+The natural reading is that conventional ordinal formulations tested in isolation
+were inadequate rather than that ordinal structure is unusable. Recent work on
+LumbarDISC, including Tr{\^\i}nc et al.\ \cite{trinc2026beyond}, has evaluated
+distance-aware ordinal metrics and patient-burden scores, confirming that standard
+ordinal classification alone is no longer an unexplored standalone novelty claim.
+This gap is therefore narrower than the four preceding it, and the thesis treats
+it accordingly: as \emph{supporting methodology} rather than a primary
+contribution.
+
+Two dimensions nonetheless remain unexploited. Ordinal objectives have scarcely
+been coupled with \emph{relational target consistency} across neighbouring
+predictions---which only becomes possible once Gap~1 is addressed. And the
+\emph{asymmetry of clinical cost} has rarely been modelled at the loss level:
+grading a severe stenosis as normal is not equivalent to the reverse, yet
+standard models optimise symmetric objectives. Acharya and Kansakar are a notable
+exception in tracking severe-to-normal misclassifications
+\cite{acharya2026disccentric}, while Wu et al.\ characterise their model's error
+profile as specificity-oriented \cite{wu2026external}. The RSNA benchmark encodes
+asymmetry in its evaluation metric, but no reviewed system optimises for it while
+also maintaining calibrated uncertainty suitable for selective prediction.
+
 \subsection{Research Questions and Objectives}
 \label{sec:lr-questions}
 
-The three gaps are related rather than independent. Relational structure
-(Gap~1), ordinal cost-sensitivity (Gap~2) and transferability (Gap~3) all bear
-on the same underlying question---whether encoding \emph{what is known about
-lumbar anatomy} into the model produces grading that is more accurate, more
-clinically aligned, and more portable than treating the problem as a collection
-of independent image classifications. This yields the following research
-questions:
+The five gaps are related rather than independent, and they divide cleanly by the
+role each plays. Gaps~2 and~3 concern \emph{how evidence is represented}: what
+supervisory signal shapes the features, and how the sequences carrying that
+evidence are weighted. Gap~1 concerns \emph{how predictions communicate} once the
+evidence is represented. Gap~5 concerns \emph{how the ordered output and its
+uncertainty are expressed}. Gap~4 asks whether any of these choices survive the
+move from a curated benchmark to real clinical data at an unseen institution.
+
+All five bear on one underlying question---whether encoding \emph{what is already
+known about lumbar anatomy} into the model produces grading that is more
+accurate, more clinically aligned and more portable than treating the problem as
+a collection of independent image classifications. Each gap yields one research
+question:
 
 \begin{description}
   \item[RQ1] Does explicitly modelling the lumbar spine as a relational
@@ -2097,7 +2186,7 @@ classification \cite{lu2018deepspine,kowlagi2022a}. The most robust empirical
 regularity is that detection transfers across institutions while fine-grained
 grading does not \cite{zhang2023deep,wu2026external}.
 
-What the field has not attempted is the common thread of the three gaps
+What the field has not attempted is the common thread of the five gaps
 identified in Section~\ref{sec:lr-gap}. Almost without exception, these systems
 grade the lumbar spine as a set of independent predictions: each level, each
 condition and each side classified in isolation, under a symmetric objective,
