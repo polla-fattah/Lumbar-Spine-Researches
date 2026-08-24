@@ -148,11 +148,16 @@ RECORDS = [
         venue='Ewha Medical Journal', vol='48', issue='3', pages='e48',
         doi='10.12771/emj.2025.00668',
         url='https://e-emj.org/upload/pdf/emj-2025-00668.pdf',
-        reason=('Full text held locally but published in KOREAN. This English-language record '
-                'supplies the abstract of the original English statement so the item is usable in '
-                'the library. NOT an independent work: it is an authorised Korean translation of '
-                'record 114 (Collins et al., BMJ 2024;385:e078378), produced with the permission '
-                'of the TRIPOD Group.'),
+        band_text=('ENGLISH-LANGUAGE COVER RECORD. The full text follows this page and is '
+                   'in KOREAN. Not an independent work: it is an authorised translation of '
+                   'record 114.'),
+        merge_with=os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+                                'newpdfs', 'NOT-ENglish.pdf'),
+        reason=('Full text IS held and follows this cover page, but is published in KOREAN. '
+                'This English-language cover supplies the abstract of the original English '
+                'statement so the item is usable in the library. NOT an independent work: it is '
+                'an authorised Korean translation of record 114 (Collins et al., BMJ '
+                '2024;385:e078378), produced with the permission of the TRIPOD Group.'),
         role=('Cite the English original (record 114) for the reporting standard itself. This '
               'translation is catalogued for completeness only and should not be cited as a '
               'separate source, since doing so would misrepresent one guideline as two.'),
@@ -206,25 +211,41 @@ def build(rec):
     citation = ', '.join(bits)
 
     flow = [
-        Paragraph('METADATA &amp; ABSTRACT RECORD &mdash; FULL TEXT NOT HELD IN THIS LIBRARY.'
-                  ' This page is a catalogue placeholder, not the published article.', band),
+        Paragraph(rec.get('band_text',
+                  'METADATA &amp; ABSTRACT RECORD &mdash; FULL TEXT NOT HELD IN THIS LIBRARY.'
+                  ' This page is a catalogue placeholder, not the published article.'), band),
         Paragraph('Inventory Record #{}'.format(rec['idx']), lab),
         Paragraph(rec['title'], h),
         Paragraph('<b>Authors</b>', lab), Paragraph(rec['authors'], body),
         Paragraph('<b>Published in</b>', lab), Paragraph(citation, body),
         Paragraph('<b>DOI</b>', lab), Paragraph(rec['doi'], body),
         Paragraph('<b>Source</b>', lab), Paragraph(rec['url'], body),
-        Paragraph('<b>Why the full text is not held</b>', lab), Paragraph(rec['reason'], body),
+        Paragraph('<b>%s</b>' % ('Language and provenance' if rec.get('merge_with')
+                                 else 'Why the full text is not held'), lab), Paragraph(rec['reason'], body),
         Paragraph('<b>Role in this programme</b>', lab), Paragraph(rec['role'], body),
         Spacer(1, 6),
         Paragraph('<b>ABSTRACT</b>', lab),
         Paragraph(rec['abstract'], abst),
         Paragraph('Abstract reproduced from the publisher record for identification and '
                   'cataloguing. Generated for the Rizgary lumbar spine research programme '
-                  '(Dr. Polla Fattah). Obtain the full text before citing substantive content.',
-                  foot),
+                  '(Dr. Polla Fattah). ' + ('The published full text follows overleaf.'
+                  if rec.get('merge_with') else
+                  'Obtain the full text before citing substantive content.'), foot),
     ]
     doc.build(flow)
+
+    src = rec.get('merge_with')
+    if src:
+        # Bind the held full text behind the English cover so the record is one file.
+        from pypdf import PdfWriter, PdfReader
+        w = PdfWriter()
+        for page in PdfReader(path).pages:
+            w.add_page(page)
+        for page in PdfReader(src).pages:
+            w.add_page(page)
+        with open(path, 'wb') as fh:
+            w.write(fh)
+
     return name, os.path.getsize(path)
 
 
