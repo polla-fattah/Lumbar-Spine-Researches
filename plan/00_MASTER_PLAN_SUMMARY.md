@@ -88,9 +88,6 @@ flowchart TD
 
 ---
 
-
----
-
 ## 4. Directory Structure of the Plan
 
 All detailed individual roadmaps are stored in `c:\Users\polla\Drives\PollaFattah\UNi\Research\Students\Selar\Project\plan\`:
@@ -108,23 +105,26 @@ All detailed individual roadmaps are stored in `c:\Users\polla\Drives\PollaFatta
 
 ---
 
-## 5. Open Item — How Many Papers?
+## 5. Open Item — Paper 1 Is Gated on Four Components
 
 > [!IMPORTANT]
-> **Two documents in this folder disagree, and the difference is not cosmetic.**
+> **This is a sequencing question, not a disagreement between documents.**
 >
-> - [`01_SELAR_PHD_ROADMAP.md`](01_SELAR_PHD_ROADMAP.md) commits Selar to **two papers**,
->   with all six AMOG-Net components delivered inside Paper 1.
-> - [`08_PUBLICATION_PLAN.md`](08_PUBLICATION_PLAN.md) proposes **seven**, one per
->   component, cumulative toward a flagship paper.
+> `01` and `08` do not contradict each other. `01` sets **two papers** as the graduation
+> minimum and handles the dissertation separately in Phase 4; `08` lists **up to seven**
+> as an aspirational menu of what could be extracted. A minimum and a menu coexist.
 >
-> These are not simply different targets. The seven-paper version is the *staged* build:
-> each component becomes publishable on its own, so partial success still yields output.
-> The two-paper version requires all six components to work before anything is
-> submittable, which is the single largest risk in the PhD.
+> The real issue is narrower. Phase 2 Task 2.1 requires the ROI extractor, cross-sequence
+> fusion, the anatomical graph transformer **and** the ordinal + uncertainty heads to be
+> implemented before Paper 1 — titled *"AMOG-Net: Anatomical Graph Transformers…"* — can
+> be written. So Selar's first submission is gated on four components all working.
 >
-> A PhD realistically lands **three or four** of the seven, not all of them -- but the
-> decomposition is the right shape, and staging protects the candidate.
+> If the graph stalls in month 9 there is no Paper 1, even though the localiser and the
+> fusion stage might each already be publishable on their own (see `08` papers 1 and 3).
 >
-> **This needs an explicit decision.** Left unresolved, the roadmap and the publication
-> plan will drift apart and the student will not know which target governs.
+> **Options:**
+> 1. **Keep as is.** One strong systems paper. Higher risk, higher ceiling.
+> 2. **Split Paper 1.** Publish the localiser and fusion work first, then the graph as a
+>    second methods paper. Lower risk, and partial success still yields output.
+>
+> Either is defensible. It should be a conscious choice rather than a default.

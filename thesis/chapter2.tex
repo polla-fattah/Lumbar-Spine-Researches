@@ -82,11 +82,16 @@ The review is organised around a single guiding question: \emph{what determines
 whether an automated system can grade lumbar degenerative severity reliably
 enough to be clinically useful?} Four candidate answers recur in the
 literature---the quality and definition of the reference labels, the degree to
-which the anatomy is localised before it is classified, the choice of
-representational backbone, and the configuration of imaging sequences supplied
-to the model. Each is examined in turn, and the chapter closes by identifying
-the two of these that remain inadequately resolved and that this thesis
-therefore addresses.
+which the anatomy is localised before it is classified, the representation and
+context supplied to the model, and the extent to which the resulting system
+transfers beyond the institution that produced it. Each is examined in turn.
+
+The chapter closes by identifying what the field has \emph{not} attempted. The
+recurring assumption across this literature is that the lumbar spine can be
+graded as a collection of independent predictions---each level, each condition
+and each side treated separately. That assumption is a modelling convenience
+rather than a clinical claim, and the gaps this thesis addresses follow from
+relaxing it.
 
 Three specific objectives follow from this. First, to characterise the clinical
 grading systems that supply the ground truth for every supervised model in this
@@ -147,8 +152,8 @@ Section~\ref{sec:lr-evolution} traces the methodological history of the field,
 and Section~\ref{sec:lr-localization} isolates anatomical localisation as the
 design principle that most consistently separates effective systems from
 ineffective ones. Sections~\ref{sec:lr-backbones} and~\ref{sec:lr-context} then
-address the two axes on which this thesis experiments: the representational
-backbone, and the spatial and sequential context supplied to it.
+address representation and context: the backbones available, and how spatial,
+sequential and cross-plane information is supplied to them.
 Section~\ref{sec:lr-imbalance} treats class imbalance and the ordinal structure
 of the label space, and Section~\ref{sec:lr-datasets} the datasets and
 benchmarks---principally the RSNA LumbarDISC collection---on which the field now
@@ -1005,10 +1010,51 @@ different pairing, segmenting discs with a U-Net, reconstructing each as a 3D
 point cloud and grading it with a graph neural network; performance was uneven
 across levels---F1 0.71 at L2/3 against 0.46 overall---which the authors present
 as a foundation requiring refinement rather than a competitive result
-\cite{baur2024automated}. Hybrids complicate the
-clean comparison this thesis undertakes, but they indicate where the field
-expects the answer to lie: not in the wholesale replacement of convolution, but
-in supplying it with a mechanism for long-range interaction.
+\cite{baur2024automated}. What hybrids indicate is where the field expects the
+answer to lie: not in the wholesale replacement of convolution, but in supplying
+it with a mechanism for long-range interaction.
+
+\subsection{Relational and Graph-Based Modelling}
+\label{sec:lr-graphs}
+
+Attention supplies long-range interaction over a grid. A graph supplies it over
+an \emph{arbitrary} structure, which matters when the entities of interest are
+not arranged in a grid at all. A graph $G = (V, E)$ places features on nodes and
+propagates them along edges by message passing, so that each node's
+representation is refined by its neighbours. Graph convolutional networks apply
+a fixed neighbourhood weighting; graph attention networks learn it; graph
+transformers extend attention over the node set, and \emph{relation-aware}
+variants condition the attention on the type of each edge, so that a
+neighbour-of-one-kind is treated differently from a neighbour-of-another.
+
+The case for graphs in medical imaging is that anatomy is relational in ways a
+rectangular image does not express, and the literature increasingly argues that
+graph construction should be \emph{anatomically justified} rather than chosen for
+convenience. The lumbar spine is an unusually clean instance: it has an
+intrinsic chain topology over five levels, several conditions co-occurring at
+each level, and bilateral symmetry between left and right---three relationships
+that are clinically motivated rather than inferred from data.
+
+Uptake in this specific domain remains minimal. Baur et al.\ are the only
+reviewed study to apply a graph network to lumbar grading, and their graph is
+constructed \emph{within} a single disc---a point cloud over its reconstructed
+3D surface---rather than \emph{across} levels or conditions
+\cite{baur2024automated}. The graph therefore models disc shape, not spinal
+structure, and the levels remain independent predictions. Nguyen et al.\ move
+closer to the relational idea by injecting disc-level priors so that the model
+learns level-specific degeneration patterns, and demonstrate that the technique
+is model-agnostic, improving baselines as well as their own architecture
+\cite{nguyen2026crossspine}---but the levels are still separate outputs that do
+not exchange information.
+
+The distinction matters for what can be claimed. Sharing a \emph{trunk} across
+targets, as the multi-task systems of Section~\ref{sec:lr-task-evolution} do
+\cite{jamaludin2017spinenet,su2022automatic}, lets the encoder learn features
+useful to several predictions. It does not let a confident prediction at one
+target inform an uncertain one at another, because the heads remain independent.
+Message passing over a graph of targets is the mechanism that would allow it,
+and Section~\ref{sec:lr-gap-relational} takes up the consequences of its
+absence.
 
 \subsection{Published CNN-versus-Transformer Comparisons and Their Limits}
 \label{sec:lr-cnn-vs-transformer}
@@ -1734,38 +1780,15 @@ probability should not be interpreted as a clinical confidence, and this remains
 an open opportunity rather than a solved problem.
 
 % ===========================================================================
-% ###########################################################################
-% ## OPEN QUESTION -- REVISIT BEFORE SUBMISSION (flagged 2026-08-23)        ##
-% ##                                                                        ##
-% ## This section currently lands on RQ1 (ResNet50/EfficientNet-B4 vs Swin) ##
-% ## and RQ2 (multi-sequence vs Sagittal-T2-only), because Reviews/Review    ##
-% ## 2.md stated that as "the explicit gap addressed by this thesis".        ##
-% ##                                                                        ##
-% ## Two later documents in the project root contradict that brief:          ##
-% ##   - suggested_methodology.md: "I would change the research problem      ##
-% ##     itself, not merely replace ResNet50/EfficientNet/Swin"; "I would    ##
-% ##     not repeat the MSc design of: train one all-sequence model versus   ##
-% ##     another T2-only model." It proposes AMOG-Net instead (anatomical    ##
-% ##     graph over 25 level-condition nodes, ordinal severity, adaptive     ##
-% ##     missing-sequence fusion, uncertainty).                              ##
-% ##   - Noor_relivance.md: grades that same comparison "Novelty:            ##
-% ##     Moderate-low -- mainly experimental/comparative".                   ##
-% ##                                                                        ##
-% ## So RQ1/RQ2 may be the MSc-level question rather than the PhD one.       ##
-% ##                                                                        ##
-% ## IF THIS CHAPTER IS RETARGETED AT THE PhD: the body does not need        ##
-% ## rewriting. All twelve AMOG-Net building blocks are already covered      ##
-% ## (localisation 2.6, ROIs 2.6.5, 2.5D 2.8.1, contrastive 2.9.5, graph     ##
-% ## 2.7.4, ordinal 2.4.8/2.9.4, cost-sensitive loss 2.9.3/2.9.6, missing    ##
-% ## sequences 2.8.5, uncertainty 2.12.5, DICOM geometry 2.8.3, external     ##
-% ## validation 2.11.3, metrics 2.11.1). The work is confined to:            ##
-% ##   (a) rewriting this section's RQs, ~1,500 words;                       ##
-% ##   (b) a few sentences in 2.1.1 restating the guiding question;          ##
-% ##   (c) deepening 2.7.4 on graph networks, currently thin -- only         ##
-% ##       baur2024automated covers GNNs on this task.                       ##
-% ##                                                                        ##
-% ## Do not action until the target degree//student is confirmed.            ##
-% ###########################################################################
+% ===========================================================================
+% Retargeted 2026-08-23 at Selar's PhD (AMOG-Net), confirmed by the supervisor.
+% The previous version landed on the MSc-level question (CNN vs Swin;
+% multi- vs single-sequence), following the brief in Reviews/Review 2.md.
+% Noor's MSc work on that question is to be published separately as its own
+% paper; this chapter now argues the PhD case: that the field treats the lumbar
+% spine as independent predictions, and that relaxing that assumption is where
+% the contribution lies.
+% ===========================================================================
 \section{Synthesis and Research Gap}
 \label{sec:lr-gap}
 
@@ -1837,129 +1860,206 @@ competitive performance \cite{acharya2026disccentric,kowlagi2022a} and
 sagittal-only systems also fail in a specific, predicted way on the lateral
 compartments \cite{nigru2024external}.
 
-\subsection{Gap 1: Architecture Comparison Under Controlled Conditions}
-\label{sec:lr-gap-architecture}
+These three disputes are noted here because any system built on this literature
+inherits them, and because they bound what can be claimed from a comparison of
+architectures or input configurations. They are not, however, the gaps this
+thesis sets out to close. Each concerns a choice \emph{within} the prevailing
+formulation---which backbone, which loss, which sequences---while leaving that
+formulation itself unexamined. The three gaps that follow question the
+formulation: that the lumbar spine is a set of independent predictions, that
+severity errors are symmetric, and that a model validated once at one
+institution has been shown to generalise.
 
-The comparative studies above are informative but none isolates the variable of
-interest. Three confounds recur.
+\subsection{Gap 1: The Spine Is Modelled as Independent Predictions}
+\label{sec:lr-gap-relational}
 
-First, \emph{unequal pipelines}. Compared architectures rarely receive identical
-preprocessing, localisation and training budgets, so a reported difference may
-reflect engineering effort rather than representational capacity---precisely the
-argument Kowlagi et al.\ advance when attributing their CNN's advantage to
-pipeline design rather than to convolution as such \cite{kowlagi2022a}. Given the
-evidence of Section~\ref{sec:lr-localize-first} that localisation dominates
-performance, a comparison in which one arm is better localised than the other
-measures preprocessing.
+The dominant formulation treats each level--condition pair as an independent
+classification. A model predicting severity at L4--L5 does so without reference
+to L3--L4, without reference to the other conditions at its own level, and
+without reference to the contralateral side. This is a modelling convenience,
+not a clinical or biomechanical claim, and the literature contains three
+distinct lines of evidence that it discards real structure.
 
-Second, \emph{frozen features}. Several comparisons extract features from frozen
-pretrained backbones rather than fine-tuning end to end
-\cite{udomluck2026multitask,patil2026mribased}. This systematically
-disadvantages transformers, whose weaker inductive biases make them more
-dependent on in-domain adaptation.
+First, \emph{degeneration propagates between adjacent levels}. The degenerative
+cascade described in Section~\ref{sec:lr-cascade} is explicitly sequential: disc
+height loss at one level alters load distribution at its neighbours, driving
+ligamentum flavum hypertrophy and facet change there in turn
+\cite{bharadwaj2023deep,nikpasand2024automated}. Levels are not independent
+samples.
 
-Third, \emph{fixed input configuration}. Every comparison holds the sequence
-configuration constant, so the interaction between architecture and available
-context is untested. This matters because the theoretical case for global
-attention is strongest exactly where context must be inferred rather than
-observed---that is, where a view is missing.
+Second, \emph{conditions co-occur at a level for shared mechanical reasons}. The
+same disc bulge that narrows the central canal also encroaches on the lateral
+recess and the foramen, which is precisely why the multi-pathology systems of
+Section~\ref{sec:lr-task-evolution} share a trunk across targets
+\cite{su2022automatic,lehnen2021detection}. Those systems share
+\emph{features}, however, not \emph{predictions}: the heads remain independent,
+so a confident finding at one target cannot inform another.
 
-A controlled comparison therefore requires a shared localisation stage, a shared
-training and augmentation protocol, comparable capacity and tuning budgets, and
-end-to-end fine-tuning of both backbones, evaluated on the same benchmark with
-the same metric. No study in this review satisfies all four conditions.
+Third, \emph{laterality is anatomically symmetric}, and the RSNA label structure
+encodes left and right as separate targets that are nonetheless produced by one
+underlying morphology \cite{richards2026the}.
 
-\subsection{Gap 2: Sequence Configuration and the Accuracy--Efficiency Trade-off}
-\label{sec:lr-gap-sequence}
+Relational modelling of this structure is almost absent from the reviewed
+literature. The single exception is Baur et al., who reconstruct each disc as a
+3D point cloud and grade it with a graph neural network---but the graph is
+\emph{within} a disc, over its surface geometry, not \emph{across} levels or
+conditions, and the reported performance was uneven (F1 0.71 at L2/3 against
+0.46 overall) \cite{baur2024automated}. Nguyen et al.\ come closer in spirit,
+injecting disc-level priors and showing that the technique is model-agnostic
+\cite{nguyen2026crossspine}, but the levels remain independent outputs rather
+than communicating nodes. No study in this review constructs a graph whose nodes
+are the level--condition targets and whose edges encode adjacency, co-occurrence
+and bilateral symmetry.
 
-The second gap concerns input rather than model. Multi-sequence pipelines carry
-costs that are rarely quantified alongside their accuracy: greater memory and
-compute, cross-plane geometric registration dependent on DICOM metadata
-\cite{batra2025mscan,pan2021automatically}, longer inference, and brittleness
-when a sequence is missing or degraded (Section~\ref{sec:lr-missing}). Against
-these, the incremental diagnostic yield of each additional sequence has not been
-measured under controlled conditions.
+This matters because the structure is not merely decorative. If neighbouring
+evidence genuinely constrains a prediction, then relational modelling should
+help most exactly where single-target evidence is weakest---the ambiguous
+mild/moderate boundary of Section~\ref{sec:lr-ordinality}, and the lateral
+compartments where human agreement itself is poorest
+\cite{lurie2008reliability}.
 
-The literature supplies both sides of the argument but no direct test. Evidence
-that the third sequence matters is indirect, inferred from the failure of
-sagittal-only systems on foraminal and subarticular targets
-\cite{nigru2024external,wu2026external}; evidence that it may not is likewise
-indirect, resting on sagittal-only systems that perform respectably against
-different baselines on different data
-\cite{acharya2026disccentric,kowlagi2022a}. Because these come from different
-architectures, cohorts, localisation strategies and metrics, the contribution of
-sequence configuration cannot be separated from everything else that differs.
+\subsection{Gap 2: Ordinal Structure and Clinical Cost Remain Unexploited}
+\label{sec:lr-gap-ordinal}
 
-Two design requirements follow. The comparison must hold architecture and
-pipeline constant while varying only the input configuration; and it must report
-results per condition rather than in aggregate, since the expected penalty is
-concentrated in the foraminal and subarticular targets and an aggregate figure
-would average away the structure of interest.
+Section~\ref{sec:lr-ordinality} established two facts that sit awkwardly
+together. Errors concentrate overwhelmingly at adjacent grade boundaries---only
+0.85\% of discs differed by more than one grade in the largest external
+validation \cite{mcsweeney2023external}---so the ordinal structure is real and
+measurable. Yet the most systematic test of ordinal-aware objectives found that
+none of soft-kappa loss, ordinal cross-entropy or regression losses improved on
+plain cross-entropy \cite{niemeyer2021a}.
+
+The natural reading is that the ordinal formulations tested were inadequate
+rather than that the structure is unusable, but the literature does not resolve
+this. Two things are missing. Ordinal objectives have been evaluated on
+\emph{disc degeneration} grading in isolation, never on the multi-target
+stenosis problem where the ordinal scale interacts with severe class imbalance
+(Section~\ref{sec:lr-distributions}) and with relational structure. And the
+\emph{asymmetry of clinical cost} has scarcely been modelled at all: grading a
+severe stenosis as normal is not equivalent to the reverse, yet almost every
+reviewed system optimises a symmetric objective. Acharya and Kansakar are the
+notable exception, reporting severe-to-normal misclassification as a headline
+result rather than burying it in a confusion matrix
+\cite{acharya2026disccentric}, and Wu et al.\ characterise their model's
+error profile as specificity-oriented and draw a deployment conclusion from it
+\cite{wu2026external}. The RSNA benchmark encodes the asymmetry in its
+evaluation metric but nothing compels a model to optimise for it.
+
+\subsection{Gap 3: Cross-Institutional Transfer Is Asserted, Not Measured}
+\label{sec:lr-gap-transfer}
+
+Section~\ref{sec:lr-generalization} documented a consistent finding: models
+degrade when moved between institutions, and detection degrades far less than
+fine-grained grading
+\cite{zhang2023deep,wu2026external,yilihamu2025quantification}. What the
+literature does not provide is a \emph{quantified adaptation curve}---how much
+local annotation is required to recover performance at a new site.
+
+The external validations reviewed here are one-shot: a model is transported,
+evaluated, and the drop reported
+\cite{mcsweeney2023external,nigru2024external,grob2022external,wu2026external}.
+None asks the operationally decisive question, which is not \emph{how much
+performance is lost} but \emph{how cheaply it can be regained}. For a hospital
+deciding whether to adopt such a system, the difference between needing ten
+locally annotated studies and needing five hundred is the difference between
+feasible and not.
+
+Two further limitations compound this. Every external validation in this review
+tests a model built elsewhere on a Western or East Asian cohort; no published
+evaluation covers a Middle Eastern population or the scanner protocols in
+routine use there. And parameter-efficient adaptation methods, now standard
+elsewhere in deep learning, appear nowhere in the reviewed lumbar literature
+despite being the natural tool when local data is scarce.
 
 \subsection{Research Questions and Objectives}
 \label{sec:lr-questions}
 
-The two gaps combine into a single factorial investigation. Crossing
-architecture with input configuration answers both questions and, additionally,
-tests whether they interact---whether a transformer's global attention can
-partially compensate for absent multiplanar data, which neither gap addresses
-alone. This yields the following research questions:
+The three gaps are related rather than independent. Relational structure
+(Gap~1), ordinal cost-sensitivity (Gap~2) and transferability (Gap~3) all bear
+on the same underlying question---whether encoding \emph{what is known about
+lumbar anatomy} into the model produces grading that is more accurate, more
+clinically aligned, and more portable than treating the problem as a collection
+of independent image classifications. This yields the following research
+questions:
 
 \begin{description}
-  \item[RQ1] Under matched localisation, training and evaluation protocols, how
-  do convolutional backbones (ResNet50, EfficientNet-B4) compare with a
-  hierarchical vision transformer (Swin) for per-level, per-condition severity
-  grading of lumbar degenerative disease?
+  \item[RQ1] Does explicitly modelling the lumbar spine as a relational
+  structure---with nodes representing level--condition targets and edges
+  encoding adjacency, within-level co-occurrence and bilateral symmetry---improve
+  severity grading over architectures that predict each target independently,
+  and is the improvement concentrated at the ambiguous grade boundaries and
+  lateral compartments where independent prediction is weakest?
 
-  \item[RQ2] What is the cost in diagnostic performance of reducing the input
-  from the full multi-sequence configuration (Sagittal T1, Sagittal T2/STIR,
-  Axial T2) to a single-sequence configuration (Sagittal T2), and how is that
-  cost distributed across the five graded conditions?
+  \item[RQ2] Can anatomically defined cross-sequence correspondence serve as a
+  self-supervised training signal---treating the same spinal level imaged in
+  different sequences as a positive pair, established through DICOM geometry
+  rather than image similarity---and does it outperform generic pretraining
+  under the label scarcity characteristic of this domain?
 
-  \item[RQ3] Do architecture and sequence configuration interact---specifically,
-  is the penalty for single-sequence input smaller for the transformer than for
-  the convolutional backbones?
+  \item[RQ3] Can a single model learn a condition-specific weighting over
+  available MRI sequences that both reflects the sequence--pathology
+  correspondence of Section~\ref{sec:lr-sequence-matching} and degrades
+  gracefully when a sequence is absent, rather than requiring a separate model
+  per input configuration?
 
-  \item[RQ4] Which class-imbalance strategies most effectively reduce
-  clinically consequential errors, in particular severe cases graded as
-  normal or mild?
+  \item[RQ4] What is the zero-shot performance loss when a model trained on
+  multinational benchmark data is applied to an unseen single-institution
+  Middle Eastern cohort, and how many locally annotated studies are required
+  under parameter-efficient adaptation to recover it?
+
+  \item[RQ5] Do cost-sensitive ordinal objectives reduce clinically consequential
+  errors---specifically severe cases graded as normal or mild---relative to the
+  symmetric categorical objectives that dominate the literature, and does
+  relational consistency across neighbouring predictions provide a usable signal
+  for identifying cases that warrant human review?
 \end{description}
 
-The corresponding objectives are to implement a shared localisation and
-preprocessing stage so that all arms receive identical input regions; to train
-each architecture under both configurations with matched budgets; to evaluate
-using the benchmark's weighted metric together with per-condition and per-class
-reporting; and to quantify computational cost---parameters, memory and inference
-time---so that any accuracy difference can be weighed against it.
+The corresponding objectives are to implement a staged system in which each
+component can be evaluated in isolation: a shared localisation and ROI stage so
+that every subsequent comparison receives identical anatomical input; a
+cross-sequence self-supervised pretraining phase; an adaptive fusion mechanism
+trained under simulated sequence dropout; a relational graph over the
+level--condition targets; and ordinal, cost-aware output heads with calibrated
+uncertainty. Each is added as a measured increment rather than assumed, so that
+the contribution of every component is quantified rather than asserted.
 
 \subsection{Scope and Delimitations}
 \label{sec:lr-scope-delimit}
 
-Four boundaries are stated explicitly. The work addresses \emph{severity
-grading}, taking localisation as a shared and largely solved precondition
-(Section~\ref{sec:lr-detection}) rather than a contribution. It evaluates on
-\emph{LumbarDISC} \cite{richards2026the}; because that collection excludes
-studies with hardware, non-degenerative pathology, severe scoliosis or
-substantial artifact, conclusions do not extend to those populations, and no
-independent external cohort is available to test transportability beyond it. It
-compares a \emph{bounded set of architectures}---two convolutional and one
-transformer---chosen as representative rather than exhaustive, and does not
-evaluate hybrid or vision--language designs
-\cite{chen2024symtc,islamsk2026an}. Finally, it reports model performance and
-computational cost, not clinical impact: the reader-assistance evidence of
-Section~\ref{sec:lr-reader-assistance} \cite{lim2022improved} shows that
-workflow benefit requires a prospective reader study, which lies outside the
-present scope.
+Five boundaries are stated explicitly.
 
-Two constraints inherited from the literature bound the interpretation of any
-result. Performance is capped by the reliability of the reference standard
-(Section~\ref{sec:lr-label-ceiling}), so figures approaching perfect agreement
-should be read as evidence of a protocol artefact rather than of clinical
-readiness. And single-benchmark evaluation cannot establish generalisation; the
-consistent development-to-validation drop documented in
-Section~\ref{sec:lr-generalization} applies to this work as much as to any other.
+The work addresses \emph{severity grading and identification}, taking
+localisation as a shared and largely solved precondition
+(Section~\ref{sec:lr-detection}) rather than as a contribution in itself.
 
-% ===========================================================================
+Model development uses the \emph{public RSNA benchmark}, and transfer is
+evaluated on a \emph{single-institution Middle Eastern cohort}. Because that
+cohort's reports describe herniation morphology while the benchmark grades
+stenosis severity, the two label spaces overlap only partially; transfer
+evaluation is therefore scoped to spinal canal stenosis, where both provide
+comparable ground truth, with herniation morphology treated as a separate local
+task. Conclusions do not extend to populations excluded by the benchmark's own
+criteria---spinal hardware, non-degenerative pathology, severe scoliosis or
+substantial artifact.
+
+The relational structure is defined \emph{anatomically rather than learned}.
+Edges encode adjacency, co-occurrence and symmetry because those relationships
+are clinically motivated; discovering an optimal graph topology from data is a
+distinct problem and is not attempted.
+
+Reference-standard reliability \emph{bounds every result reported here}
+(Section~\ref{sec:lr-label-ceiling}). Where human inter-reader agreement is
+$\kappa \approx 0.49$ for a compartment, a model cannot be shown to exceed it,
+and figures approaching perfect agreement should be read as evidence of a
+protocol artefact rather than clinical readiness.
+
+Finally, the work reports \emph{model performance and computational cost, not
+clinical impact}. The reader-assistance literature of
+Section~\ref{sec:lr-reader-assistance} \cite{lim2022improved,gao2022automatic}
+demonstrates that workflow benefit requires a prospective reader study, which
+lies outside the present scope and is identified as the natural successor to
+this work.
+
 \section{Chapter Summary}
 \label{sec:lr-summary}
 
@@ -1985,16 +2085,25 @@ classification \cite{lu2018deepspine,kowlagi2022a}. The most robust empirical
 regularity is that detection transfers across institutions while fine-grained
 grading does not \cite{zhang2023deep,wu2026external}.
 
-Two questions remain unresolved. Whether attention-based backbones offer any
-advantage over well-tuned convolutional ones is contested, with the balance of
-lumbar-specific evidence currently favouring CNNs
-\cite{kowlagi2022a,lee2026deep,silveira2025automated}, yet no study has compared
-them under matched localisation, training and evaluation conditions. And whether
-the full three-sequence protocol is necessary, or whether a single ubiquitous
-sequence suffices, has been argued from both sides without a controlled test.
-These two questions, and their interaction, constitute the gap this thesis
-addresses. Chapter~3 sets out the experimental design through which they are
-answered.
+What the field has not attempted is the common thread of the three gaps
+identified in Section~\ref{sec:lr-gap}. Almost without exception, these systems
+grade the lumbar spine as a set of independent predictions: each level, each
+condition and each side classified in isolation, under a symmetric objective,
+and validated at a single institution. Yet the same literature establishes that
+degeneration propagates between adjacent levels, that conditions co-occur at a
+level for shared mechanical reasons, that the errors which matter clinically are
+asymmetric, and that performance does not survive the journey to another
+hospital.
+
+The proposition this thesis tests is that encoding those known properties of
+lumbar anatomy---relational structure between targets, ordinal and
+cost-sensitive severity, anatomically defined correspondence across sequences,
+and explicit measurement of what transfer costs and what it takes to
+recover---produces grading that is more accurate where it is currently weakest,
+better aligned with clinical consequence, and portable to institutions the model
+has never seen. Chapter~3 sets out the experimental design through which that
+proposition is tested, component by component, so that each contribution is
+measured rather than assumed.
 
 % ===========================================================================
 \printbibliography[heading=bibintoc,title={References}]
