@@ -390,7 +390,10 @@ The error objective also requires care. Severity grades are ordinal, and distant
 under-grading is clinically different from adjacent disagreement. Yet the literature
 does not establish that ordinal losses automatically improve classification:
 Niemeyer et al. found several ordinal formulations unable to outperform standard
-cross-entropy for Pfirrmann grading \cite{niemeyer2021a}. At the same time, reducing
+cross-entropy for Pfirrmann grading \cite{niemeyer2021a}. While recent frameworks have
+begun to evaluate distance-aware ordinal metrics \cite{trinc2026beyond}, the integration of
+asymmetric clinical cost with target-level relational consistency remains unexploited.
+At the same time, reducing
 Severe$\rightarrow$Normal/Mild errors by simply shifting the model toward predicting
 Severe would create an unacceptable false-positive burden. The fourth problem is
 therefore to evaluate error direction, calibration and selective prediction without
@@ -930,6 +933,10 @@ and 294 candidate matched multi-sequence cases, while a wider raw DICOM inventor
 contains additional studies. These numbers are not presented as the final cohort
 until one-to-one reconciliation is complete:
 \torecord{final Rizgary case-flow counts and reasons for exclusion}.
+
+Operationally, the very first phase of local deployment includes strict, protocol-compliant
+de-identification and governance verification of the local clinical cohort prior to analytical processing,
+ensuring complete data privacy and patient protection from project onset.
 
 Rizgary Hospital is a single external institution. The study can therefore support a
 claim of transport to that independent setting, not universal Middle Eastern
