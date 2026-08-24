@@ -3,7 +3,7 @@
 %  Disease-Adaptive Heterogeneous Graph Learning with Anatomically Aligned
 %  Multi-Sequence MRI Representations
 %
-%  PROSPECTIVE THESIS-FRAMING VERSION 1.0
+%  PROSPECTIVE THESIS-FRAMING VERSION 2.0
 %  Written before completion of the full experimental programme.
 %  The research questions, hypotheses, scope boundaries and novelty position are
 %  intended to remain stable. Fields marked [TO CONFIRM], [TO RECORD] or
@@ -113,7 +113,7 @@ reference-standard conventions change across institutions
 
 The research therefore evaluates three methodological contributions and one
 translational validation programme. The integrated framework evaluating these components
-is designated \textbf{AMOG-Net} (\textbf{A}daptive \textbf{M}ulti-sequence \textbf{O}rganised-\textbf{G}raph Network). The first contribution is anatomically aligned cross-sequence
+is designated \textbf{AMOG-Net} (\textbf{A}natomy-aware \textbf{M}ulti-sequence \textbf{O}rdinal \textbf{G}raph Network). The first contribution is anatomically aligned cross-sequence
 self-supervision, in which DICOM patient-space correspondence defines which views
 should agree during representation learning. The second is disease-conditioned
 adaptive sequence routing, in which the model learns target- and patient-dependent
@@ -390,9 +390,10 @@ The error objective also requires care. Severity grades are ordinal, and distant
 under-grading is clinically different from adjacent disagreement. Yet the literature
 does not establish that ordinal losses automatically improve classification:
 Niemeyer et al. found several ordinal formulations unable to outperform standard
-cross-entropy for Pfirrmann grading \cite{niemeyer2021a}. While recent frameworks have
-begun to evaluate distance-aware ordinal metrics \cite{trinc2026beyond}, the integration of
-asymmetric clinical cost with target-level relational consistency remains unexploited.
+cross-entropy for Pfirrmann grading \cite{niemeyer2021a}. A recent preprint has begun to evaluate distance-aware ordinal assessment on
+LumbarDISC \cite{trinc2026beyond}; however, the combination of asymmetric clinical
+cost with target-level relational modelling appears unaddressed in the literature
+reviewed for this thesis.
 At the same time, reducing
 Severe$\rightarrow$Normal/Mild errors by simply shifting the model toward predicting
 Severe would create an unacceptable false-positive burden. The fourth problem is
@@ -934,9 +935,11 @@ contains additional studies. These numbers are not presented as the final cohort
 until one-to-one reconciliation is complete:
 \torecord{final Rizgary case-flow counts and reasons for exclusion}.
 
-Operationally, the very first phase of local deployment includes strict, protocol-compliant
-de-identification and governance verification of the local clinical cohort prior to analytical processing,
-ensuring complete data privacy and patient protection from project onset.
+Before analytical use of the local cohort, the Rizgary data-preparation phase will
+follow the approved institutional governance protocol. A controlled research copy will
+be de-identified before access by the model-development team, and the permitted storage
+and compute environment will be verified before local processing begins. These safeguards
+precede, rather than form part of, model development.
 
 Rizgary Hospital is a single external institution. The study can therefore support a
 claim of transport to that independent setting, not universal Middle Eastern
