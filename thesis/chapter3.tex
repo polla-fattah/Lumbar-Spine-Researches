@@ -856,10 +856,7 @@ w_{k,l}
 \label{eq:geometry-weight}
 \end{equation}
 
-The reference implementation therefore uses a small geometrically plausible
-candidate set $\mathcal{K}_l$ and supplies either the highest-scoring ordered
-slices or their weights to the downstream 2.5D aggregation module. This is
-preferred to forcing every clinical axial stack into a globally orthogonal grid,
+The reference implementation uses the geometry score $s_{k,l}$ in a ranking/selection step ($\mathrm{Top-}K$ or $\mathrm{argmax}$) to select the physical 2.5D slice stack from the candidate set $\mathcal{K}_l$. The continuous weights $w_{k,l}$ modulate feature aggregation in downstream modules and are \emph{never} multiplied directly against raw MRI pixel intensities, avoiding any distortion of T2 tissue contrast. This is preferred to forcing every clinical axial stack into a globally orthogonal grid,
 because resampling an intentionally disc-aligned acquisition can introduce
 through-plane interpolation and blur small neural structures. Canonical
 resampling may still be evaluated as a secondary robustness comparison, but it
@@ -1790,7 +1787,7 @@ W_{\gamma}
 \label{eq:gated-graph-update}
 \end{align}
 
-followed by the usual feed-forward transformation. The gate allows a node with
+followed by the usual feed-forward transformation. Nodes lacking visual evidence ($e_{p,i}=0$) bypass message passing and LayerNorm updates entirely, hard-masking their hidden states to zero ($\mathbf{h}^{(q+1)}_i = \mathbf{0}$) to prevent LayerNorm noise amplification and feature drift across graph layers. The gate allows a node with
 strong local visual evidence to retain its own state when neighbouring messages
 are inconsistent, while still permitting relational evidence to contribute when
 it is useful. The ungated residual formulation remains a mandatory ablation;
@@ -1995,7 +1992,13 @@ initialized to mirror the RSNA challenge evaluation weights ($1:2:4$ ratio for
 Normal/Mild, Moderate, and Severe grades), directly aligning the training penalty
 with the benchmark's clinical risk metric.
 
-One implementation uses the expected cost under the predicted distribution:
+When using an ordinal threshold head (Section~\ref{sec:method-ordinal-threshold}), the 3-class probability distribution $p_{t,k}$ is explicitly derived from cumulative threshold probabilities before computing expected cost:
+\[
+p_{t,0} = 1 - P(y>0\mid\mathbf{h}_t), \qquad
+p_{t,1} = P(y>0\mid\mathbf{h}_t) - P(y>1\mid\mathbf{h}_t), \qquad
+p_{t,2} = P(y>1\mid\mathbf{h}_t).
+\]
+This derived distribution feeds the expected cost formulation:
 
 \begin{equation}
 \mathcal{L}_{\mathrm{cost}}
@@ -2148,13 +2151,12 @@ show that abstention improves patient care.
 \section{Composite Training Objective}
 \label{sec:method-total-loss}
 
-The complete model may use the objective
+In the primary phased pipeline, self-supervised pretraining (Phase 2) minimizes $\mathcal{L}_{\mathrm{ACSSL}}$ independently. During supervised fine-tuning (Phase 3), the active objective is
 
 \begin{equation}
-\mathcal{L}_{\mathrm{total}}
+\mathcal{L}_{\mathrm{supervised\_total}}
 =
 \mathcal{L}_{\mathrm{grade}}
-+\lambda_{\mathrm{ssl}}\mathcal{L}_{\mathrm{ACSSL}}
 +\lambda_{\mathrm{miss}}\mathcal{L}_{\mathrm{miss}}
 +\lambda_{\mathrm{cost}}\mathcal{L}_{\mathrm{cost}}
 +\lambda_{\mathrm{reg}}\mathcal{L}_{\mathrm{reg}},
@@ -2162,10 +2164,9 @@ The complete model may use the objective
 \end{equation}
 
 where $\mathcal{L}_{\mathrm{grade}}$ is categorical or ordinal supervised loss,
-$\mathcal{L}_{\mathrm{ACSSL}}$ is the anatomical cross-sequence objective,
 $\mathcal{L}_{\mathrm{miss}}$ is optional missing-modality consistency,
 $\mathcal{L}_{\mathrm{cost}}$ is the optional clinical cost term and
-$\mathcal{L}_{\mathrm{reg}}$ collects standard regularisation.
+$\mathcal{L}_{\mathrm{reg}}$ collects standard regularisation. Monolithic multi-task training incorporating $\lambda_{\mathrm{ssl}}\mathcal{L}_{\mathrm{ACSSL}}$ into the joint sum is evaluated as an optional ablation.
 
 Graph message passing is normally part of the forward model rather than a
 separate loss. If an explicit graph-consistency regulariser is introduced, it
@@ -2511,9 +2512,11 @@ compared:
 \end{enumerate}
 
 To evaluate the local morphology transfer task (disc bulge, protrusion,
-extrusion) under extreme sample constraints ($N \le 25$), linear probing on
-frozen ACSSL representations is evaluated as a standalone baseline, comparing
-its transfer performance against full fine-tuning to directly test Hypothesis H1.
+extrusion) under extreme sample constraints ($N \le 25$), multi-label linear
+probing with independent sigmoid heads on frozen ACSSL representations is
+evaluated as a standalone baseline, accommodating non-mutually-exclusive
+herniation co-occurrence and comparing its transfer performance against full
+fine-tuning to directly test Hypothesis H1.
 
 This design avoids assuming in advance that graph-only or encoder-only
 adaptation is correct. The trainable parameter count is reported for every
@@ -2724,8 +2727,12 @@ property.
 
 Confidence intervals for primary metrics are obtained by bootstrap resampling
 \emph{patients}, not individual targets. On each replicate, a patient is sampled
-with replacement and all of that patient's target predictions enter together.
-This preserves within-study dependence.
+with replacement and all of that patient's target predictions enter together,
+preserving within-study dependence. To prevent division-by-zero errors when
+evaluating minority classes or small subgroups (where unstratified resampling
+might draw zero positive cases), bootstrap sampling is stratified at the patient
+level by target severity class, ensuring every resample contains at least one
+positive instance of minority classes.
 
 The default is a sufficiently large number of replicates to stabilise the
 2.5th and 97.5th percentiles; the final number is
