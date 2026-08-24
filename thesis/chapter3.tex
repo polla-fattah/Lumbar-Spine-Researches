@@ -3,7 +3,7 @@
 %  Disease-Adaptive Heterogeneous Graph Learning with Anatomically Aligned
 %  Multi-Sequence MRI Representations
 %
-%  PROTOCOL-GRADE VERSION
+%  PROTOCOL-GRADE VERSION 2 -- VIVA-HARDENED
 %  This chapter is written prospectively because the full PhD experiment has not
 %  yet been completed. After implementation, convert prospective statements to
 %  past tense and replace all [TO CONFIRM] / [TO RECORD] fields with the executed
@@ -88,7 +88,11 @@ self-supervised representation in which positive relationships are defined by
 DICOM patient-space correspondence rather than by generic image similarity.
 The second is a disease-conditioned sequence router that learns how much each
 available MRI sequence contributes to each anatomical target and is trained
-explicitly to remain operational when one or more sequences are absent. The
+explicitly to remain operational when one or more sequences are absent or
+technically present but degraded. Missingness and corruption are treated as
+distinct failure modes: an absent sequence is masked explicitly, whereas a
+corrupted sequence remains observable but is accompanied by quality evidence
+that the router may learn to distrust. The
 third is a heterogeneous disease--anatomy graph whose nodes correspond to
 level--condition--laterality targets and whose typed edges encode anatomical
 adjacency, within-level relationships and bilateral symmetry. The translational
@@ -136,14 +140,16 @@ operationalised as follows.
 
   \item[RQ3 --- Disease-conditioned modality routing.] Can one model learn
   target- and patient-dependent sequence weights while remaining robust to
-  arbitrary missing-sequence configurations, without requiring a separately
-  trained network for every combination of sagittal T1, sagittal T2/STIR and
-  axial T2?
+  both missing and quality-degraded MRI sequences, without requiring a
+  separately trained network for every combination of sagittal T1, sagittal
+  T2/STIR and axial T2?
 
   \item[RQ4 --- Cross-institutional transfer.] What is the zero-shot degradation
   when a benchmark-trained model is applied to a previously unseen Middle
-  Eastern clinical cohort, and how does performance recover as the amount of
-  local annotation available for adaptation increases?
+  Eastern clinical cohort, how much of that degradation is attributable to
+  localisation versus grading/reference-standard shift, and how does
+  performance recover as the amount of local annotation available for
+  adaptation increases?
 
   \item[RQ5 --- Clinically asymmetric error and uncertainty.] Do ordinal and
   cost-sensitive objectives reduce clinically consequential distant errors,
@@ -159,7 +165,7 @@ choices survive the transition from a benchmark to real local clinical data.
 \subsection{Design Principles}
 \label{sec:method-principles}
 
-Six principles govern all experiments.
+Seven principles govern all experiments.
 
 \textbf{First, anatomy precedes grading.} Every classifier and ablation receives
 the same anatomically localised input so that a comparison of representations is
@@ -194,6 +200,16 @@ The model is trained to reproduce radiological grades whose inter-reader
 reliability is imperfect. Performance is therefore interpreted against human
 agreement and not as evidence that the network has discovered a more objective
 biological truth.
+
+\textbf{Seventh, each major dependency receives a diagnostic control.} The
+primary end-to-end result is not replaced by manually corrected data, but a
+pre-specified subset is used to isolate failures that arise upstream of the
+claimed contribution. In particular, external grading is repeated with
+verified anatomical localisation, graph behaviour is stress-tested on isolated
+single-level disease, cross-sequence pretraining is tested for loss of
+sequence-specific information, and modality routing is evaluated under image
+corruption as well as complete absence. These controls are diagnostic rather
+than additional novelty claims.
 
 % ===========================================================================
 \section{Overall Research Design}
@@ -286,9 +302,10 @@ accuracies.
   label-efficient grading and cross-institutional robustness relative to generic
   pretraining, particularly when only a fraction of benchmark labels is used.
 
-  \item[H2] Disease-conditioned routing with modality dropout will degrade less
-  under missing-sequence experiments than fixed concatenation or ordinary
-  cross-attention trained only on complete studies.
+  \item[H2] Disease-conditioned routing with explicit availability masking,
+  modality dropout and quality-aware gating will degrade less under missing-
+  sequence and corruption experiments than fixed concatenation or ordinary
+  cross-attention trained only on clean complete studies.
 
   \item[H3] A typed heterogeneous graph will outperform independent target heads
   and a homogeneous graph if the anatomical edge types carry useful relational
@@ -296,13 +313,16 @@ accuracies.
   the topology itself matters.
 
   \item[H4] Zero-shot performance on Rizgary will be lower than internal
-  benchmark performance because of scanner, protocol, population and reference-
-  standard shift; the magnitude and pattern of that drop are treated as findings
-  rather than failures of the project.
+  benchmark performance because of scanner, protocol, population, localisation
+  and reference-standard shift; the magnitude and pattern of that drop are
+  treated as findings rather than failures of the project. A verified-ROI
+  control is expected to separate the portion attributable to localisation from
+  the residual grading-domain shift.
 
   \item[H5] Local adaptation will improve performance as annotation increases,
   but no predetermined percentage of ``recovery'' is required. The shape of the
-  recovery curve is the result.
+  recovery curve and the location in the network at which limited adaptation is
+  most effective are both treated as results.
 
   \item[H6] Cost-sensitive/ordinal objectives may reduce distant
   Severe$\rightarrow$Normal/Mild errors even if they do not improve aggregate
@@ -562,33 +582,66 @@ reference standard provides a defensible class label.
 \label{sec:method-report-verification}
 
 Automated report extraction, if available from the parallel clinical-NLP work,
-may accelerate construction of the matrix but does not define the gold
-standard. The final labels used for Selar's external evaluation are manually
-verified against the original report text.
+may accelerate matrix construction but does not define the reference standard.
+Every label that enters Selar's external grading analysis is manually checked
+against the original report text. This requirement applies to positive findings,
+explicitly negative/normal statements and the anatomical level to which the
+statement refers; an NLP output is never accepted as ground truth merely because
+its parser confidence is high. Label noise of this kind is well documented in
+medical image analysis, where labels derived from clinical text or from a single
+reader carry error rates high enough to change measured performance and to
+reward models that learn the annotation process rather than the disease
+\cite{karimi2020deep}. The verification procedure below is designed so that
+residual noise is bounded and reported rather than absorbed silently into the
+reference standard.
 
-A two-stage verification procedure is preferred:
+Verification is organised in three levels, which deliberately distinguish
+\emph{textual fidelity} from \emph{clinical harmonisation}.
 
 \begin{enumerate}
-  \item \textbf{Structured extraction audit.} Every non-normal/non-empty finding
-  is traced back to the exact report phrase, level and laterality. Multi-level
-  expressions such as ``L2--3 and L4--5, L5--S1 shows circumferential disc
-  bulge'' are expanded into separate level records without changing their
-  meaning.
+  \item \textbf{Complete source-text audit.} Every externally evaluated
+  case--level label is traced to the exact report phrase and its level and
+  laterality. Multi-level expressions such as ``L2--3 and L4--5, L5--S1 shows
+  circumferential disc bulge'' are expanded into separate level records without
+  changing their meaning. Ambiguous phrases are coded as unresolved rather than
+  forced into a class.
 
-  \item \textbf{Clinical reliability subset.} A pre-specified stratified subset
-  of local studies is independently re-read by two qualified readers using an
-  explicit grading sheet. Disagreements are adjudicated by a more senior reader
-  where available. Inter-reader agreement is reported with weighted
-  $\kappa$ for ordinal grades and ordinary agreement/appropriate $\kappa$ for
-  binary morphology. The size of the re-read subset will be fixed before model
-  results are examined, based on reader availability and the precision required
-  for the agreement estimate.
+  \item \textbf{Harmonised central-canal regrading.} The preferred confirmatory
+  external reference standard is generated by two qualified readers who
+  independently review the MRI for the fixed Rizgary test set and assign the
+  same three-grade target used for the cross-institutional comparison
+  (Normal/Mild, Moderate, Severe) at L1--L2 through L5--S1 using a common grading
+  sheet. Readers are blinded to model predictions and, where feasible, to the
+  original routine report during the first pass. Disagreements are adjudicated
+  by a more senior reader or a pre-specified consensus procedure. Weighted
+  $\kappa$ \cite{cohen1968weighted}, exact agreement and the distribution of
+  one-grade versus two-grade disagreements are reported.
+
+  Adjudication is by explicit consensus rather than by statistical label
+  fusion. Estimator-based fusion such as STAPLE
+  \cite{warfield2004simultaneous} is designed to recover both a reference
+  standard and per-rater performance from a collection of raters, and is not
+  adopted for a two-reader design: with two observations the performance
+  parameters are weakly identified, and a disagreement is better resolved by a
+  senior reader who can inspect the image than by an expectation-maximisation
+  estimate over a pair of labels.
+
+  \item \textbf{Resource-limited reliability fallback.} If dual regrading of the
+  entire fixed external test set is not feasible, a stratified subset is
+  regraded before any model result is inspected. The size and sampling scheme
+  are fixed in advance to cover lumbar levels and severity categories. The
+  harmonised subset is then reported as the strongest external reference
+  analysis, while report-derived labels on the remaining cases are explicitly
+  labelled a secondary real-world analysis rather than treated as equivalent to
+  the LumbarDISC reference process.
 \end{enumerate}
 
-If a second-reader study cannot be completed, the report-derived matrix remains
-usable as a real-world reference standard, but the absence of independent
-regrading is stated explicitly as a limitation and no claim is made that local
-labels reproduce the RSNA grading protocol exactly.
+The historical spreadsheet is never used to override a source report or an
+adjudicated regrade. Where the report-derived label and harmonised reader label
+differ, both are retained with provenance so that reference-standard shift can
+be quantified rather than hidden. This separation is important because a
+cross-institutional performance drop may arise from image-domain shift,
+reference-standard shift, or both.
 
 \subsection{Schema Alignment Between LumbarDISC and Rizgary}
 \label{sec:method-schema-alignment}
@@ -631,6 +684,14 @@ augmentation. For a patient $p$, every sagittal series, every axial series,
 every disc level, every side and every augmented crop belongs to one and only
 one partition. A programmatic assertion is run before training to confirm that
 the intersection of patient identifiers across partitions is empty.
+
+This discipline is not a formality. A systematic review of 294 papers across
+seventeen fields found leakage of exactly this kind---the same subject present
+on both sides of a split---to be among the most common causes of irreproducible
+machine-learning results in applied science \cite{kapoor2023leakage}. The risk
+is acute in this study because a single patient contributes many slices,
+several sequences and up to twenty-five targets, so an image-level split would
+place near-identical data in training and test while appearing well formed.
 
 The split record is version-controlled as a list of pseudonymous IDs. Data
 loaders consume those fixed lists rather than performing a new random split each
@@ -759,11 +820,58 @@ d_k =
 \label{eq:plane-distance}
 \end{equation}
 
-The nearest anatomically corresponding axial slices are the slices with the
-smallest $d_k$, subject to coverage and orientation checks. The method is an
-implementation of physical correspondence, not a learned registration shortcut,
-and follows the geometric principle used by prior lumbar pipelines
-\cite{pan2021automatically,batra2025mscan}.
+Distance alone is not treated as sufficient evidence of anatomical
+correspondence. Lumbar axial stacks are frequently prescribed obliquely so that
+the slice plane follows the local disc space. Let $\mathbf{n}^{\mathrm{disc}}_l$
+denote an estimated normal to the target disc plane, obtained from the local
+anatomical landmarks or endplate/disc geometry available from the localisation
+stage. The acquisition--disc angular discrepancy for slice $k$ is
+
+\begin{equation}
+\theta_{k,l}
+=
+\arccos\!\left(
+\left|\mathbf{n}_k^\top\mathbf{n}^{\mathrm{disc}}_l\right|
+\right).
+\label{eq:acquisition-angle}
+\end{equation}
+
+A geometry relevance score combines distance and angular compatibility,
+
+\begin{equation}
+s_{k,l}
+=
+-\frac{d_k^2}{2\sigma_d^2}
+-\lambda_{\theta}\,\theta_{k,l},
+\label{eq:geometry-score}
+\end{equation}
+
+with corresponding normalised slice weights
+
+\begin{equation}
+w_{k,l}
+=
+\frac{\exp(s_{k,l})}
+{\sum_{j\in\mathcal{K}_l}\exp(s_{j,l})}.
+\label{eq:geometry-weight}
+\end{equation}
+
+The reference implementation therefore uses a small geometrically plausible
+candidate set $\mathcal{K}_l$ and supplies either the highest-scoring ordered
+slices or their weights to the downstream 2.5D aggregation module. This is
+preferred to forcing every clinical axial stack into a globally orthogonal grid,
+because resampling an intentionally disc-aligned acquisition can introduce
+through-plane interpolation and blur small neural structures. Canonical
+resampling may still be evaluated as a secondary robustness comparison, but it
+is not the default alignment strategy.
+
+The per-level value $\theta_l$ (for example the median or maximum discrepancy
+within the selected stack) is retained as a quality-control variable. External
+error analysis tests whether unusually oblique or poorly aligned acquisitions
+are associated with localisation failure or grading error. The overall method
+remains an implementation of physical correspondence rather than a learned
+registration shortcut and follows the geometric principle used by prior lumbar
+pipelines \cite{pan2021automatically,batra2025mscan}.
 
 \subsection{Orientation Standardisation}
 \label{sec:method-orientation}
@@ -822,6 +930,8 @@ Automated QC records the following per series:
   \item slice count and ordering consistency;
   \item missing or duplicated instance positions;
   \item orientation consistency within series;
+  \item axial-to-disc acquisition angulation discrepancy $\theta_l$ where
+        target landmarks are available;
   \item in-plane spacing and slice spacing;
   \item field of view and lumbar coverage;
   \item intensity dynamic range;
@@ -890,6 +1000,43 @@ also reported at pre-specified physical thresholds. Where full masks are
 available, Dice and surface-distance metrics are reported. These results are
 separated from disease grading, consistent with the literature showing that
 detection/localisation and fine-grained grading generalise differently.
+
+\subsection{Localisation-Controlled External Analysis}
+\label{sec:method-localisation-control}
+
+Because localisation is an upstream dependency, a large external performance
+drop cannot automatically be attributed to the grading representation. A
+pre-specified stratified subset of the fixed Rizgary test set is therefore used
+for a diagnostic \emph{verified-ROI control}. For this subset, qualified review
+confirms the lumbar level and corrects the target centre or crop only when the
+automated localisation is wrong. The primary external result remains the fully
+automated pipeline; manually verified ROIs are never substituted silently into
+that headline result.
+
+The same frozen grading model is then evaluated twice on the control subset:
+
+\begin{equation}
+M_{\mathrm{autoROI}}
+\qquad\text{and}\qquad
+M_{\mathrm{verifiedROI}},
+\end{equation}
+
+and the localisation-attributable difference is reported as
+
+\begin{equation}
+\Delta M_{\mathrm{loc}}
+=
+M_{\mathrm{verifiedROI}}-M_{\mathrm{autoROI}}.
+\label{eq:localisation-controlled-delta}
+\end{equation}
+
+A small $\Delta M_{\mathrm{loc}}$ alongside a large public-to-Rizgary grading
+drop supports a representational/reference-standard domain-shift explanation.
+A large $\Delta M_{\mathrm{loc}}$ instead shows that the enabling localiser is a
+material source of transport failure. The subset size and sampling scheme are
+fixed before the external grading results are inspected and are chosen to span
+lumbar levels, severity classes and, where possible, acquisition-quality
+conditions.
 
 \subsection{Disease-Specific 2.5D Regions of Interest}
 \label{sec:method-roi}
@@ -979,7 +1126,13 @@ for patient $p$, level $l$ and modality/sequence $m$. The encoders may share
 architecture while keeping separate normalisation statistics and weights, or
 may partially share weights if an explicit ablation shows that doing so is
 beneficial. Separate encoders are the default because T1, sagittal T2/STIR and
-axial T2 have different contrast and orientation statistics.
+axial T2 have different contrast and orientation statistics. In the standard
+taxonomy of multimodal learning, the problem posed by the MRI sequence stack is
+one of \emph{alignment} and \emph{fusion} rather than translation
+\cite{baltrusaitis2019multimodal}: no sequence is to be generated from another,
+and the task is to place complementary views of one anatomy in a common frame
+and combine them. Naming the problem this way matters because it determines
+which prior work is a legitimate baseline.
 
 To keep comparisons fair, the dimensionality of the output representation is
 held constant across fusion methods. Fixed concatenation, simple averaging and
@@ -1001,6 +1154,32 @@ feature extractor in those experiments.
 
 
 % ===========================================================================
+\subsection{Competitive Methodological Baselines}
+\label{sec:method-competitive-baselines}
+
+The internal E0--E8 ladder explains which proposed component contributes to a
+result, but it is not sufficient by itself to establish competitiveness with
+current lumbar MRI methods. Two additional reference implementations are
+therefore included where reproducibility permits.
+
+\begin{enumerate}
+  \item \textbf{Multi-view cross-attention baseline.} A strong sagittal--axial
+  fusion model following the design principle exemplified by M-SCAN is
+  reproduced under the same patient split, ROI definitions and training budget
+  used by the proposed system \cite{batra2025mscan}.
+  \item \textbf{Inter-level context baseline.} A model in which level-specific
+  features communicate through an ordered Transformer, reflecting the recent
+  anatomy-guided multi-level context literature, is trained under the same
+  experimental conditions. This baseline tests whether the heterogeneous
+  disease graph adds value beyond generic inter-level attention.
+\end{enumerate}
+
+Published point estimates from these methods are reported only as contextual
+references when the original split or target definition differs. Claims of
+superiority require matched reimplementation or an otherwise genuinely
+comparable evaluation protocol; a higher number from a different split is not
+treated as a head-to-head result.
+
 \section{Core Contribution I: Anatomically Aligned Cross-Sequence Self-Supervision}
 \label{sec:method-ssl}
 
@@ -1008,10 +1187,24 @@ feature extractor in those experiments.
 \label{sec:method-ssl-rationale}
 
 Conventional self-supervised vision learning defines related views by applying
-augmentations to one image. That is useful but does not exploit a distinctive
-property of multi-sequence MRI: sagittal T1, sagittal T2/STIR and axial T2 can
-look very different while representing the same underlying patient and spinal
-level. DICOM geometry supplies the correspondence directly.
+augmentations to one image, whether through contrastive objectives that
+contrast a positive against many negatives
+\cite{chen2020simple,he2020momentum} or through non-contrastive
+self-distillation that dispenses with negatives entirely
+\cite{grill2020bootstrap,caron2021emerging}. That is useful but does not
+exploit a distinctive property of multi-sequence MRI: sagittal T1, sagittal
+T2/STIR and axial T2 can look very different while representing the same
+underlying patient and spinal level. DICOM geometry supplies the correspondence
+directly.
+
+The closest existing analogue is cross-modal contrastive alignment, in which
+paired observations in two modalities are pulled together in a shared embedding
+space \cite{radford2021learning}. There the pairing is supplied by
+human-authored text; here it is supplied by patient-space geometry, which is
+both cheaper to obtain and, for the anatomical question at issue, more precise.
+The proposed objective is therefore a known learning mechanism applied to a
+pairing signal that the lumbar MRI literature has treated as a preprocessing
+convenience rather than as supervision.
 
 The proposed objective therefore treats anatomical identity, rather than visual
 similarity, as the primary source of positive pairs. For patient $p$, level
@@ -1023,7 +1216,10 @@ differ.
 This idea is evaluated as a representation-learning hypothesis, not assumed to
 be beneficial. The literature already shows that generic and longitudinal
 self-supervision can reduce label dependence
-\cite{jamaludin2017selfsupervised,chen2020simple}; the experiment here asks
+\cite{jamaludin2017selfsupervised,chen2020simple}, and that self-supervised
+pretraining improves both accuracy and label efficiency in medical imaging
+specifically, including a multi-instance variant that treats several images of
+the same pathology as positives \cite{azizi2021big}; the experiment here asks
 whether explicitly anatomical cross-sequence correspondence is a stronger
 signal for lumbar grading.
 
@@ -1042,10 +1238,13 @@ P_m(\mathbf{f}_{p,l,m})
 \label{eq:ssl-projection}
 \end{equation}
 
-The projection space is used for the self-supervised objective; the encoder
-features before projection are retained for downstream grading. This prevents
-the representation used for contrastive geometry from constraining the final
-classifier unnecessarily.
+The projection space is used only to express the anatomical self-supervised
+constraint; the encoder features before projection are retained for routing and
+downstream grading. The projection head is discarded or decoupled after the
+pretraining stage unless an explicitly labelled joint-training ablation retains
+it. This separation reduces the risk that an objective designed to align
+anatomy across sequences will force the final disease representation itself to
+be sequence-invariant.
 
 \subsection{Positive-Pair Construction}
 \label{sec:method-positive-pairs}
@@ -1100,7 +1299,12 @@ than choosing one arbitrarily.
 False negatives are a concern because two different patients may have very
 similar normal anatomy. The implementation will therefore compare ordinary
 InfoNCE with a variant that does not force all non-positive samples to be hard
-negatives, such as a multi-positive or non-contrastive consistency objective.
+negatives, such as a multi-positive objective or a non-contrastive consistency
+objective of the kind that removes negative pairs altogether
+\cite{grill2020bootstrap}. The latter is attractive here precisely because the
+false-negative problem is structural rather than incidental: normal lumbar
+anatomy is genuinely similar between patients, so a correct model should not be
+penalised for representing it similarly.
 The novelty claim is tied to the \emph{anatomical pairing}, not to a particular
 brand of contrastive loss.
 
@@ -1126,7 +1330,7 @@ The competing initialisations are:
   \item training from random initialisation;
   \item ImageNet initialisation;
   \item generic medical/volumetric pretraining where a suitable public model is
-        available;
+        available \cite{azizi2021big};
   \item ordinary augmentation-based self-supervision;
   \item the proposed anatomically aligned cross-sequence self-supervision.
 \end{itemize}
@@ -1135,6 +1339,29 @@ A successful result is not defined as beating every baseline at every label
 fraction. The useful scientific question is where anatomical pairing helps,
 where it does not, and whether any benefit is largest under label scarcity or
 domain shift.
+
+\subsection{Sequence-Specific Information Preservation Test}
+\label{sec:method-ssl-preservation}
+
+Anatomical alignment can become harmful if the encoder learns invariance by
+erasing contrast-specific information. The use of a projection head reduces
+this risk but does not eliminate it, because gradients from
+$\mathcal{L}_{\mathrm{ACSSL}}$ still update the sequence encoders. A dedicated
+preservation experiment therefore tests whether pretraining retains information
+that is diagnostically useful only in particular acquisitions.
+
+For each major sequence, a single-sequence grading probe is trained from the
+same encoder with and without ACSSL pretraining while the probe architecture and
+labelled data are held fixed. Performance is compared separately on targets
+whose expected evidence is sequence-specific, including foraminal targets for
+sagittal T1 and canal/subarticular targets for axial T2. The experiment is not
+intended to prove a causal hierarchy among sequences. Its purpose is to detect a
+failure mode in which improved cross-sequence alignment is purchased by loss of
+sequence-unique diagnostic signal.
+
+A representation is therefore considered beneficial only if any gain in label
+efficiency or transfer is not accompanied by a reproducible deterioration on
+these sequence-specific probes beyond the uncertainty of the comparison.
 
 \subsection{Transfer Test of the Representation}
 \label{sec:method-ssl-transfer}
@@ -1181,7 +1408,18 @@ where the non-negative routing weights satisfy
 \label{eq:routing-simplex}
 \end{equation}
 
-The gate is conditioned on target identity and patient features:
+The gate is conditioned on target identity, normalised patient features and
+sequence-quality evidence. To avoid a high feature norm acting as an accidental
+proxy for importance, the image representation is first normalised,
+
+\begin{equation}
+\tilde{\mathbf{f}}_{p,l,m}
+=
+\mathrm{LayerNorm}(\mathbf{f}_{p,l,m}),
+\label{eq:routing-feature-norm}
+\end{equation}
+
+and the routing weights are
 
 \begin{equation}
 g_{p,t,m}
@@ -1189,21 +1427,46 @@ g_{p,t,m}
 \mathrm{softmax}_{m\in\mathcal{M}_p}
 \left(
 G[
-\mathbf{f}_{p,l,m},
+\tilde{\mathbf{f}}_{p,l,m},
 \mathbf{e}_{c},
 \mathbf{e}_{l},
-\mathbf{a}_{p}
+\mathbf{a}_{p},
+\mathbf{q}_{p,m}
 ]
 \right),
 \label{eq:routing-gate}
 \end{equation}
 
 where $\mathbf{e}_{c}$ and $\mathbf{e}_{l}$ are learnable condition and level
-embeddings and $\mathbf{a}_{p}$ denotes optional acquisition/context metadata
-that is available without leaking the target label. The initial implementation
-uses a lightweight MLP or target-conditioned attention gate. A more complex
-mixture-of-experts router is considered only if the simpler mechanism is
-insufficient.
+embeddings, $\mathbf{a}_{p}$ denotes optional acquisition/context metadata
+available without leaking the target label, and $\mathbf{q}_{p,m}$ is a compact
+quality representation derived from non-diagnostic acquisition/QC evidence such
+as motion score, truncation/coverage flags, spacing irregularity or other
+pre-specified image-quality indicators. The router remains patient-specific
+because image features are retained; the quality vector supplements rather than
+replaces them.
+
+The gating mechanism itself has clear precedent. Squeeze-and-excitation
+recalibrates channel responses through a learned, content-dependent gate
+\cite{hu2020squeeze}, and sparsely-gated mixture-of-experts layers route each
+input to a subset of expert subnetworks through a trainable gating network
+\cite{shazeer2017outrageously}. Neither is adopted unchanged. What is proposed
+here is that the gate be conditioned on \emph{target identity}, so that one
+study is fused differently for a foraminal target than for a canal target at
+the same level. The novelty claim is the conditioning variable and its clinical
+justification, not the existence of a gate.
+
+The initial implementation uses a lightweight MLP or target-conditioned
+attention gate. A more complex mixture-of-experts router is considered only if
+the simpler mechanism is insufficient. Should that route be taken, the
+load-balancing failure reported for sparsely-gated experts applies directly
+\cite{shazeer2017outrageously}: without an explicit balancing term the gate can
+collapse onto one input and the remaining experts stop receiving gradient. The
+degenerate case is diagnostically important here, because a router that always
+selects sagittal T2 would be functionally identical to a fixed fusion rule while
+presenting as a learned one. Gate entropy and per-target weight distributions
+are therefore monitored during training and reported, and a collapsed router is
+recorded as a negative result rather than reported as successful routing.
 
 \subsection{Explicit Availability Mask}
 \label{sec:method-routing-mask}
@@ -1221,11 +1484,25 @@ The remaining weights are renormalised over the modalities that actually
 exist. A missing sequence is therefore not represented by an all-zero image
 whose meaning the network must infer. Availability is explicit in the model.
 
+This follows the hetero-modal principle, in which each modality is embedded
+independently and fusion is computed over whatever modalities are present, so
+that a single trained model accepts any subset without retraining
+\cite{havaei2016hemis}. The masked-softmax renormalisation used here is a
+simpler realisation of that idea, chosen because the routing weights must
+remain interpretable as an allocation over available evidence, which
+moment-based fusion would obscure.
+
 \subsection{Modality Dropout}
 \label{sec:method-modality-dropout}
 
 During training, complete studies are stochastically converted into incomplete
-ones by removing one or more sequence streams. The dropout distribution includes:
+ones by removing one or more sequence streams. Modality-wise dropout is an
+established route to test-time robustness against missing modalities that still
+permits cross-modal correlations to be learned during training
+\cite{neverova2016moddrop}. It is adopted here because incomplete studies are
+the norm rather than the exception in the local cohort, so tolerance of absence
+is a deployment requirement and not merely a stress test. The dropout
+distribution includes:
 
 \begin{itemize}
   \item all three sequences;
@@ -1243,6 +1520,36 @@ dropout schedule selected on validation data}.
 No external test case is artificially repaired by copying another sequence into
 a missing slot. The model's purpose is to remain functional under genuine
 absence, not to conceal it.
+
+\subsection{Corrupted-Modality Robustness}
+\label{sec:method-routing-corruption}
+
+A modality can be present yet clinically unreliable. This is distinct from
+missing-modality learning: an availability mask can suppress a sequence that is
+absent, but it cannot by itself protect the router from a motion-corrupted or
+truncated series that remains technically available.
+
+During supervised routing experiments, controlled corruption is therefore
+applied to one sequence stream at a time using transformations that approximate
+plausible acquisition failures without manufacturing new pathology. Candidate
+corruptions include motion-like displacement/ghosting approximations, increased
+noise, bias-field/intensity distortion, partial field-of-view truncation and
+controlled slice loss. The exact corruption family and severity levels are
+pre-specified from the QC characteristics observed in the development data and
+are reported explicitly.
+
+For each corruption, the analysis measures both prediction degradation and the
+change in routing allocation. If sequence $m$ is corrupted, a robust router is
+expected, where clinically possible, to reduce $g_{p,t,m}$ relative to the clean
+input while redistributing weight to the remaining evidence. This expectation
+is evaluated rather than hard-coded. A model that preserves accuracy only by
+assigning high weight to a visibly corrupted sequence is treated as unstable
+even if aggregate performance appears acceptable.
+
+Three controls are compared: routing without quality features, routing with
+$\mathbf{q}_{p,m}$ but no corruption training, and quality-aware routing exposed
+to controlled corruption during supervised training. The corruption experiment
+is a robustness test of RQ3 and not a separate novelty claim.
 
 \subsection{Routing Consistency}
 \label{sec:method-routing-consistency}
@@ -1336,6 +1643,41 @@ with embeddings that identify level and condition:
 The graph topology is defined anatomically before training. It is not learned
 from correlations in the test data.
 
+The formalism is that of graph neural networks operating by neighbourhood
+feature propagation \cite{kipf2017semisupervised}. The setting is strictly
+inductive: each patient presents a graph whose node features the model has never
+seen, so what is learned is an aggregation function rather than an embedding
+tied to one fixed graph \cite{hamilton2017inductive}. Node set and edge
+topology are constant across patients; node features and evidence masks are
+not.
+
+\subsection{Node Evidence Availability Versus Label Availability}
+\label{sec:method-node-availability}
+
+The graph distinguishes two forms of ``missingness'' that must not be conflated.
+A node may lack a ground-truth label in a particular cohort while still having
+valid image evidence, or it may lack usable visual evidence because a required
+sequence, field of view or localisation is missing. These cases are handled
+differently.
+
+On LumbarDISC, a missing target label sets the supervised-loss mask $m_t=0$ but
+does not automatically remove the node from the forward graph if the image
+inputs required to construct its representation are available. At inference,
+absence of a local Rizgary label likewise does not imply absence of the
+anatomical structure: the model is permitted to compute auxiliary foraminal or
+subarticular representations even when those outputs cannot be scored locally.
+Suppressing such nodes solely because their labels are unavailable would change
+the trained graph at external deployment and would confuse missing supervision
+with missing anatomy.
+
+By contrast, when the visual evidence itself is invalid---for example the axial
+coverage does not include a target, localisation fails, or a required sequence
+is absent---an evidence mask $e_{p,t}\in\{0,1\}$ is propagated to the graph.
+Edges carrying messages from nodes with $e_{p,t}=0$ are masked before the
+attention softmax. This prevents genuinely unsupported ``ghost''
+representations from contaminating neighbouring nodes while preserving
+information from unlabelled but observable anatomy.
+
 \subsection{Typed Edge Families}
 \label{sec:method-edge-types}
 
@@ -1371,13 +1713,23 @@ This represents bilateral anatomical symmetry without forcing equal grades.
 Additional cross-type edges are added only if clinically justified in the
 pre-specified topology. A denser graph is not automatically a better graph; the
 study tests whether explicit relation types add value over homogeneous message
-passing.
+passing. Distinguishing edge types by giving each relation its own
+transformation is the defining feature of relational graph convolution
+\cite{schlichtkrull2018modeling}. The claim under test is therefore not that
+typed relations are a new idea, but that \emph{these particular anatomical
+relations}---the motion-segment chain, same-level compartment coexistence and
+bilateral symmetry---carry information that undifferentiated message passing
+discards.
 
 \subsection{Relation-Aware Message Passing}
 \label{sec:method-message-passing}
 
 For layer $q$, node $i$ receives messages from neighbours $j\in\mathcal{N}(i)$.
-A relation-aware attention formulation is
+The formulation below combines learned attention over neighbours
+\cite{velickovic2018graph} with relation-specific projections
+\cite{schlichtkrull2018modeling}, an arrangement close to the type-dependent
+attention used for heterogeneous graphs \cite{hu2020heterogeneous}. A
+relation-aware attention formulation is
 
 \begin{align}
 \mathbf{q}_i &= W_Q\mathbf{h}^{(q)}_i,\\
@@ -1402,25 +1754,62 @@ with attention
 \label{eq:relational-attention}
 \end{equation}
 
-and update
+and the neighbour message is
 
 \begin{equation}
-\tilde{\mathbf{h}}^{(q+1)}_i
+\mathbf{m}^{(q)}_i
 =
 \sum_{(j,r)\in\mathcal{N}(i)}
-\alpha_{ijr}\mathbf{v}_{j,r}.
+\alpha_{ijr}\mathbf{v}_{j,r},
 \label{eq:graph-message}
 \end{equation}
 
-Residual connection, normalisation and feed-forward transformation produce the
-final layer output. Relation-specific transformations $W^r_K,W^r_V$ allow an
+with unavailable-evidence neighbours removed from the softmax by the mask
+$e_{p,j}=0$. To reduce the risk that a focal abnormality is propagated
+indiscriminately into a normal adjacent target, local evidence and relational
+evidence are combined through a learnable residual gate,
+
+\begin{align}
+\boldsymbol{\gamma}^{(q)}_i
+&=
+\sigma\!\left(
+W_{\gamma}
+[\mathbf{h}^{(q)}_i\Vert\mathbf{m}^{(q)}_i]
++b_{\gamma}
+\right),\\
+\mathbf{h}^{(q+1)}_i
+&=
+\mathrm{LN}\!\left(
+\mathbf{h}^{(q)}_i
++
+\boldsymbol{\gamma}^{(q)}_i\odot\mathbf{m}^{(q)}_i
+\right),
+\label{eq:gated-graph-update}
+\end{align}
+
+followed by the usual feed-forward transformation. The gate allows a node with
+strong local visual evidence to retain its own state when neighbouring messages
+are inconsistent, while still permitting relational evidence to contribute when
+it is useful. The ungated residual formulation remains a mandatory ablation;
+otherwise any gain cannot be attributed specifically to the proposed control of
+neighbour influence. Relation-specific transformations $W^r_K,W^r_V$ allow an
 adjacent-level neighbour to influence a node differently from its contralateral
-counterpart.
+counterpart. Relation-specific parameters grow linearly with the number of edge
+families, a known source of overfitting in relational graph models. With three
+families over twenty-five nodes the risk is modest, but the basis-decomposition
+remedy \cite{schlichtkrull2018modeling} is available should the pre-specified
+topology later be widened.
 
 The exact graph transformer implementation may be replaced by a computationally
-simpler relation-aware GAT if validation shows no benefit from the more complex
-version. The contribution is the explicit typed target graph and its controlled
-evaluation, not a requirement to use the largest graph architecture.
+simpler relation-aware GAT \cite{velickovic2018graph} if validation shows no
+benefit from the more complex version. Where a transformer formulation is
+retained, lumbar level identity is made explicit to the attention mechanism
+through positional encodings \cite{dwivedi2021generalization} or structural
+attention biases derived from graph distance \cite{ying2021transformers}, since
+the spine has a short, fixed path structure that such encodings represent
+naturally. The contribution is the explicit typed target graph and its
+controlled evaluation, not a requirement to use the largest graph
+architecture.
 
 \subsection{Graph Baselines}
 \label{sec:method-graph-baselines}
@@ -1432,9 +1821,11 @@ The graph contribution is tested against:
   \item \textbf{Ordered level transformer:} features communicate across the five
         lumbar levels but do not form 25 typed condition/laterality nodes.
   \item \textbf{Homogeneous graph:} the same 25 nodes and adjacency pattern but
-        one undifferentiated edge type.
+        one undifferentiated edge type
+        \cite{kipf2017semisupervised,velickovic2018graph}.
   \item \textbf{Heterogeneous graph:} typed adjacent-level, cross-condition and
-        bilateral relations.
+        bilateral relations
+        \cite{schlichtkrull2018modeling,hu2020heterogeneous}.
   \item \textbf{Random/shuffled-edge control:} graph capacity retained while
         anatomical edges are permuted.
 \end{enumerate}
@@ -1458,6 +1849,49 @@ The full graph is further decomposed:
 Results are reported by target family. It is plausible, for example, that
 bilateral edges help lateral-compartment grading but add little to central-canal
 classification. A single average graph improvement would conceal this structure.
+
+\subsection{Isolated-Lesion Specificity Stress Test}
+\label{sec:method-isolated-lesion}
+
+A graph can improve average grading while still introducing a clinically
+undesirable failure mode: a severe focal lesion at one level may elevate the
+predicted severity of an adjacent level that is visually normal. This
+``information contagion'' is evaluated directly rather than inferred from
+aggregate specificity.
+
+The held-out public evaluation set is searched, without altering labels, for
+cases in which one target is Severe while the same target at one or both
+adjacent levels is Normal/Mild. For these naturally occurring isolated-lesion
+cases, the independent-head, homogeneous-graph, ungated heterogeneous-graph and
+gated heterogeneous-graph models are compared on the adjacent normal levels.
+The primary stress-test outcomes are the adjacent-level false-positive rate,
+the change in predicted Severe probability after graph refinement, and the
+fraction of cases in which the graph changes a correct local prediction into an
+incorrect higher grade.
+
+A graph contribution is not considered clinically coherent if an aggregate gain
+is accompanied by a material, reproducible increase in adjacent-level
+false-positive contamination. This stress test is therefore part of the
+acceptance criterion for retaining relational message passing in the final
+integrated system.
+
+\subsection{External Graph-Scope Sensitivity}
+\label{sec:method-external-graph-scope}
+
+Rizgary provides reliable evaluation labels primarily for central-canal
+stenosis, whereas the public graph is trained over all 25 targets. Absence of a
+local label for a foraminal or subarticular node does not make that node
+inherently invalid, but the possibility that auxiliary unvalidated nodes alter
+central-canal predictions is tested explicitly.
+
+For the external central-canal analysis, three inference configurations are
+compared where implementation permits: (i) the full trained 25-node graph using
+all visually available node representations; (ii) a central-canal-only graph
+restricted to the five canal nodes using a separately trained or appropriately
+ablated model; and (iii) the full graph with only nodes lacking valid visual
+evidence masked. The comparison is interpreted as a sensitivity analysis of
+external graph scope, not as a post-hoc search for whichever configuration
+scores highest.
 
 \subsection{Graph Consistency and Uncertainty}
 \label{sec:method-graph-uncertainty}
@@ -1565,6 +1999,31 @@ The cost term is evaluated alongside, not instead of, standard calibration and
 discrimination metrics. A model is not considered better merely because it
 optimises the chosen matrix.
 
+\subsection{Under-Grading Versus Over-Grading Trade-off}
+\label{sec:method-cost-tradeoff}
+
+Cost sensitivity is not accepted as beneficial merely because it lowers the
+Severe$\rightarrow$Normal/Mild rate. A sufficiently large penalty on
+under-grading can shift the decision boundary toward Severe and create an
+unacceptable false-positive burden. The cost-sensitive experiments therefore
+report both sides of the trade-off for each pre-specified cost matrix and each
+candidate value of $\lambda_{\mathrm{cost}}$.
+
+The minimum reporting set comprises Severe-class sensitivity, specificity,
+positive predictive value, the proportion of all targets predicted Severe, the
+Severe$\rightarrow$Normal/Mild rate and the Normal/Mild$\rightarrow$Severe rate,
+together with macro-F1, weighted $\kappa$ and calibration. A cost-sensitive
+configuration is retained only if the reduction in clinically consequential
+under-grading is not explained by indiscriminate over-prediction of Severe.
+
+Decision-curve analysis \cite{vickers2006decision} is not a mandatory part of
+this imaging-grading study because the thesis does not observe a validated
+treatment or referral action threshold, and net benefit is defined only once
+such a threshold exists. If a clinically agreed binary action and threshold probability are
+established in a separately approved extension, decision-curve analysis may be
+reported there. Until then, the thesis reports the empirical sensitivity--false-
+positive trade-off without presenting radiological grades as treatment utility.
+
 \subsection{Class Imbalance}
 \label{sec:method-imbalance}
 
@@ -1593,6 +2052,8 @@ together.
 \label{sec:method-temperature}
 
 Raw neural-network probabilities are not treated as calibrated confidence.
+Modern networks are systematically overconfident, and added capacity tends to
+worsen calibration even where it improves accuracy \cite{guo2017calibration}.
 Temperature scaling is fitted on the validation set:
 
 \begin{equation}
@@ -1607,13 +2068,21 @@ p_k^{(T)}
 \end{equation}
 
 where $T>0$ is selected without access to the test labels. Calibration is then
-evaluated with Expected Calibration Error, Brier score and reliability diagrams.
+evaluated with Expected Calibration Error, the Brier score
+\cite{brier1950verification} and reliability diagrams.
 
 \subsection{Predictive Uncertainty}
 \label{sec:method-uncertainty}
 
-The primary feasible uncertainty methods are MC dropout and/or a small deep
-ensemble. If $S$ stochastic predictions are available, the predictive mean is
+The primary feasible uncertainty methods are Monte Carlo dropout, which
+approximates Bayesian inference by retaining dropout at test time and so adds no
+training cost \cite{gal2016dropout}, and a small ensemble of independently
+initialised models, which is typically better calibrated and degrades more
+gracefully under distribution shift \cite{lakshminarayanan2017simple}. The
+second property is the reason an ensemble is considered despite its cost, since
+the external Rizgary evaluation is itself a distribution shift and is where
+overconfidence would be most damaging. If $S$ stochastic predictions are
+available, the predictive mean is
 
 \begin{equation}
 \bar{\mathbf{p}}
@@ -1648,6 +2117,17 @@ Rather than choosing one arbitrary threshold, the complete risk--coverage curve
 is reported: as increasingly uncertain cases are withheld, what fraction of the
 cohort remains covered and what error remains among the retained predictions?
 The area under, or summary points from, this curve can compare methods.
+
+Conformal prediction offers a stronger guarantee than a heuristic threshold,
+converting any model into one that emits prediction sets with finite-sample
+coverage under exchangeability alone \cite{angelopoulos2023gentle}. It is
+therefore reported for the internal held-out evaluation, where exchangeability
+is defensible. It is \emph{not} claimed to hold on the Rizgary test set: that
+cohort is drawn from a different institution, scanner population and reporting
+process, which is precisely the violation of exchangeability under which the
+coverage guarantee fails. Where conformal sets are computed externally they are
+presented as a descriptive comparison against internally calibrated thresholds,
+with the broken assumption stated rather than left for a reader to notice.
 
 The terminology ``refer'' describes model behaviour only. It does not claim a
 validated clinical workflow; a prospective reader study would be required to
@@ -1701,11 +2181,19 @@ Training is separated into conceptually distinct phases:
 
   \item \textbf{Self-supervised pretraining.}
         Sequence encoders are trained with anatomical cross-sequence pairs using
-        development patients only.
+        development patients only. The primary ACSSL phase uses studies for which
+        the sequence pair required by the positive relation is present and passes
+        QC. Modality dropout is disabled in this phase so that the pretraining
+        objective is not changed by stochastic removal of its own positive pair.
+        An incomplete-modality SSL variant, if investigated, is treated as a
+        separate exploratory experiment with a dynamically defined set of valid
+        positives.
 
   \item \textbf{Supervised grading.}
         Encoders are fine-tuned with the routing and graph modules on
-        LumbarDISC labels.
+        LumbarDISC labels. Modality dropout and controlled corruption are
+        introduced here, after anatomical pretraining, so that missing-modality
+        robustness is learned without altering the definition of ACSSL.
 
   \item \textbf{Calibration.}
         Temperature/uncertainty parameters are fitted on validation data after
@@ -1723,10 +2211,15 @@ Training is separated into conceptually distinct phases:
 \subsection{Optimiser and Schedules}
 \label{sec:method-optimiser}
 
-AdamW is the default optimiser for transformer/graph components; SGD or AdamW
-may be compared for CNN baselines if required. Learning rate is selected on the
-validation set within a pre-specified range, with warm-up and cosine decay or a
-plateau scheduler used consistently across the main ablation. Early stopping is
+AdamW \cite{loshchilov2019decoupled} is the default optimiser for
+transformer/graph components; SGD or AdamW may be compared for CNN baselines if
+required. AdamW is preferred over Adam \cite{kingma2015adam} because weight
+decay is decoupled from the adaptive step size, so regularisation strength can
+be tuned without confounding the effective learning rate---a distinction that
+matters when one schedule must serve encoder, router and graph modules of
+different scales. Learning rate is selected on the validation set within a
+pre-specified range, with warm-up and cosine decay \cite{loshchilov2017sgdr} or
+a plateau scheduler used consistently across the main ablation. Early stopping is
 based on a prevalence-robust validation metric such as macro-F1 or weighted
 $\kappa$, not raw accuracy.
 
@@ -1744,6 +2237,12 @@ The final report records:
   \item hardware and software versions;
   \item wall-clock and GPU time.
 \end{itemize}
+
+Mixed-precision training \cite{micikevicius2018mixed} is used where it does not
+change results, because volumetric multi-sequence batches are memory-bound on
+the hardware available to this programme. At least one configuration is repeated
+in single precision to confirm that reduced precision has not altered a
+comparison on which a contribution claim rests.
 
 No final hyperparameter value is fabricated in this protocol chapter; each is
 \torecord{executed training configuration and model-selection criterion}.
@@ -1794,10 +2293,10 @@ It is a ladder in which each additional assumption is isolated.
 E0 & Independent ROI classifier & How well can anatomically localised targets be graded without relational or adaptive fusion?\\
 E1 & + DICOM-aligned multi-sequence ROIs & What is gained by correct cross-plane correspondence under fixed fusion?\\
 E2 & + disease-conditioned sequence routing & Does target-specific routing outperform fixed fusion?\\
-E3 & + modality dropout / missing-sequence training & Does explicit training for absence improve robustness?\\
+E3 & + modality dropout / quality-aware corruption training & Does explicit training for missing and degraded sequences improve robustness?\\
 E4 & + anatomical cross-sequence SSL & Does anatomy-defined pretraining improve representation and label efficiency?\\
 E5 & + homogeneous target graph & Does generic message passing help?\\
-E6 & + typed heterogeneous disease--anatomy graph & Do clinically defined edge types matter beyond graph capacity?\\
+E6 & + typed heterogeneous disease--anatomy graph with gated residual update & Do clinically defined edge types add value without contaminating strong local evidence?\\
 E7 & + ordinal/cost-sensitive/calibrated heads & Can clinically consequential errors and probability reliability be improved?\\
 E8 & Selected complete system + external transfer & Do the selected components survive institutional shift and adapt efficiently?\\
 \bottomrule
@@ -1815,16 +2314,20 @@ Three ablation families correspond directly to the doctoral contributions.
 
 \textbf{Anatomical SSL ablation} compares no SSL, generic image SSL and
 DICOM-aligned cross-sequence SSL under identical downstream training. It is
-repeated at reduced label fractions.
+repeated at reduced label fractions and accompanied by the sequence-specific
+preservation probes of Section~\ref{sec:method-ssl-preservation}.
 
 \textbf{Routing ablation} compares fixed fusion, cross-attention, target-
-conditioned routing and target-conditioned routing with modality dropout.
-Performance is reported under complete and missing-sequence input.
+conditioned routing, target-conditioned routing with modality dropout, and
+quality-aware routing under controlled corruption. Performance is reported
+under complete, missing-sequence and corrupted-sequence input.
 
 \textbf{Graph ablation} compares independent heads, an ordered five-level
-transformer, homogeneous graph, heterogeneous graph and random/shuffled edges.
-Edge-family removal further identifies whether adjacency, bilateral symmetry or
-same-level cross-condition interaction carries the signal.
+transformer, homogeneous graph, ungated heterogeneous graph, gated
+heterogeneous graph and random/shuffled edges. Edge-family removal further
+identifies whether adjacency, bilateral symmetry or same-level cross-condition
+interaction carries the signal, while isolated-lesion cases test whether any
+gain is purchased by adjacent-level contamination.
 
 \subsection{Negative Results}
 \label{sec:method-negative-results}
@@ -1859,14 +2362,24 @@ zero-shot result. If a local intensity harmonisation method is fitted on Rizgary
 data, that constitutes a separate domain-adaptation experiment and is labelled
 accordingly.
 
-The primary zero-shot analysis is restricted to the central-canal targets for
-which the local reports provide a defensible mapping. The principal comparison
-is therefore not the full 25-target benchmark score versus a five-target local
-score; it is public held-out versus local external performance on the
-\emph{same central-canal task}.
+The primary zero-shot analysis is restricted to the central-canal targets.
+Where the harmonised reader regrading described in
+Section~\ref{sec:method-report-verification} is available, that adjudicated
+three-grade matrix defines the confirmatory external reference standard. The
+manually audited routine-report matrix is retained as a secondary real-world
+reference analysis. The principal comparison is therefore not the full 25-target
+benchmark score versus a five-target local score; it is public held-out versus
+local external performance on the same central-canal grading task, with the
+reference-standard provenance stated explicitly.
 
 \subsection{Quantifying Domain Shift}
 \label{sec:method-domain-shift}
+
+Domain shift between institutions is a recognised and extensively catalogued
+failure mode in medical image analysis, with adaptation methods spanning
+supervised, semi-supervised and unsupervised settings \cite{guan2022domain}.
+This study measures the shift before attempting to correct it, because its size
+and structure are themselves the finding sought by RQ4.
 
 Performance degradation is reported as both absolute and relative change:
 
@@ -1891,14 +2404,21 @@ The shift is decomposed by:
   \item scanner/vendor/field strength where the local cohort contains enough
         variation;
   \item slice thickness/in-plane resolution;
-  \item localisation success;
-  \item report/reference-standard confidence.
+  \item axial-to-disc angulation discrepancy and geometry quality;
+  \item localisation success and verified-ROI correction status;
+  \item report/reference-standard confidence and harmonised-reader status;
+  \item image-quality/corruption indicators where available.
 \end{itemize}
 
 This analysis separates representational failure from data-quality failure
 where possible. For example, if grading declines but localisation remains
 stable, the pattern supports the detection-versus-grading asymmetry documented
-in Chapter~2.
+in Chapter~2. The interpretation is explicitly decomposed into at least three
+potential contributors: localisation shift, image/representation shift and
+reference-standard shift. The verified-ROI control estimates the first; the
+harmonised-reader analysis reduces the third; the residual difference is the
+closest available estimate of grading-domain transport failure, although the
+three sources cannot be made perfectly orthogonal in retrospective data.
 
 \subsection{Local Error Review}
 \label{sec:method-local-error-review}
@@ -1952,24 +2472,41 @@ rather than a single ``fine-tuned'' number.
 \subsection{Adaptation Strategies}
 \label{sec:method-adaptation-strategies}
 
-Four strategies are compared:
+Few-shot adaptation is not treated as a single operation, because the dominant
+source of institutional shift may reside in the image representation, the
+modality router, the relational module or the final decision boundary. A
+pre-specified family of progressively less constrained strategies is therefore
+compared:
 
 \begin{enumerate}
-  \item \textbf{No adaptation.} The zero-shot baseline.
+  \item \textbf{No adaptation.} The frozen zero-shot baseline.
   \item \textbf{Non-learned/simple harmonisation.} Intensity preprocessing is
         adjusted using only the adaptation pool where a defensible method exists.
-  \item \textbf{Parameter-efficient adaptation.} Adapter layers or low-rank
-        updates are trained while most of the public-data representation remains
-        fixed.
-  \item \textbf{Full fine-tuning.} All or most parameters are updated, where
-        computationally feasible and where $N$ is large enough to avoid
-        immediate overfitting.
+  \item \textbf{Head-only adaptation.} Only the final grading heads are updated.
+  \item \textbf{Router + head adaptation.} Sequence encoders and graph are
+        frozen; routing and output layers are adapted.
+  \item \textbf{Graph + head adaptation.} Sequence encoders are frozen while
+        relation-aware graph parameters and output heads are adapted.
+  \item \textbf{Late-encoder PEFT + head.} Low-rank \cite{hu2022lora} or
+        bottleneck-adapter \cite{houlsby2019parameterefficient} parameters are
+        inserted into a limited set of late encoder blocks while the remainder
+        of the image representation stays fixed.
+  \item \textbf{Constrained multi-module PEFT.} A small parameter budget is
+        distributed across late encoder, router and graph components according
+        to a pre-specified configuration selected on development/domain-shift
+        validation rather than the fixed Rizgary test set.
+  \item \textbf{Full fine-tuning.} All or most parameters are updated as a
+        high-capacity reference only where $N$ and compute make this defensible.
 \end{enumerate}
 
-The exact PEFT implementation is chosen after a small validation comparison and
-is not itself claimed as novel. Its role is to ask an operational question:
-how many local labels are needed when a hospital cannot afford to retrain a full
-model from scratch?
+This design avoids assuming in advance that graph-only or encoder-only
+adaptation is correct. The trainable parameter count is reported for every
+strategy, and performance is interpreted jointly with that count. The exact
+adapter/LoRA implementation is supporting methodology taken directly from the
+parameter-efficient transfer literature
+\cite{houlsby2019parameterefficient,hu2022lora}, not a doctoral novelty;
+the scientific question is where a limited local adaptation budget is most
+effective and how that answer changes with $N$.
 
 \subsection{Annotation-Efficiency Summary}
 \label{sec:method-annotation-efficiency}
@@ -1987,18 +2524,32 @@ annotation-efficient adaptation.
 \subsection{Avoiding Adaptation Overfit}
 \label{sec:method-adaptation-overfit}
 
-Few-shot training is particularly vulnerable to overfitting and selection bias.
-The study therefore:
+Few-shot training is particularly vulnerable to overfitting and hyperparameter
+selection bias, especially at $N=10$. Repeatedly splitting ten cases into even
+smaller train/validation folds can itself create unstable model selection. The
+study therefore separates \emph{method selection} from \emph{few-shot
+estimation}.
 
 \begin{itemize}
-  \item repeats each $N$ across several sampled adaptation sets;
-  \item uses regularisation and early stopping based only on an adaptation
-        validation split or internal cross-validation within the adaptation
-        pool;
-  \item never selects the adaptation epoch from the fixed external test;
-  \item reports the variance across sampled local subsets;
-  \item compares PEFT with full fine-tuning rather than assuming fewer trainable
-        parameters are always superior.
+  \item PEFT architecture, rank/adapter size, learning-rate range, maximum epoch
+        budget and stopping rule are selected before the final $N=10,25,50,100$
+        recovery experiment, using public development/site-shift experiments or
+        a separate local adaptation-development procedure that never touches the
+        fixed Rizgary test set.
+  \item Each $N$ is repeated across several independent stratified adaptation
+        samples; variance across these samples is reported because the identity
+        of ten cases can dominate a point estimate.
+  \item For the smallest $N$, the pre-specified stopping rule is used rather than
+        inventing a two- or three-patient validation split. Where the adaptation
+        pool is large enough, internal validation or cross-validation may be used
+        for larger $N$ as a secondary safeguard.
+  \item The fixed external test set is never used to choose epoch, adapter rank,
+        module placement, threshold, calibration or any other adaptation
+        hyperparameter.
+  \item Training-set loss and generalisation gap are reported for the tiny-$N$
+        settings so that apparent recovery caused by memorisation is visible.
+  \item PEFT is compared with full fine-tuning rather than assumed superior
+        merely because fewer parameters are trainable.
 \end{itemize}
 
 % ===========================================================================
@@ -2049,9 +2600,13 @@ These are primary discrimination metrics.
 \subsection{Quadratic Weighted Kappa}
 \label{sec:method-kappa}
 
-Quadratic weighted $\kappa$ is reported because the labels are ordered and the
-literature supplies human agreement values in $\kappa$. For observed confusion
-matrix $O$ and expected matrix $E$, with weight
+Quadratic weighted $\kappa$ \cite{cohen1968weighted} is reported because the
+labels are ordered and the literature supplies human agreement values in
+$\kappa$. The weighting is not a technical detail but a clinical requirement:
+an unweighted $\kappa$ would penalise a Normal/Mild-to-Moderate confusion
+exactly as heavily as a Severe-to-Normal/Mild one, collapsing the very
+distinction the grading task exists to preserve. For observed confusion matrix
+$O$ and expected matrix $E$, with weight
 
 \[
 w_{ij}=\frac{(i-j)^2}{(K-1)^2},
@@ -2103,7 +2658,7 @@ target level, while confidence intervals respect patient clustering.
 Calibration evaluation includes:
 
 \begin{itemize}
-  \item Brier score;
+  \item Brier score \cite{brier1950verification};
   \item Expected Calibration Error (ECE);
   \item classwise reliability diagrams;
   \item negative log likelihood where useful;
@@ -2168,8 +2723,11 @@ Ablation models are evaluated on the same patients, so comparisons are paired.
 For scalar patient-level losses or correctness indicators, a paired permutation
 test or Wilcoxon signed-rank test is used where distributional assumptions are
 not justified. AUCs are compared with an appropriate paired procedure such as
-DeLong's test when its assumptions are satisfied. Bootstrap differences are
-used for metrics without a simple analytic test.
+DeLong's test \cite{delong1988comparing} when its assumptions are satisfied.
+The paired form is required rather than optional here: ablation models are
+evaluated on the same patients, so their AUCs are correlated and an unpaired
+comparison would misstate the variance of the difference. Bootstrap differences
+are used for metrics without a simple analytic test.
 
 The primary quantity is the paired difference
 
@@ -2249,17 +2807,22 @@ clinical meaning.
 The reliance on DICOM coordinates creates a specific failure mode. Controlled
 perturbations therefore test sensitivity to small localisation/geometry errors:
 axial slice selection shifted by one or two slices, modest ROI-centre offsets,
-and simulated spacing variation. The purpose is not to train on corrupted
-geometry by default, but to measure how brittle the system is to the imperfect
-localisation expected in practice.
+simulated spacing variation, and perturbation of the axial-to-disc angular
+compatibility term. Results are stratified by the recorded acquisition-angle
+discrepancy $\theta_l$. The purpose is not to train on corrupted geometry by
+default, but to measure how brittle the system is to the imperfect localisation
+and oblique acquisition expected in practice.
 
 \subsection{Image-Quality and Acquisition Perturbation}
 \label{sec:method-acquisition-robust}
 
-Where feasible, synthetic intensity perturbations approximating scanner shift
-are applied to the public held-out set: contrast scaling, noise, bias field and
-resolution degradation. These do not replace real external validation but help
-identify which changes reproduce the pattern observed at Rizgary.
+Where feasible, controlled perturbations approximating scanner and acquisition
+failure are applied to the public held-out set: contrast scaling, noise, bias
+field, resolution degradation, motion-like corruption, slice loss and partial
+truncation. These do not replace real external validation but help identify
+which changes reproduce the pattern observed at Rizgary. For router experiments,
+the change in modality weight before and after corruption is reported alongside
+the change in prediction, so robustness is not inferred from accuracy alone.
 
 \subsection{Graph Perturbation}
 \label{sec:method-graph-robust}
@@ -2394,12 +2957,14 @@ The repository will include:
 \subsection{Reference-Standard Shift}
 \label{sec:method-threat-label}
 
-LumbarDISC uses structured expert grades; Rizgary uses routine narrative
-reports. A performance drop can therefore reflect both imaging-domain shift and
-reference-standard shift. The thesis mitigates this by restricting transfer to
-defensible overlap, auditing report labels and, where possible, re-reading a
-stratified subset. It does not claim that the two reference standards are
-identical.
+LumbarDISC uses structured expert grades; Rizgary originates from routine
+narrative reports. A performance drop can therefore reflect both imaging-domain
+shift and reference-standard shift. The thesis mitigates this by restricting
+transfer to defensible overlap, manually verifying every evaluated local label
+against source text and, for the strongest external analysis, constructing a
+harmonised central-canal reference through independent reader regrading with
+adjudication where feasible. Report-derived and harmonised-reader results are
+kept separate rather than averaged into one ambiguous reference standard.
 
 \subsection{Single-Centre Local External Validation}
 \label{sec:method-threat-single-centre}
@@ -2422,9 +2987,30 @@ are specifically designed to separate mechanism from capacity.
 \label{sec:method-threat-localisation}
 
 The graph and routing modules cannot recover evidence absent from a bad crop.
-Localisation is therefore measured and failures are reported separately.
-Downstream results may additionally be stratified by localisation error to
-estimate how much grading depends on the enabling stage.
+Localisation is therefore measured and failures are reported separately. A
+verified-ROI control on a pre-specified Rizgary subset repeats grading after
+manual confirmation/correction of target localisation, allowing the external
+performance drop to be decomposed into an upstream localisation component and a
+residual grading/reference-standard component.
+
+\subsection{Graph Evidence and Unlabelled External Nodes}
+\label{sec:method-threat-graph-external}
+
+Rizgary cannot score every node used by the 25-target public graph. Missing
+local ground truth is not treated as missing anatomy, and nodes with valid
+visual evidence remain available to the trained graph. Truly unsupported nodes
+caused by absent sequences, failed localisation or inadequate coverage are
+masked. A full-graph versus canal-only sensitivity analysis tests whether
+unvalidated auxiliary nodes materially alter central-canal predictions.
+
+\subsection{Corrupted but Present Modalities}
+\label{sec:method-threat-corruption}
+
+Availability masks solve absence but not poor quality. A motion-corrupted or
+truncated sequence can still enter the router and receive weight. Quality-aware
+gating, controlled corruption training and corruption-specific evaluation are
+therefore included, and routing weights are never interpreted as reliable when
+the model has not been tested under such degradations.
 
 \subsection{Class Imbalance}
 \label{sec:method-threat-imbalance}
@@ -2465,11 +3051,11 @@ language of ``decision-support potential'' rather than clinical benefit.
 \textbf{RQ} & \textbf{Primary comparison} & \textbf{Primary outcomes} & \textbf{Failure interpretation}\\
 \midrule
 \endhead
-RQ1 & independent/level transformer/homogeneous graph vs typed heterogeneous graph & macro-F1, $\kappa$, severe recall, edge ablations & graph topology carries little useful signal or local evidence dominates\\
-RQ2 & generic pretraining vs anatomical cross-sequence SSL at 10/25/50/100\% labels & macro-F1, $\kappa$, label efficiency, external drop & anatomy-defined positives do not improve transferable representation\\
-RQ3 & fixed fusion/cross-attention vs routing $\pm$ modality dropout & missing-sequence degradation, target-specific performance, calibration & fixed fusion is sufficient or learned routing is unstable\\
-RQ4 & public held-out vs fixed Rizgary test; no adaptation vs PEFT/full tuning & zero-shot $\Delta$, recovery curve, calibration shift & domain shift is larger or less annotation-efficient than expected\\
-RQ5 & CE vs ordinal/cost-aware objectives; calibrated vs uncalibrated prediction & Severe$\rightarrow$Normal rate, grade distance, Brier/ECE, risk--coverage & ordinal/cost formulation offers no advantage over CE\\
+RQ1 & independent/level transformer/homogeneous graph vs ungated and gated typed heterogeneous graph & macro-F1, $\kappa$, severe recall, edge ablations, isolated-lesion adjacent-level false positives & graph topology carries little useful signal or relational messages contaminate strong local evidence\\
+RQ2 & generic pretraining vs anatomical cross-sequence SSL at 10/25/50/100\% labels & macro-F1, $\kappa$, label efficiency, external drop, sequence-specific preservation probes & anatomy-defined positives do not improve transferable representation or erase modality-specific signal\\
+RQ3 & fixed fusion/cross-attention vs routing, modality dropout and quality-aware routing & missing- and corrupted-sequence degradation, target-specific performance, routing-weight response, calibration & fixed fusion is sufficient or learned routing is unstable under absence/corruption\\
+RQ4 & public held-out vs fixed Rizgary test; automated vs verified ROIs; report-derived vs harmonised labels; module-wise PEFT vs no/full tuning & zero-shot $\Delta$, localisation-controlled $\Delta M_{\mathrm{loc}}$, recovery curve, calibration shift & transport failure is dominated by localisation, reference-standard shift or representation shift; adaptation may remain inefficient\\
+RQ5 & CE vs ordinal/cost-aware objectives; calibrated vs uncalibrated prediction & Severe under-grading and over-grading rates, Severe PPV/specificity, grade distance, Brier/ECE, risk--coverage & lower under-grading is offset by unacceptable Severe false positives or ordinal/cost formulation adds no advantage\\
 \bottomrule
 \end{longtable}
 
@@ -2485,7 +3071,15 @@ a requirement that every proposed mechanism win.
 
 The final manuscript/thesis reporting will follow the current applicable
 medical-AI and diagnostic/prediction reporting checklists at the time of
-submission. At minimum the report will include:
+submission. Four apply to different parts of this work and are not
+interchangeable. TRIPOD+AI \cite{collins2024tripodai} governs the development
+and validation of the prediction model. CLAIM \cite{tejani2024checklist}
+governs the medical-imaging specifics, including acquisition, ground-truth
+definition and model description. STARD \cite{bossuyt2015stard} governs any
+analysis reported as diagnostic accuracy against a reference standard,
+including the harmonised reader study. STROBE
+\cite{vonelm2007strengthening} governs the description of the retrospective
+Rizgary cohort itself. At minimum the report will include:
 
 \begin{itemize}
   \item complete cohort flow diagrams and inclusion/exclusion reasons;
@@ -2523,20 +3117,29 @@ aligned cross-sequence self-supervision asks whether the same spinal level
 viewed under different MRI sequences provides a stronger representation-learning
 signal than generic augmentation. Disease-conditioned routing asks whether one
 model can allocate different sequence evidence to different targets while
-remaining functional when modalities are absent. The heterogeneous
-disease--anatomy graph asks whether explicit typed relations among adjacent
-levels, co-occurring compartments and bilateral targets improve grading beyond
-independent heads, an inter-level transformer or a homogeneous graph. Ordinal,
-cost-sensitive and uncertainty-aware outputs remain supporting methods and are
-retained only if their contribution is measurable.
+remaining functional when modalities are absent or degraded, with quality-aware
+gating tested under controlled corruption. The heterogeneous disease--anatomy
+graph asks whether explicit typed relations among adjacent levels, co-occurring
+compartments and bilateral targets improve grading beyond independent heads, an
+inter-level transformer or a homogeneous graph without inducing adjacent-level
+information contamination. Anatomical SSL is additionally tested for preservation
+of sequence-specific diagnostic information. Ordinal, cost-sensitive and
+uncertainty-aware outputs remain supporting methods and are retained only if
+their contribution is measurable and does not simply exchange severe
+under-grading for indiscriminate over-grading.
 
 The translational design is deliberately separated from model development.
 Rizgary is not mixed into public training. A fixed local test set establishes
 zero-shot domain shift, while a separate adaptation pool supplies controlled
-few-shot subsets. The primary local comparison is restricted to central-canal
-stenosis, where the benchmark and narrative local reports can support a
-defensible common target; local herniation morphology remains a separate task
-rather than being forced into the RSNA schema.
+few-shot subsets. External interpretation is strengthened by a verified-ROI
+control that isolates localisation error and by a harmonised central-canal
+reader reference where feasible, while the report-derived matrix is retained
+as a distinct real-world reference analysis. Few-shot adaptation compares
+where a restricted update budget is applied---head, router, graph or late
+encoder---rather than assuming one PEFT location is universally optimal. The
+primary local comparison remains restricted to central-canal stenosis; local
+herniation morphology is analysed separately rather than being forced into the
+RSNA schema.
 
 Finally, the methodology defines success as an answer to the research
 questions, not as attainment of a predetermined accuracy. A graph that adds
