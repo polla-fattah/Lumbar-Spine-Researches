@@ -1,130 +1,148 @@
-# MSc Project Plan — Student 4: Clinical Symptom & Surgical Prognostics
+# MSc Project Plan — Student 4: Imaging–Symptom–Treatment Association
 
-**Project Title:** Discordance Between Radiological Severity and Clinical Symptoms in Lumbar Degeneration: Prognostic Value of AI-Derived Stenosis Grading  
+**Status:** **PENDING — DO NOT ALLOCATE TO A STUDENT YET**  
+**Provisional Title:** Association Between Lumbar MRI Degenerative Findings, Presenting Symptoms, Treatment Path and Outcome in a Middle Eastern Clinical Cohort  
 **Academic Supervisor:** Dr. Polla Abdulhamid Fattah  
-**Target Degree:** MSc in Medical Informatics / Clinical Data Science / Spine Surgery Research  
-**Duration:** 6 Months (Conditional Bonus Project)  
+**Best-Fit Degrees:** MSc in Medical Informatics / Clinical Data Science / Epidemiology / Spine Surgery Research  
+**Expected Duration after data approval:** 6–9 Months
 
 ---
 
-> [!CAUTION]
-> **DO NOT ASSIGN A STUDENT TO THIS PROJECT YET.**
->
-> Every research question below depends on clinical data that **has not been confirmed to
-> exist**: presenting symptoms, examination findings, treatment decision, and outcome.
-> None of it is present in the `Data/` folder as delivered — that contains imaging and
-> radiology reports only.
->
-> **Required before this becomes a project:** a written confirmation from Rizgary Hospital
-> that symptom and outcome records exist, are retrievable for these specific 299 patients,
-> and may be linked to the imaging under the existing agreement.
->
-> If that confirmation arrives, this becomes the **highest-value study in the entire
-> programme** — imaging-to-symptom discordance is the most-cited unresolved problem in the
-> lumbar literature, and few groups can obtain the linkage. Treat it as a standing request
-> to the hospital, not as a staffed project. Ask early: retrospective linkage gets harder
-> once a data-collection window closes.
+## 1. Activation Conditions
+
+This project becomes available only after written confirmation that the following can be retrieved and linked to the relevant Rizgary imaging cases:
+
+- presenting symptoms;
+- symptom duration;
+- relevant examination findings if available;
+- treatment decision;
+- surgery / conservative treatment status;
+- follow-up outcome and follow-up interval.
+
+The hospital / ethics authority must explicitly permit this linkage. Imaging-only approval is not automatically sufficient.
+
+If the clinical data are not available, **do not substitute synthetic outcomes or simulated patients.** That would be a different research question and should be advertised as a separate project, not as a fallback clinical-prognostic study.
 
 ---
 
-## 1. Executive Summary & Clinical Context
+## 2. Research Rationale
 
-* **Clinical Dilemma:** Radiological stenosis on MRI correlates notoriously poorly with patient symptoms. Up to 30–40% of asymptomatic adults show anatomical disc herniation on MRI, while patients with severe radiculopathy may show modest imaging findings.
-* **Project Objective:** Link AI-derived multi-level radiological stenosis severity scores to actual patient presenting symptoms (e.g., radiculopathy vs. neurogenic claudication vs. low back pain) and surgical vs. conservative treatment outcomes at Rizgary Teaching Hospital.
-* **Important Note:** This is a **conditional high-ROI project** that depends on Rizgary Hospital providing supplementary clinical chart data alongside the DICOM scans.
+Lumbar MRI abnormalities and patient symptoms are not perfectly concordant. The clinically valuable question is therefore not whether an AI model can reproduce a radiology grade, but whether quantified imaging burden relates to what the patient experiences and what treatment is chosen.
 
----
-
-## Who this project suits
-
-> **Note:** this project cannot be allocated until the hospital confirms that clinical
-> symptom and outcome records exist and may be linked to the imaging. See the caution at
-> the top of this document.
-
-**Technical difficulty: LOW–MEDIUM**, but the highest clinical value in the programme if
-the data becomes available.
-
-**You will need**
-- Strong applied statistics: logistic regression, odds ratios, ROC analysis, agreement measures
-- Python or R for statistical modelling
-- Genuine interest in clinical reasoning — this project is about the gap between what
-  imaging shows and what patients experience
-- Comfort working with messy real-world clinical records
-
-**You will NOT need**
-- To train any imaging model; you consume predictions produced elsewhere
-- A GPU
-
-**You will gain**
-- Clinical prognostic modelling, a highly transferable skill
-- Experience linking imaging to outcomes, which very few groups can offer
-- A paper addressing the most-cited unresolved problem in the lumbar literature
-
-**Best fit:** Medical Informatics, Clinical Data Science, Epidemiology, or a
-research-minded clinician.
+The study must remain observational. It can estimate associations / predictive discrimination; it cannot prove that an imaging feature caused surgery or symptom resolution.
 
 ---
 
-## 2. Research Questions (RQs)
+## 3. Research Questions
 
-* **RQ1:** What is the degree of discordance between AI-graded anatomical stenosis severity (L1–L2 … L5–S1) and presenting clinical symptoms in a Middle Eastern cohort?
-* **RQ2:** Which specific radiological finding combination (e.g., central canal vs. lateral recess vs. foraminal compromise) is the strongest multivariate predictor of surgical intervention?
-* **RQ3:** Does an AI-derived aggregate Lumbar Degeneration Index (LDI) predict 1-year post-treatment symptom resolution better than traditional single-level grading?
+**RQ1.** How strongly do level-resolved MRI findings correlate with presenting symptom patterns?
 
----
+**RQ2.** Which available imaging findings—central canal stenosis, foraminal narrowing where reliably recorded, disc herniation morphology, nerve-root pressure and multilevel burden—are associated with surgical vs conservative treatment after adjustment for available covariates?
 
-## 3. Required Data & Clinical Variables
+**RQ3.** Does a pre-specified multi-level imaging-burden score improve discrimination compared with the single worst radiological grade?
 
-1. **Radiological Data:** Audited local finding matrix + Selar's AMOG-Net predicted severity probabilities for the 294 Rizgary cases.
-2. **Clinical Chart Data (To be requested from Rizgary Hospital):**
-   - Presenting Chief Complaint (Radiculopathy, Neurogenic Claudication, Axial Low Back Pain).
-   - Duration of Symptoms (< 3 months, 3–12 months, > 12 months).
-   - Treatment Path (Conservative / Physical Therapy vs. Surgical Decompression / Microdiscectomy).
-   - Post-Treatment Outcome (Symptom Resolution, Partial Improvement, Unchanged).
+**RQ4.** If follow-up is sufficiently complete, which baseline imaging and clinical variables are associated with treatment response at a clearly defined time point?
+
+Do **not** include lateral-recess / subarticular stenosis unless new radiologist grading creates that reference variable.
 
 ---
 
-## 4. Methodological Workflow & Timeline
+## 4. Required Variables
 
-```mermaid
-flowchart TD
-    M1[Month 1: Clinical Chart Linkage & Data Cleaning] --> M2[Month 2: Discordance Analysis & Cross-Tabulation]
-    M2 --> M3[Month 3: Multivariate Logistic Regression & ROC Curve Analysis]
-    M3 --> M4[Month 4: Decision Tree & Prognostic Model Development]
-    M4 --> M6[Months 5-6: Manuscript Preparation & Submission]
-```
+### Imaging / report variables
 
-### Month 1: Hospital Data Linkage & Anonymization
-- Retrieve retrospective outpatient/surgical logs from Rizgary Teaching Hospital matching the 294 PACS case IDs.
-- Link clinical symptom fields with radiological target variables.
+- lumbar level;
+- canal stenosis grade or severity category;
+- foraminal narrowing where defensible;
+- bulge / protrusion / extrusion;
+- nerve-root pressure where reported;
+- age / sex;
+- optional AI prediction probabilities only after the imaging model has been independently validated.
 
-### Month 2: Symptom-Radiology Discordance Quantification
-- Calculate Cohen's Kappa (κ) and Goodman-Kruskal gamma between radiological stenosis grade and clinical severity.
-- Identify "radiologically severe but clinically mild" and "radiologically mild but clinically severe" discordance rates.
+### Clinical variables
 
-### Month 3: Predictive Modeling of Surgical Intervention
-- Build multivariable logistic regression models to predict surgical conversion based on radiological findings + patient age/sex.
-- Calculate Odds Ratios (OR) and Area Under the ROC Curve (AUC).
-
-### Month 4: Prognostic AI Index Validation
-- Test whether AI multi-level graph embeddings improve surgical outcome prediction compared to single-level maximum stenosis grades.
-
-### Months 5–6: Paper Writing & Submission
-- Draft manuscript targeting top spine clinical journals.
+- dominant symptom phenotype;
+- symptom duration;
+- neurological deficit where documented;
+- treatment path;
+- procedure type if surgical;
+- follow-up duration;
+- outcome definition selected before analysis.
 
 ---
 
-## 5. Target Venues & Deliverables
+## 5. Methodology
 
-* **Targets** — Reach: *The Spine Journal* (IF ~3.8) or *Spine*. Target: *European Spine Journal*. Floor: *BMC Musculoskeletal Disorders*.
-* **Note:** if the clinical linkage is obtained, this is the most clinically significant paper in the programme and justifies aiming high.
-* **Primary Output:** 1 clinical prognosis paper **submitted** + MSc Thesis Dissertation.
+### Phase 1 — Data availability and missingness audit
+
+Before model building:
+
+- report how many of the imaging cases have each clinical variable;
+- quantify loss to follow-up;
+- define exclusions;
+- draw a cohort flow diagram.
+
+If outcome completeness is inadequate, narrow the project to **cross-sectional imaging–symptom association** rather than pretending to perform prognostics.
+
+### Phase 2 — Discordance analysis
+
+- cross-tabulate imaging severity vs symptom phenotype;
+- weighted kappa / rank correlation where scales are genuinely comparable;
+- calculate the proportions of radiologically severe / clinically mild and radiologically mild / clinically severe patterns under pre-specified definitions.
+
+### Phase 3 — Multivariable modelling
+
+Potential models:
+
+- logistic regression for surgical vs conservative treatment;
+- ordinal / multinomial regression for symptom categories where appropriate;
+- penalised regression if the number of predictors approaches the event count.
+
+Do not use a complex ML model merely because it is available; N is likely modest.
+
+### Phase 4 — Prognostic modelling only if follow-up supports it
+
+If outcome data are sufficiently complete:
+
+- specify a single primary outcome / time point;
+- use internal validation by bootstrap or cross-validation;
+- compare imaging-only vs clinical-only vs combined models;
+- report calibration, discrimination and decision-curve analysis if appropriate.
 
 ---
 
-## 6. Risk Management & Fallback Options
+## 6. AI-Derived Features
 
-| Potential Risk | Severity | Mitigation Strategy |
-| :--- | :---: | :--- |
-| Rizgary Hospital cannot provide retrospective clinical symptom logs | **High** | **Fallback:** Reframe study as a synthetic simulation / radiologist reader concordant study using blinded clinical reader ratings. |
-| Incomplete follow-up outcome data | Medium | Focus analysis on initial presenting symptoms vs. imaging findings rather than long-term outcome tracking. |
+AI embeddings or probabilities may be analysed only as a **secondary predictor** after the model generating them has been independently evaluated.
+
+The primary clinically interpretable comparison should use:
+
+- maximum single-level grade;
+- number of affected levels;
+- pre-specified burden score;
+- specific morphological findings.
+
+Do not define an opaque "Lumbar Degeneration Index" after looking at the outcome and then test it on the same data; that would be circular.
+
+---
+
+## 7. Expected Outputs if Activated
+
+- MSc dissertation;
+- transparent linked clinical-imaging dataset dictionary;
+- association / prediction analysis with calibration and uncertainty;
+- manuscript prepared for submission.
+
+Because the project depends on external clinical data availability, it is **not part of the currently selectable MSc catalogue** until activation conditions are satisfied.
+
+---
+
+## 8. Risks
+
+| Risk | Response |
+|---|---|
+| Clinical records cannot be linked | Do not activate the project. Offer a different pre-approved MSc topic. |
+| Follow-up is sparse | Reframe to cross-sectional imaging–symptom association. |
+| Surgery is strongly confounded by clinician / access factors | Treat model as association / prediction, not causal inference. |
+| Event count too small | Reduce predictor set; use penalisation; avoid complex ML. |
+| AI model not ready | Use radiology-report findings; AI is optional, not a dependency. |

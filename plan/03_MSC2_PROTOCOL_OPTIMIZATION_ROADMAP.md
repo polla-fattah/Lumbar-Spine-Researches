@@ -1,133 +1,203 @@
-# MSc Project Plan — Student 2: Rapid Triage Protocol Optimization
+# MSc Project Plan — Student 2: Sequence-Sparing Lumbar MRI Protocol Evaluation
 
-**Project Title:** Sequence-Sparing Rapid Emergency Triage Protocol for Lumbar Spine MRI: An Ablation Study Using Deep Multi-Sequence Models  
+**Project Title:** Finding-Specific Evaluation of Sequence-Sparing Lumbar MRI for Rapid Triage: A Matched-Model Ablation Study  
 **Academic Supervisor:** Dr. Polla Abdulhamid Fattah  
 **Target Degree:** MSc in Computer Science / Artificial Intelligence / Biomedical Engineering  
-**Duration:** 6 Months  
+**Duration:** 6–8 Months
 
 ---
 
-## 1. Executive Summary & Clinical Reframe
+## 1. Clinical Question
 
-* **Clinical Bottleneck:** MRI scanner capacity at public teaching hospitals (like Rizgary Hospital) is severely constrained. Standard lumbar MRI protocols (Sagittal T1, Sagittal T2, Axial T2) take ~25 minutes per study, creating massive patient waiting lists.
-* **The Project Reframe:** Rather than asking if single-sequence MRI can replace full diagnostic MRI, this study asks: **"Can a shortened sequence protocol (e.g., Sagittal T2 alone) serve as an accurate, rapid emergency triage tool to rule out critical central canal stenosis and severe nerve root compression in under 10 minutes?"**
-* **Why it's ideal for MSc:** The student conducts controlled sequence ablation experiments without having to design a deep network from scratch.
+Abbreviated spine MRI protocols already exist in the literature, so this project does **not** claim to invent rapid MRI. The research contribution is a **finding-specific, local validation of which lumbar MRI sequences are necessary for which radiological targets and what diagnostic trade-off follows when the protocol is shortened in a resource-constrained teaching hospital.**
 
-> [!IMPORTANT]
-> **Do not gate this project on AMOG-Net.** As originally written, this project could not
-> begin until Selar's Phase 2 completed (around month 10), which would leave the MSc
-> student idle for most of a year and make their graduation hostage to someone else's
-> research risk.
->
-> The clinical question — *which sequence carries the diagnostic information for which
-> finding* — does not require AMOG-Net. A standard ResNet50 or EfficientNet baseline
-> trained per sequence configuration answers it perfectly well, and a simpler model
-> arguably makes the ablation **more** interpretable, since any accuracy drop is
-> attributable to the missing sequence rather than to interactions inside a complex
-> architecture.
->
-> **Plan:** start with a simple baseline immediately. If AMOG-Net is ready in time, add
-> it as a second arm and report both. That converts a hard dependency into an optional
-> bonus.
+The project asks:
+
+> **Can a shorter lumbar MRI sequence set preserve sufficient sensitivity for selected radiologically severe findings while materially reducing measured acquisition time?**
+
+It is a triage / screening study, not a proposal to replace a comprehensive diagnostic MRI protocol.
 
 ---
 
-## Who this project suits
+## 2. Research Questions
 
-**Technical difficulty: MEDIUM–HIGH.** The most engineering-heavy of the four, and the one
-with a hard hardware requirement.
+**RQ1.** How does performance change for central canal stenosis, foraminal narrowing where defensibly labelled, and disc-herniation morphology when MRI sequence combinations are reduced?
 
-**You will need**
-- Solid Python and PyTorch; able to train and debug a CNN without hand-holding
-- DICOM handling — pydicom, SimpleITK or MONAI (learnable during the project)
-- Access to a GPU. This is not laptop work; confirm availability before choosing
-- Understanding of ROC analysis, sensitivity/specificity and statistical model comparison
+**RQ2.** Which MRI sequence contributes the most diagnostic information for each finding type and lumbar level?
 
-**You will NOT need**
-- To design a novel architecture — you use standard backbones (ResNet50, EfficientNet)
-- To wait for the PhD student's model; a standard baseline answers the clinical question
+**RQ3.** What sensitivity–specificity trade-off is achievable for **radiologically severe / high-risk findings** under an abbreviated sequence set?
 
-**You will gain**
-- Medical imaging pipeline experience end to end
-- Controlled ablation design, which is a transferable research skill
-- A clinical paper with direct operational value to the hospital
+**RQ4.** What scanner-time / throughput improvement would follow from the shortened protocol using **measured local acquisition durations**, not assumed durations?
 
-**Best fit:** Computer Science, Artificial Intelligence, or Biomedical Engineering.
+Do not use the term **"urgent surgical finding"** unless an independently verified surgical-urgency label becomes available.
+
+No fixed sensitivity threshold is declared in advance unless a radiologist / clinical protocol committee supplies a justified non-inferiority or safety threshold.
 
 ---
 
-## 2. Research Questions (RQs)
+## 3. Experimental Design — Critical Correction
 
-* **RQ1:** What is the diagnostic accuracy drop (AUC / F1 score) per finding type (central canal stenosis vs. neural foraminal stenosis vs. disc herniation) when sequence inputs are ablated from Full (T1+T2+Axial) to Single (T2 Sagittal alone)?
-* **RQ2:** Which specific sequence is indispensable for which anatomical finding — for
-  example, is Sagittal T1 mandatory for neural foraminal assessment, or can Sagittal T2
-  suffice for screening? *(Subarticular assessment cannot be included: the local reports
-  contain no subarticular findings at all, so there is no reference standard to test
-  against on this cohort.)*
-* **RQ3:** Can a rapid triage model achieve ≥92% sensitivity for urgent surgical findings (e.g., severe canal compromise / extrusion) while reducing scan acquisition time by over 50%?
+### The invalid design to avoid
 
----
+Do **not** train one full-protocol network and then zero out an unseen modality only at test time as the primary ablation. That creates an out-of-distribution input and confounds sequence importance with model brittleness.
 
-## 3. Experimental Setup & Sequence Combinations
+### Required primary design
 
-The student will test 4 sequence input configurations on the 294 multi-sequence Rizgary DICOM studies using Selar's pre-trained model:
+Train **matched models separately for each sequence configuration**, using:
 
-| Configuration | Sequences Provided as Input | Simulated Scan Time | Intended Clinical Role |
-| :--- | :--- | :---: | :--- |
-| **Config A (Full)** | Sagittal T1 + Sagittal T2 + Axial T2 | ~25 Minutes | Standard Diagnostic Reference |
-| **Config B (Sagittal Only)**| Sagittal T1 + Sagittal T2 | ~15 Minutes | Intermediate Rapid Protocol |
-| **Config C (Rapid Triage)**| **Sagittal T2 Alone** | **~8–10 Minutes** | **Ultra-Fast Emergency Screening** |
-| **Config D (T2 Combo)** | Sagittal T2 + Axial T2 | ~18 Minutes | Axial-Preserved Screening |
+- the same patient-level folds;
+- the same architecture family / encoder capacity as far as possible;
+- the same augmentation and optimisation budget;
+- the same evaluation set;
+- identical label definitions.
 
----
+Suggested configurations:
 
-## 4. Methodological Workflow & Timeline
+| Config | MRI input | Purpose |
+|---|---|---|
+| **A — Full** | Sagittal T1 + Sagittal T2/STIR + Axial T2 | comparison reference |
+| **B — Sagittal** | Sagittal T1 + Sagittal T2/STIR | removes axial imaging |
+| **C — T2 sagittal only** | Sagittal T2/STIR | minimal single-sequence triage candidate |
+| **D — T2 combined** | Sagittal T2/STIR + Axial T2 | preserves axial information while omitting T1 |
 
-```mermaid
-flowchart TD
-    M1[Month 1: Environment & Model Pipeline Setup] --> M2[Month 2: Sequence Ablation Inference Experiments]
-    M2 --> M3[Month 3: Finding-Specific ROC-AUC & Confusion Matrix Analysis]
-    M3 --> M4[Month 4: Scanner Throughput & Efficiency Simulation]
-    M4 --> M5[Months 5-6: Manuscript Writing & Journal Submission]
-```
+A standard ResNet / EfficientNet / modest 2.5D encoder is sufficient. AMOG-Net may be added later as a secondary comparator, but the MSc must not depend on it.
 
-### Month 1: Model Setup & Baseline Verification
-- Train a standard baseline (ResNet50 or EfficientNet-B4, ImageNet-initialised) on the
-  full-protocol configuration. Use AMOG-Net weights instead **only if** they are
-  available by this point; do not wait for them.
-- Verify baseline inference on 294 Rizgary multi-sequence DICOM studies under Config A (Full Protocol).
+### Optional secondary experiment
 
-### Month 2: Sequence Ablation Experiments
-- Execute systematic sequence masking: zero-out or strip T1 Sagittal, Axial T2, or T2 Sagittal channels.
-- Record predicted probabilities across all evaluable targets (canal stenosis at 5 levels; foraminal where laterality is stated) for all 4 configurations (294 cases × 4 configs = 1,176 evaluation runs).
-
-### Month 3: Clinical Performance Evaluation
-- Calculate ROC-AUC, Macro-F1, Sensitivity, and Specificity for each configuration broken down by finding category:
-  1. Central Canal Stenosis.
-  2. Neural Foraminal Stenosis.
-  3. Disc Extrusion vs. Bulge.
-- Perform Delong tests to evaluate statistical significance of AUC differences between Full and Rapid Triage protocols.
-
-### Month 4: Hospital Throughput Simulation
-- Model scanner throughput capacity at Rizgary Hospital under varying ratios of Rapid Triage vs. Full Diagnostic protocols.
-- Calculate potential reduction in patient waiting list days.
-
-### Months 5–6: Paper Writing & Thesis Submission
-- Write manuscript emphasizing safety, sensitivity thresholds, and emergency triage utility.
+Train one modality-dropout model and compare its missing-sequence behaviour with the matched separately trained models. This tests robustness but does not replace the primary controlled design.
 
 ---
 
-## 5. Target Venues & Primary Deliverables
+## 4. Data and Splitting
 
-* **Targets** — Reach: *Radiology: Artificial Intelligence*. Target: *European Journal of Radiology* (IF ~3.3). Floor: *BMC Medical Imaging* or *Academic Radiology*.
-* **Note:** the throughput argument is what makes this attractive to a radiology journal. Lead with scanner time and waiting lists, not with model architecture.
-* **Primary Output:** 1 peer-reviewed journal paper **submitted** + MSc Thesis Dissertation.
+- Use only de-identified Rizgary DICOM data after governance approval.
+- Current eligible imaging cohort: approximately 294 matched cases, subject to final raw-study reconciliation.
+- Split by patient, never by image / slice.
+- Because N is modest, use either:
+  - a locked test set plus repeated train/validation seeds, or
+  - nested / repeated patient-level cross-validation with a clearly separated final test subset.
+
+The label-to-image / level correspondence must be explicit. Whole-image labels that cannot be anatomically matched to the reported level must not be treated as target-specific ground truth.
 
 ---
 
-## 6. Risk Management & Ethical Safeguards
+## 5. Scan-Time Measurement
 
-| Potential Risk | Severity | Mitigation Strategy |
-| :--- | :---: | :--- |
-| Reviewers object to dropping T1 sequence (missing bone marrow lesions) | High | State explicitly throughout manuscript that this is a **Rapid Triage Screening Tool** for acute nerve compression, NOT a comprehensive diagnostic protocol. |
-| Model performance drops severely on single-sequence input | Medium | Evaluate whether combining Sagittal T2 + Axial T2 (Config D) retains high accuracy while still saving scan time. |
+Do not publish assumed values such as "25 min" or "8–10 min" unless they are verified locally.
+
+Preferred sources:
+
+1. scanner protocol console / sequence prescription times;
+2. DICOM acquisition / series timing fields where reliable;
+3. radiology department protocol logs;
+4. direct prospective timing of a non-patient protocol simulation if permitted.
+
+For every configuration report:
+
+- total acquisition time;
+- absolute minutes saved;
+- percentage reduction;
+- theoretical exams per scanner day under transparent assumptions.
+
+A throughput simulation must clearly state that it models operational capacity and does not prove improved patient outcomes.
+
+---
+
+## 6. Evaluation
+
+Report by finding type and, where sample size permits, by level.
+
+Primary metrics:
+
+- sensitivity / recall for Severe or high-risk radiological findings;
+- specificity;
+- macro F1 / balanced accuracy;
+- AUROC with 95% CIs;
+- false-negative count and error severity.
+
+Comparisons:
+
+- DeLong test for paired AUCs where assumptions are met;
+- bootstrap paired confidence intervals for other metrics;
+- report absolute and relative performance difference from Config A.
+
+For triage framing, the false-negative analysis is at least as important as overall accuracy.
+
+---
+
+## 7. Workflow
+
+### Month 1
+
+- data de-identification confirmation;
+- DICOM pipeline and patient-level folds;
+- label / level audit;
+- extract actual sequence timing data;
+- implement baseline architecture.
+
+### Months 2–3
+
+- train Config A–D independently under matched conditions;
+- repeat seeds / folds;
+- save predictions for paired analysis.
+
+### Month 4
+
+- finding-specific diagnostic statistics;
+- false-negative audit;
+- optional modality-dropout comparison.
+
+### Month 5
+
+- scanner-time and throughput simulation;
+- radiologist review of the proposed triage scope and failure cases.
+
+### Months 6–7
+
+- dissertation and manuscript preparation according to STARD / CLAIM as appropriate.
+
+---
+
+## 8. Student Fit
+
+**Technical difficulty:** MEDIUM–HIGH.
+
+Requires:
+
+- Python / PyTorch;
+- DICOM handling (pydicom, SimpleITK or MONAI);
+- GPU access;
+- ROC / sensitivity / specificity analysis;
+- careful experimental control.
+
+The student does **not** need to invent a new neural architecture.
+
+---
+
+## 9. Expected Outputs
+
+- MSc dissertation;
+- reproducible matched sequence-ablation code;
+- finding-specific diagnostic trade-off table;
+- scanner-time / throughput analysis;
+- **one manuscript prepared for journal submission**.
+
+No publication or predefined performance level is guaranteed.
+
+---
+
+## 10. Main Risks
+
+| Risk | Mitigation |
+|---|---|
+| Single-sequence model performs poorly | This remains a valid negative result; identify the minimum acceptable multi-sequence combination. |
+| Reviewers object that abbreviated MRI is not novel | Frame novelty as finding-specific local validation and operational trade-off, not invention of rapid MRI. |
+| Timing data unavailable | Do not make throughput claims until actual protocol duration is obtained. |
+| Labels insufficient for foraminal / laterality analysis | Restrict to central canal and other defensibly labelled findings. |
+| Severe class too small | Report wide CIs honestly and avoid unsupported safety claims. |
+
+---
+
+## Relevant abbreviated-protocol precedent
+
+Abbreviated spine MRI has already been evaluated in emergency cord-compression workflows using sagittal and axial T2-weighted stacks. This MSc therefore frames its contribution as **lumbar finding-specific local validation and operational trade-off**, not invention of abbreviated MRI. See: *Implementing a rapid cord compression Magnetic Resonance Imaging protocol in the emergency department: Lessons learned*. https://pmc.ncbi.nlm.nih.gov/articles/PMC11571330/

@@ -31,7 +31,7 @@ The five options below are all achievable from the Rizgary data. They are not mu
 
 | # | Option | Novelty | Effort | Needs data you may not have | Useful to the hospital |
 |---|--------|---------|--------|------------------------------|------------------------|
-| 1 | Population epidemiology | **High** | **Low** | No | Medium |
+| 1 | Tertiary-hospital cohort characterisation | Medium–High | **Low** | No | Medium |
 | 2 | Protocol optimisation | Medium–High | Medium | No | **Very high** |
 | 3 | Degeneration phenotypes | **High** | Medium | No | Medium |
 | 4 | Reporting-quality audit | Medium | **Low** | Radiologist identity per report | High |
@@ -40,9 +40,9 @@ The five options below are all achievable from the Rizgary data. They are not mu
 ---
 
 ## Option 1 — Population epidemiology
-### *First MRI characterisation of lumbar degeneration in this population*
+### *Level-specific MRI characterisation in a tertiary-hospital referral cohort*
 
-**The gap.** Essentially every published lumbar MRI cohort is North American, European, Chinese, Korean or Japanese. There is no MRI-based characterisation of lumbar degenerative disease in a Kurdish/Iraqi population.
+**The gap.** Large, level-resolved lumbar MRI cohorts remain dominated by North American, European and East Asian settings. Regional Iraqi/Kurdish MRI studies exist, so the defensible gap is the lack of a carefully audited, level-resolved tertiary-hospital cohort analysis using this 299-report resource. The study must not infer general-population prevalence from a symptomatic/referral cohort.
 
 **What you would report**
 - Distribution of disc bulge / protrusion / extrusion by spinal level
@@ -51,16 +51,16 @@ The five options below are all achievable from the Rizgary data. They are not mu
 - Whether L4-5 and L5-S1 dominance matches published Western and East Asian norms
 - Prevalence of canal stenosis, nerve-root pressure, facet arthrosis, ligamentum flavum hypertrophy
 
-**Why it is genuinely novel.** It is new descriptive clinical knowledge about a population nobody has measured this way.
+**Why it remains useful.** It provides a reproducible, level-resolved description of findings in a regional tertiary-hospital cohort and a benchmark for future local work. The novelty claim should be based on the exact cohort design and variables after a targeted literature review, not on a broad claim that no Iraqi MRI studies exist.
 
 **Strengths**
 - Needs **no AI at all** — the 299 reports alone are sufficient
 - Fastest route to a publication
-- Establishes the cohort as a named research resource
+- Establishes the cohort as a documented regional research resource
 - The AI later scales it to the hospital's entire archive
 
 **Weaknesses**
-- Descriptive rather than explanatory
+- Descriptive rather than causal or population-representative
 - Reviewers will ask for comparison against published norms, so a careful literature comparison table is required
 
 **Data required:** already held.
@@ -68,9 +68,9 @@ The five options below are all achievable from the Rizgary data. They are not mu
 ---
 
 ## Option 2 — Protocol optimisation
-### *Can a shortened MRI protocol preserve diagnostic accuracy?*
+### *What finding-specific trade-off follows when the lumbar MRI sequence set is shortened?*
 
-**The reframe.** "Is sagittal T2 alone enough?" is a computer-science question. **"Can we shorten the lumbar MRI protocol without losing diagnostic accuracy?"** is a clinical one, and they are answered by the same experiment.
+**The reframe.** "Is sagittal T2 alone enough?" is a computer-science question. **"Which findings remain detectable when the lumbar MRI sequence set is shortened, and what measured scanner-time saving accompanies that trade-off?"** is a clinical / operational question. Abbreviated spine MRI protocols already exist, so the contribution is local finding-specific validation rather than invention of rapid MRI.
 
 **Why the hospital cares**
 - Scanner time is the binding constraint on throughput
@@ -81,7 +81,7 @@ The five options below are all achievable from the Rizgary data. They are not mu
 **What you would report**
 Which MRI sequence carries the diagnostic information for **which specific finding** — for example, whether foraminal findings genuinely require sagittal T1, or whether axial T2 is indispensable for subarticular assessment.
 
-**Key strength.** This produces a clinical answer *even if the model underperforms*. "Sequence X carries the information for finding Y" stands on its own.
+**Key strength.** This produces a clinically interpretable answer even if the shortest protocol underperforms. The primary experiment must train matched models for each sequence configuration rather than zeroing a missing sequence only at test time.
 
 **Weakness.** Must be reported per finding, not as one aggregate number — an average across all findings would hide exactly the structure that matters.
 
@@ -158,7 +158,7 @@ Cluster the cases by their finding patterns and test whether coherent phenotypes
 
 ## Recommendation
 
-**Make options 1 and 2 the medical spine of the project.**
+**Make the revised options 1 and 2 the medical spine of the programme.**
 
 - Both are achievable with data already in hand
 - Both matter to Rizgary
@@ -189,7 +189,7 @@ As hospital-commissioned research, you are one of very few teams positioned to o
 
 | Item | Value |
 |------|-------|
-| Case folders | 294 |
+| Eligible local imaging case folders currently identified | 294 |
 | Radiology reports (.docx) | **299**, one per case, ids 2–300 |
 | Spreadsheet rows | 195 — covers only 195 of 299 cases |
 | Sequences per study | sagittal T1, sagittal T2, axial T2 — **all three present in 25/25 sampled** |
@@ -211,6 +211,17 @@ As hospital-commissioned research, you are one of very few teams positioned to o
 3. **Chapter 2 retarget** — flagged in a comment above section 2.13 of `thesis/chapter2.tex`. The current research questions (CNN vs Swin; multi- vs single-sequence) follow the MSc brief, which `suggested_methodology.md` recommends replacing. Not actioned; awaiting confirmation of the target degree and student.
 
 ---
+
+
+---
+
+## Committee-facing publication wording
+
+None of the options should promise publication. Student-facing documents should state
+**"manuscript prepared for peer-reviewed submission"**. Journal names are planning
+targets, not guarantees. Claims such as *first*, *novel*, *population prevalence* or
+*clinically deployable* must be re-checked against the literature and the actual sampling
+frame immediately before submission.
 
 ## Appendix — Phenotype discovery strategy (rescued)
 

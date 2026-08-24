@@ -1,215 +1,194 @@
-# Lumbar Spine MRI Research Program — Master Plan Summary
+# Lumbar Spine MRI Research Programme — Committee-Ready Master Plan
 
 **Project Title:** Lumbar Spine MRI AI & Clinical Studies (Rizgary Teaching Hospital & International Benchmarks)  
 **Lead Academic Supervisor:** Dr. Polla Abdulhamid Fattah  
 **Primary PhD Candidate:** Selar  
-**Date:** 2026-08-23  
+**Revision Date:** 2026-08-24  
+**Committee Status:** **Scientifically approvable in principle; local-data work remains conditional on the governance actions in Section 5.**
 
 ---
 
-## 1. Program Vision & Core Philosophy
+## 1. Programme Vision
 
-This master plan establishes a modular, risk-mitigated research program that bridges **Computer Science / Deep Learning innovation** with **Genuinely Actionable Clinical Utility**.
+This programme separates one doctoral methodological track from several independent MSc projects. The purpose is to avoid a single oversized project, protect each student's graduation timeline from another student's research risk, and ensure that every project has a distinct research question and publication identity.
 
-To avoid the common pitfall of medical AI projects—where a single student attempts a massive scope and risks stalling out—the research is partitioned into:
-1. **One Clear, High-Impact PhD Path (Selar)** focusing on algorithmic methodology, cross-institutional domain transfer, and multi-sequence graph deep learning.
-2. **Four Modular MSc Spin-Off Projects** that utilize the data infrastructure, pre-trained models, and clinical datasets created during Phase 1 to produce independent, high-ROI research publications.
+The programme has two linked aims:
 
-```mermaid
-flowchart TD
-    subgraph Data Infrastructure & Audit
-        D1[299 Local English Radiology Reports]
-        D2[294 Local Multi-Sequence DICOMs]
-        D3[1,975 RSNA Held Benchmark Studies]
-        
-        D1 -->|NLP Extract & Manual Dual Audit| Gold[Level-Resolved Gold Standard Matrix]
-    end
+1. **Computer-science contribution:** develop and test methods for anatomy-aware, disease-adaptive, multi-sequence lumbar MRI analysis that remain robust across institutions and missing MRI sequences.
+2. **Clinical / health-informatics contribution:** use the local Rizgary cohort to answer clinically actionable questions about finding distributions, MRI protocol efficiency, report structuring, and—if additional records become available—imaging–symptom–outcome relationships.
 
-    subgraph Primary PhD Core: Selar
-        Gold & D3 --> PhD["Selar PhD Roadmap: AMOG-Net & Cross-Institutional Domain Transfer"]
-        PhD --> Paper1["📄 Paper 1 (CS/AI): IEEE TMI / MedIA / MICCAI"]
-        PhD --> Paper2["📄 Paper 2 (Medical AI): Radiology: AI / Eur. Radiol."]
-    end
+The AI method is not the clinical message. For clinically oriented papers, the clinical question leads and the model is the measurement tool.
 
-    subgraph Modular MSc Spin-Off Projects
-        Gold --> MSc1["📚 MSc 1: Kurdish Population Lumbar Epidemiology"]
-        PhD --> MSc2["📚 MSc 2: Rapid Triage Protocol Optimization"]
-        D1 --> MSc3["📚 MSc 3: Clinical NLP Report Structuring Benchmark"]
-        Gold --> MSc4["📚 MSc 4: Clinical Symptom & Surgical Prognostics"]
-    end
+---
+
+## 2. Research Tracks and Availability
+
+| Track | Status | Primary question | Can start now? |
+|---|---|---|---|
+| **PhD — Disease-adaptive heterogeneous graph learning & transfer** | Approved in principle | Can explicit disease/level relationships, adaptive sequence routing, anatomical self-supervision, and cross-institutional adaptation improve lumbar MRI grading? | **Yes, using public benchmark data** |
+| **MSc 1 — Tertiary-hospital cohort characterisation** | Available after report-data access approval | What level-specific lumbar degenerative findings occur in this symptomatic/referral cohort, and how do they vary with age and sex? | **Yes, reports only** |
+| **MSc 2 — Sequence-sparing MRI triage / protocol optimisation** | Available after de-identified DICOM release | Which MRI sequences are needed for which finding, and what diagnostic trade-off accompanies a shortened protocol? | **Yes, after de-identification** |
+| **MSc 3 — Clinical NLP report structuring** | Available after report-data access approval | How accurately can rule-based NLP and open-weight LLMs extract level-resolved lumbar findings from local English radiology reports? | **Yes, reports only** |
+| **MSc 4 — Imaging–symptom–treatment prognostics** | **Not available for allocation yet** | How do imaging findings relate to symptoms, treatment and outcomes? | **No — clinical linkage not confirmed** |
+
+---
+
+## 3. Data Assets and Cohort Accounting
+
+### 3.1 Public benchmark resources
+
+- **RSNA LumbarDISC / RSNA 2024 lumbar degenerative classification data**: public multi-institutional, multi-sequence MRI benchmark. The full published cohort contains 2,697 patients and 8,593 MRI series; the locally held labelled Kaggle training subset used for development contains approximately 1,975 studies. The proposal must state clearly which subset is used in each experiment rather than using the two numbers interchangeably.
+- **SPIDER**: public lumbar MRI anatomical segmentation resource used for localisation / segmentation development and benchmarking, subject to its licence terms.
+
+### 3.2 Local Rizgary resources
+
+- 299 anonymised narrative lumbar MRI radiology reports.
+- 294 local case folders currently identified as eligible matched multi-sequence imaging cases.
+- A raw DICOM audit found 341 DICOM StudyInstanceUID-level studies across 25,110 files.
+
+### 3.3 Required reconciliation before committee sign-off
+
+The relationship between **341 raw DICOM studies**, **294 eligible imaging cases**, and **299 reports** must be documented in a short cohort-flow table before final committee submission. Do not infer the reason for exclusions. Record the verified reason for every exclusion / repeat / unmatched case once the audit is complete.
+
+Suggested format:
+
+```text
+Raw DICOM studies received                    341
+    - repeat / duplicate studies              [VERIFY]
+    - non-lumbar / unusable / incomplete      [VERIFY]
+    - no matching report                      [VERIFY]
+Eligible matched imaging cases                294
+Narrative reports available                   299
+Final cohort per individual project           [project-specific]
 ```
 
 ---
 
-## 2. Allocation Matrix & Publication Strategy
+## 4. Ground-Truth and Schema Rules
 
-| Project | Primary Focus | Required Assets | Target Venues | Estimated Duration |
-| :--- | :--- | :--- | :--- | :---: |
-| **Selar PhD Roadmap** | Multi-sequence Graph Transformers, Zero-Shot & Few-Shot Domain Transfer (Canal Stenosis & Local Herniations) | RSNA Benchmark (1,975) + Rizgary DICOMs (294) + Audited Matrix | *IEEE TMI*, *Medical Image Analysis*, *Radiology: AI* | 21–24 Months |
-| **MSc Project 1** | First Kurdish/Iraqi Lumbar Degeneration Population Epidemiology | Audited Level-Resolved Matrix (299 cases) | *European Spine Journal*, *J. Orthop. Surg. Res.* | 4–6 Months |
-| **MSc Project 2** | Sequence-Sparing Rapid Triage Protocol Optimization | AMOG-Net Trained Model + 294 Local DICOM Studies | *European Journal of Radiology*, *BMC Med. Imaging* | 6 Months |
-| **MSc Project 3** | Clinical NLP & Information Extraction for Unstructured Reports | 299 Narrative `.docx` Radiology Reports | *Journal of Biomedical Informatics*, *IEEE JBHI* | 6–8 Months |
-| **MSc Project 4** | Radiological Severity vs. Clinical Symptom & Surgical Outcome Prognostics | Audited Matrix + Hospital Symptom Logs | *The Spine Journal*, *Spine* | 6 Months (Bonus) |
+1. **Do not use the folder names `normal / bulge / protrusion / extrusion` as ground truth.** The folder grouping is lossy and contains known inconsistencies. Local labels must come from the verified radiology reports / audited structured matrix.
+2. **Reports are primary.** The older spreadsheet is a transcription and contains known age discrepancies; it must not override the source reports.
+3. **Local and RSNA schemas are not interchangeable.** Local reports contain central canal stenosis frequently, foraminal narrowing incompletely, no verified subarticular/lateral-recess labels, and limited laterality. Therefore local external transfer is restricted to targets with defensible ground truth, principally central canal stenosis at five levels unless fresh radiologist grading is obtained.
+4. **Ground truth must be independently auditable.** The evaluation set for each project must have a documented annotation / verification procedure and an agreement statistic where feasible.
+5. **Patient-level independence is mandatory.** No patient may appear in more than one training / validation / test partition.
 
 ---
 
-## 3. Data Governance & Hard Rules
+## 5. Ethics, Governance and Access — Approval Conditions
 
-1. **Do NOT Train on Folder Names (`normal/bulge/protrusion/extrusion`):** The folder classification is lossy and contains errors (multi-level hernia co-occurrence, duplicate cases). All ground truth must derive from the audited level-resolved local matrix.
-2. **Reports are Primary; Spreadsheet is Secondary:** The manual spreadsheet (`research LSS 1.xlsx`) covers only 195 cases and contains 14 age transcription errors. The 299 narrative `.docx` reports are the single source of truth.
-3. **Target Schema Alignment (Empirical Finding):** Local reports do **not** contain RSNA's 25-target schema (subarticular stenosis appears in 0% of local reports, and laterality in only 27%). Zero-shot transfer evaluation is strictly scoped to **Spinal Canal Stenosis (5 targets)**—matching M-SCAN benchmark standards—while herniation morphology (bulge/protrusion/extrusion) is treated as a separate local multi-label task.
-4. **Ground truth must be verified before any model is evaluated against it.** The 299
-   reports must be structured and manually checked before use as a reference standard.
-   This is a **quality** rule, not a **sequencing** rule — see the correction below.
+These are **conditions of data access**, not optional wording edits.
 
-> [!IMPORTANT]
-> **Sequencing correction — the original dependency chain was fragile.**
->
-> As first written, all four MSc projects waited on Selar's Phase 1, and MSc 2
-> additionally waited on Phase 2 (~month 10). That routes four students' graduations
-> through one student's research risk: if Selar's PhD slips, everything slips.
->
-> **Revised sequencing, which removes every avoidable dependency:**
->
-> | Project | Starts | Depends on |
-> | :--- | :--- | :--- |
-> | **MSc 1 — Epidemiology** | **Immediately** | Nothing. Extract the 299 reports by hand (~25–40 h). |
-> | **MSc 3 — Clinical NLP** | **Immediately** | Nothing. *Owns* the automated extraction and delivers the matrix to everyone else. |
-> | **MSc 2 — Protocol Optimisation** | **Immediately** | A ResNet/EfficientNet baseline, *not* AMOG-Net. |
-> | **Selar PhD** | **Immediately** | RSNA data only until Phase 3. The local cohort is not needed until month ~11. |
-> | **MSc 4 — Prognostics** | **Not yet** | Unconfirmed clinical data — see the caution in its roadmap. |
->
-> A useful cross-check falls out of this for free: MSc 1's manual extraction and MSc 3's
-> automated extraction cover the same 299 reports, so their agreement becomes a
-> **validation result for MSc 3** rather than a scheduling conflict.
->
-> **Move report extraction out of Selar's Phase 1 and into MSc 3.** It shortens the PhD's
-> critical path and gives MSc 3 a deliverable to own.
+### 5.1 Institutional authority
 
----
+Before any student receives local clinical data, record the exact hospital / institutional authority under which the work proceeds:
 
-## 4. Data Governance, Ethics and Access
+- hospital research committee / IRB / ethics reference number and date;
+- lawful consent or waiver basis for retrospective de-identified research;
+- permitted data-processing environment;
+- publication and data-sharing restrictions.
 
-> [!NOTE]
-> Items marked **[CONFIRM]** need the exact institutional wording before this pack is
-> submitted. The substance is correct; only the formal phrasing is provisional.
+### 5.2 DICOM de-identification
 
-### 4.1 Provenance and authority
+The local DICOM export is **not yet safe for student distribution**. The de-identification tool has been dry-run, but the clean copy and restricted linkage file remain to be completed.
 
-This research is **commissioned by and conducted for Rizgary Teaching Hospital**, which
-supplied the imaging and radiology reports from its own clinical archive. It is not a
-university-initiated secondary-use study. **[CONFIRM]** the formal instrument under which
-the work proceeds — service agreement, hospital research committee approval, or
-institutional review board reference — and cite it here by number and date.
+Required before MSc 2 or local-image PhD work:
 
-The cohort is retrospective: MRI examinations already acquired in the course of routine
-clinical care for patients presenting with lumbar symptoms. No imaging was acquired for
-research purposes, no patient underwent any additional procedure, and the work carries no
-clinical risk to the individuals whose data it uses.
+- [ ] de-identified DICOM copy generated;
+- [ ] linkage key stored separately under restricted access;
+- [ ] private tags reviewed / stripped as appropriate;
+- [ ] UIDs handled according to the hospital-approved de-identification policy;
+- [ ] burned-in pixel text checked where relevant;
+- [ ] only de-identified data released to students;
+- [ ] cloud / external GPU use confirmed as permissible before upload.
 
-**[CONFIRM]** the consent basis — whether the hospital relies on a waiver of individual
-consent for retrospective de-identified analysis, on broad consent recorded at
-presentation, or on another basis under national regulation.
+### 5.3 Public release is separate from research use
 
-### 4.2 The public benchmark
+A future data descriptor or public release requires **separate hospital permission** and a stricter disclosure review. Internal research approval does not imply permission to publish the imaging dataset.
 
-The RSNA LumbarDISC data used for model development is a **publicly released research
-dataset**, distributed already de-identified by the Radiological Society of North America
-for exactly this purpose. Its use carries no separate patient-consent obligation. The
-programme complies with the challenge's published terms of use, and **[CONFIRM]** whether
-those terms permit use in hospital-commissioned rather than purely academic work.
+### 5.4 MSc 4 requires additional approval
 
-### 4.3 Current de-identification status — action required
-
-**The local DICOM archive is not yet de-identified.** An audit of the delivered data found
-patient name, date of birth, sex and study date populated in **every one of 25,110 DICOM
-files across 341 studies**. The radiology reports, by contrast, were already anonymised
-before delivery.
-
-A de-identification tool (`tools/deidentify_dicom.py`) has been written and dry-run
-against the full archive. It removes direct identifiers, reduces dates to the year,
-strips private tags, and writes a clean copy while leaving originals untouched. The
-linkage file mapping case identifiers back to patient identity is written **outside** the
-project directory by design.
-
-**The following must be complete before any student is given access:**
-
-| Step | Status |
-| :--- | :--- |
-| De-identification tool written and dry-run verified | Done |
-| Clean copy generated | **Outstanding** |
-| Linkage file secured under restricted access | **Outstanding** |
-| Students work only from the de-identified copy | **Policy — to be enforced** |
-
-### 4.4 Access control
-
-- Identifiable data remains within hospital-controlled storage and is not distributed.
-- Students receive the **de-identified copy only**, and no student requires access to the
-  linkage file for any project described in this plan.
-- The repository excludes all patient data by configuration, so imaging cannot enter
-  version control accidentally.
-- **[CONFIRM]** whether hospital policy permits processing on external cloud compute. This
-  constrains Phase 2 of the PhD, where multi-sequence model training may exceed local GPU
-  capacity — see the compute risk in [`01_SELAR_PHD_ROADMAP.md`](01_SELAR_PHD_ROADMAP.md).
-
-### 4.5 Publication and data sharing
-
-Published outputs will report aggregate results only; no individual patient data, and no
-image from which a patient could be identified, will appear in any manuscript.
-
-Should the cohort later be released publicly as a data descriptor — noted as a candidate
-output in [`08_PUBLICATION_PLAN.md`](08_PUBLICATION_PLAN.md) — that constitutes a
-materially different level of disclosure from internal research use and would require
-**separate hospital approval**, a stricter de-identification standard including UID
-regeneration, and review for burned-in pixel annotation. It is not covered by any
-existing permission and must not be assumed.
-
-### 4.6 Clinical data, if obtained
-
-[`05_MSC4_CLINICAL_PROGNOSTICS_ROADMAP.md`](05_MSC4_CLINICAL_PROGNOSTICS_ROADMAP.md)
-depends on symptom and outcome records that have **not been confirmed to exist** and are
-not part of the current delivery. Linking clinical records to imaging is a broader
-disclosure than imaging alone, and **[CONFIRM]** would require its own approval before any
-such linkage is attempted. That project is therefore listed but not staffed.
-
-## 5. Directory Structure of the Plan
-
-All detailed individual roadmaps are stored in `c:\Users\polla\Drives\PollaFattah\UNi\Research\Students\Selar\Project\plan\`:
-
-- [`00_MASTER_PLAN_SUMMARY.md`](file:///c:/Users/polla/Drives/PollaFattah/UNi/Research/Students/Selar/Project/plan/00_MASTER_PLAN_SUMMARY.md) — This master overview.
-- [`01_SELAR_PHD_ROADMAP.md`](file:///c:/Users/polla/Drives/PollaFattah/UNi/Research/Students/Selar/Project/plan/01_SELAR_PHD_ROADMAP.md) — Selar's complete PhD research plan and execution strategy.
-- [`02_MSC1_EPIDEMIOLOGY_ROADMAP.md`](file:///c:/Users/polla/Drives/PollaFattah/UNi/Research/Students/Selar/Project/plan/02_MSC1_EPIDEMIOLOGY_ROADMAP.md) — MSc 1: Population Epidemiology Study.
-- [`03_MSC2_PROTOCOL_OPTIMIZATION_ROADMAP.md`](file:///c:/Users/polla/Drives/PollaFattah/UNi/Research/Students/Selar/Project/plan/03_MSC2_PROTOCOL_OPTIMIZATION_ROADMAP.md) — MSc 2: Rapid Triage Protocol Optimization.
-- [`04_MSC3_CLINICAL_NLP_ROADMAP.md`](file:///c:/Users/polla/Drives/PollaFattah/UNi/Research/Students/Selar/Project/plan/04_MSC3_CLINICAL_NLP_ROADMAP.md) — MSc 3: Clinical Information Extraction NLP Benchmark.
-- [`05_MSC4_CLINICAL_PROGNOSTICS_ROADMAP.md`](file:///c:/Users/polla/Drives/PollaFattah/UNi/Research/Students/Selar/Project/plan/05_MSC4_CLINICAL_PROGNOSTICS_ROADMAP.md) — MSc 4: Clinical Symptom & Surgical Prognostics.
-- [`06_RATIONALE_options_considered.md`](file:///c:/Users/polla/Drives/PollaFattah/UNi/Research/Students/Selar/Project/plan/06_RATIONALE_options_considered.md) — Record of the five medical-novelty options considered, their weaknesses, and why the chosen scope was chosen. Includes the phenotype discovery-then-validation strategy for a future Option 3 study.
-- [`07_AMOGNET_TECHNICAL_SPEC.md`](file:///c:/Users/polla/Drives/PollaFattah/UNi/Research/Students/Selar/Project/plan/07_AMOGNET_TECHNICAL_SPEC.md) — The AMOG-Net design document: graph edge types, ordinal threshold formulation, cost matrix, contrastive objective, and the E0--E8 ablation ladder.  is the schedule; this is the specification it implements.
-- [`08_PUBLICATION_PLAN.md`](file:///c:/Users/polla/Drives/PollaFattah/UNi/Research/Students/Selar/Project/plan/08_PUBLICATION_PLAN.md) — Seven proposed papers, one per AMOG-Net component, cumulative toward a flagship system paper.
-- [`09_TRAINING_CURRICULUM.md`](file:///c:/Users/polla/Drives/PollaFattah/UNi/Research/Students/Selar/Project/plan/09_TRAINING_CURRICULUM.md) — The ten concepts Selar needs, with priority tiers and the dependency-order caveat.
-- [`10_PAPER_QUALITY_STANDARD.md`](file:///c:/Users/polla/Drives/PollaFattah/UNi/Research/Students/Selar/Project/plan/10_PAPER_QUALITY_STANDARD.md) — **The quality bar every paper must clear before submission.** Derived from what the strongest papers in the 108-record bibliography actually did, and from the failure modes the three systematic reviews identify. Includes a pre-submission checklist.
+Linking symptoms, treatment decisions or outcomes to imaging is a new disclosure scope and must receive explicit institutional approval before MSc 4 is advertised as available.
 
 ---
 
-## 6. Open Item — Paper 1 Is Gated on Four Components
+## 6. Independence of Student Projects
 
-> [!IMPORTANT]
-> **This is a sequencing question, not a disagreement between documents.**
->
-> `01` and `08` do not contradict each other. `01` sets **two papers** as the graduation
-> minimum and handles the dissertation separately in Phase 4; `08` lists **up to seven**
-> as an aspirational menu of what could be extracted. A minimum and a menu coexist.
->
-> The real issue is narrower. Phase 2 Task 2.1 requires the ROI extractor, cross-sequence
-> fusion, the anatomical graph transformer **and** the ordinal + uncertainty heads to be
-> implemented before Paper 1 — titled *"AMOG-Net: Anatomical Graph Transformers…"* — can
-> be written. So Selar's first submission is gated on four components all working.
->
-> If the graph stalls in month 9 there is no Paper 1, even though the localiser and the
-> fusion stage might each already be publishable on their own (see `08` papers 1 and 3).
->
-> **Options:**
-> 1. **Keep as is.** One strong systems paper. Higher risk, higher ceiling.
-> 2. **Split Paper 1.** Publish the localiser and fusion work first, then the graph as a
->    second methods paper. Lower risk, and partial success still yields output.
->
-> Either is defensible. It should be a conscious choice rather than a default.
+The original dependency chain has been removed.
+
+| Project | Independent start plan |
+|---|---|
+| **MSc 1** | Manually structure the 299 reports for its own epidemiological / cohort analysis; later compare with MSc 3 automated extraction as a validation exercise. |
+| **MSc 3** | Own the NLP research question and automated extraction method. It does not need the PhD model. |
+| **MSc 2** | Train matched standard baselines for each sequence configuration; AMOG-Net is an optional later comparator, never a prerequisite. |
+| **PhD** | Begin with public RSNA + SPIDER. It does not depend on local NLP extraction during the core-method development phase. |
+| **MSc 4** | No allocation until clinical records and permissions are confirmed. |
+
+---
+
+## 7. Project Boundaries, Data Stewardship and Authorship
+
+Shared data do not create automatic authorship.
+
+- **MSc 1 owns the epidemiological / cohort research question and statistical analysis.**
+- **MSc 2 owns the sequence-ablation / protocol-optimisation research question and matched-model experiments.**
+- **MSc 3 owns the NLP method comparison, error analysis and structured-extraction tool.**
+- **The PhD owns the novel disease-adaptive heterogeneous graph, cross-sequence self-supervision, missing-modality robustness and domain-transfer methodology.**
+- **MSc 4, if activated, owns the clinical linkage / prognostic analysis.**
+
+The verified structured matrix is a **programme / hospital research asset**, not the personal property of one student. Authorship follows substantive contribution under institutional policy / CRediT principles rather than mere access to the same dataset.
+
+---
+
+## 8. Updated PhD Novelty Position
+
+The doctoral work must not claim novelty merely from combining:
+
+- segmentation / localisation;
+- multi-sequence MRI;
+- a Transformer across lumbar levels;
+- ordinal grading;
+- quantitative biomarkers.
+
+A June 2026 study by Chai et al. already combines anatomy-guided segmentation, level-specific multi-sequence ROIs, anatomical biomarkers, inter-level Transformer context, ordinal grading and consistency regularisation. Therefore the revised doctoral novelty is deliberately narrower and stronger:
+
+1. **Heterogeneous disease–anatomy graph:** 25 condition-level nodes with typed relations for adjacent levels, bilateral anatomy and same-level condition interactions—not merely five ordered lumbar-level tokens.
+2. **Disease-conditioned adaptive sequence routing:** the model learns which sequence is informative for each condition / level / case and remains functional under arbitrary missing modalities.
+3. **Anatomically aligned cross-sequence self-supervised learning:** DICOM spatial correspondence defines positive relationships across T1 / sagittal T2 / axial T2 before supervised grading.
+4. **Cross-institutional zero-shot and annotation-efficient few-shot adaptation:** public benchmark development followed by genuinely independent local validation.
+
+Ordinal loss, uncertainty calibration, localisation and 2.5D ROIs remain important **supporting methods**, but they are not presented as independent novelty claims.
+
+Key closest-work reference: Chai Z, Liu C, Qin R, Zhao D, Shi A. (2026). *Anatomy-guided context-aware deep learning for lumbar degenerative disease grading and burden-aware risk assessment on MRI*. Frontiers in Medicine, 13, 1848548. https://doi.org/10.3389/fmed.2026.1848548
+
+---
+
+## 9. Publication Policy
+
+The programme aims to produce manuscripts suitable for peer-reviewed submission; **publication is never guaranteed**.
+
+Use three venue levels internally:
+
+- **Reach:** ambitious venue if the evidence is exceptional;
+- **Target:** realistic first-choice venue for the completed study;
+- **Fallback:** credible indexed venue if the first-choice scope or review outcome does not fit.
+
+Student-facing project descriptions should say **"expected output: a thesis plus a manuscript prepared for journal submission"**, not "high publication certainty" or "guaranteed publication".
+
+For the PhD, a realistic working target is **3–4 submitted original papers with 1–2 accepted during candidature**, while recognising that acceptance timing is outside the candidate's control.
+
+---
+
+## 10. Committee Recommendation
+
+**Recommended decision: APPROVE IN PRINCIPLE, subject to the following conditions before student advertisement / local DICOM access:**
+
+1. complete ethics / institutional reference fields;
+2. generate and verify the de-identified DICOM copy;
+3. reconcile 341 raw DICOM studies → 294 eligible imaging cases → project-specific cohorts;
+4. use the revised MSc 1 non-population framing;
+5. use matched independently trained sequence models in MSc 2 rather than zeroing modalities at test time;
+6. use an independent / adjudicated reference standard for the MSc 3 test set;
+7. keep MSc 4 unavailable until clinical linkage data and approval are confirmed;
+8. use the revised PhD novelty claims that explicitly differentiate the work from Chai et al. 2026 and M-SCAN.
+
+With these conditions satisfied, the programme is suitable for publication as a structured postgraduate research-opportunities catalogue.

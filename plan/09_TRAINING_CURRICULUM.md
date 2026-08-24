@@ -1,6 +1,6 @@
 # Training Curriculum — Selar
 
-**Ten concepts required to build and defend AMOG-Net**
+**Ten concepts required to build and defend the revised AMOG-Net v2 research programme**
 Supervisor: Dr. Polla Abdulhamid Fattah · Candidate: Selar · Companion to [`01_SELAR_PHD_ROADMAP.md`](01_SELAR_PHD_ROADMAP.md) and [`07_AMOGNET_TECHNICAL_SPEC.md`](07_AMOGNET_TECHNICAL_SPEC.md)
 
 ---
@@ -50,8 +50,7 @@ correspondence, data leakage, mishandled DICOM geometry, inappropriate evaluatio
 flawless graph transformer trained on misaligned labels produces a confident, worthless
 result. Do not rush Phase A.
 
-**Phase B is where the novelty is.** Concepts 5–8 are the four components that make
-AMOG-Net a contribution rather than an application.
+**Phase B is where the novelty is.** Concepts 5–7 contain the three central methodological contributions: disease-adaptive sequence routing, anatomically aligned cross-sequence self-supervision, and typed heterogeneous graph reasoning. Concept 8 remains essential supporting methodology, but ordinal learning is no longer claimed as standalone novelty because closely related lumbar ordinal-grading work now exists.
 
 **Phase C is what makes it a PhD.** Excellent code with weak experimental design is an
 engineering project. Concepts 9–10 are the difference.
@@ -199,13 +198,25 @@ compromise is the right one here.
 
 # PHASE B — Where the novelty lives
 
-*Concepts 5–8. Each of these could support a standalone publication.*
+> [!IMPORTANT]
+> **Closest-work update (2026).** Chai et al. already combine anatomy-guided segmentation,
+> multi-sequence level-specific ROIs, quantitative biomarkers, inter-level Transformer
+> context and ordinal grading. Therefore the candidate must be able to explain why the PhD
+> is *not* simply that pipeline with another backbone. The defensible distinction is:
+> **typed 25-target disease–anatomy graph + disease-conditioned missing-modality routing +
+> anatomically aligned cross-sequence SSL + independent external transfer.**
+>
+> Required reading before claiming novelty: Chai Z et al. (2026), Frontiers in Medicine,
+> doi:10.3389/fmed.2026.1848548.
+
+
+*Concepts 5–7 contain the core novelty. Concept 8 is essential supporting methodology and may contribute to a broader paper, but should not be forced into a standalone publication.*
 
 ## 5. Multi-view and multi-sequence fusion
 
 **What it is.** How to combine Sagittal T1 + Sagittal T2/STIR + Axial T2 into one decision.
 
-**Why this thesis needs it.** This is AMOG-Net's adaptive fusion stage. The interesting
+**Why this thesis needs it.** This is one of AMOG-Net v2's three central novelty areas: disease-conditioned adaptive sequence routing with missing-modality robustness. The interesting
 question is *not* "which sequence is best?" — it is whether the model can learn a
 **disease-specific** weighting, so that foraminal narrowing leans on sagittal T1 while
 canal stenosis leans on axial T2:
@@ -235,7 +246,7 @@ real examinations do not always deliver all three.
 **What it is.** Learning useful representations from unlabelled data, before any
 supervised training.
 
-**Why this thesis needs it.** This is a genuine novelty opportunity. Generic contrastive
+**Why this thesis needs it.** This is one of the three central novelty areas. Generic contrastive
 learning treats augmented copies of an image as positive pairs. The proposal here is
 **anatomically defined** pairs instead:
 
@@ -262,7 +273,7 @@ data-size problem: this cohort is small, and self-supervision is how you get mor
 
 **What it is.** Learning over data with explicit relational structure rather than a grid.
 
-**Why this thesis needs it.** This is likely the **heart of AMOG-Net**. The spine is not
+**Why this thesis needs it.** This is a central novelty area of AMOG-Net v2, but it must be distinguished from recent inter-level Transformer work and prior CNN–GNN disc grading. The spine is not
 25 independent predictions — levels are biomechanically coupled, conditions at one level
 interact, and left and right are anatomically symmetric. Represent each
 level-condition pair as a node:
@@ -330,7 +341,7 @@ useless.
 
 **Self-check.** *"My accuracy is 86%. Why might that be worse than a model scoring 79%?"*
 
-**Weight: 10/10 · Estimated 3–4 weeks.**
+**Weight: 9/10 · Estimated 3–4 weeks.**
 
 ---
 
@@ -428,7 +439,7 @@ activity. Phase A alone is 13–16 weeks — plan for that rather than being sur
 The ten concepts form a single chain:
 
 > **MRI anatomy → DICOM geometry → localisation → 2.5D representation → multi-sequence
-> fusion → self-supervised learning → anatomical graph reasoning → ordinal grading →
+> disease-adaptive fusion → anatomical self-supervision → typed heterogeneous graph reasoning → ordinal/calibrated grading →
 > uncertainty → rigorous external validation.**
 
 And the supervisory advice, stated plainly:

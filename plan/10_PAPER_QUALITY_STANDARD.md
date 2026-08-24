@@ -132,12 +132,10 @@ explains the drop is more credible than one that avoids testing for it.
 > **Rule: for a methods paper, the ablation IS the contribution. A final number without
 > one is an engineering result, not a scientific one.**
 
-AMOG-Net has six components. Publishing "AMOG-Net achieves 0.91" proves nothing about any
-of them. The E0–E8 ladder in [`07_AMOGNET_TECHNICAL_SPEC.md`](07_AMOGNET_TECHNICAL_SPEC.md)
-exists for this reason:
+AMOG-Net v2 has three central novelty areas plus several supporting components. Publishing "AMOG-Net achieves 0.91" proves nothing about which idea matters. The E0–E8 ladder in [`07_AMOGNET_TECHNICAL_SPEC.md`](07_AMOGNET_TECHNICAL_SPEC.md) exists for this reason:
 
 ```
-Baseline → +ROI → +MultiView → +Ordinal → +SSL → +Graph → +Uncertainty
+Baseline → +Aligned ROI → +Adaptive Routing → +Missing-Modality → +Anatomical SSL → +Homogeneous Graph → +Typed Graph → +Calibration
 ```
 
 - [ ] Each increment reported with confidence intervals
@@ -198,6 +196,45 @@ journal wants the clinical question first and the architecture second.
 
 ---
 
+## 9. Committee and proposal integrity — before a project is advertised
+
+A technically good project can still be rejected at proposal stage if its framing is
+incorrect. Add these checks before publishing a student project title:
+
+- [ ] **Sampling frame is stated correctly.** A tertiary-hospital symptomatic/referral
+      cohort must not be presented as population prevalence.
+- [ ] **"First" / "novel" claims have been checked with a targeted current literature
+      search.** If regional studies exist, narrow the claim instead of pretending they do
+      not.
+- [ ] **Every requested outcome actually exists in the data.** Age at MRI is not age of
+      disease onset; imaging severity is not surgical urgency; absent follow-up cannot be
+      replaced with synthetic outcomes.
+- [ ] **Ablation experiments change one scientific variable at a time.** For sequence
+      ablation, matched models trained for each input configuration are the primary design;
+      zeroing an unseen modality only at inference is an out-of-distribution stress test,
+      not clean evidence that the modality is unnecessary.
+- [ ] **Project dependencies are non-blocking.** An MSc student's graduation must not
+      depend on a PhD component being completed first unless the dependency is unavoidable
+      and formally scheduled.
+- [ ] **Student-facing text does not guarantee publication or a performance threshold.**
+      State "manuscript prepared for submission" and treat negative results as valid.
+- [ ] **Shared datasets have a stewardship / authorship policy.** Dataset access alone does
+      not imply authorship; ownership language should refer to programme / institutional
+      stewardship, not personal student ownership.
+
+### Updated AMOG-Net novelty rule
+
+Chai et al. (2026) already combine anatomy-guided localisation, multi-sequence ROIs,
+biomarkers, inter-level Transformer context and ordinal grading. Therefore AMOG-Net papers
+must not claim those ingredients as new by themselves. The revised novelty tests are:
+
+1. typed heterogeneous disease–anatomy graph vs simple level Transformer / homogeneous graph;
+2. disease-conditioned sequence routing + arbitrary missing-modality robustness;
+3. anatomically aligned cross-sequence self-supervision;
+4. independent zero-shot / few-shot cross-institutional transfer.
+
+---
+
 # Pre-submission checklist
 
 Run this before any manuscript leaves the group.
@@ -234,3 +271,9 @@ Run this before any manuscript leaves the group.
 > **The one-line test.** Before submitting, ask: *if a sceptical reviewer from another
 > hospital tried to reproduce this, what would they find that we have not already
 > disclosed?* Whatever the answer is, put it in the paper first.
+
+---
+
+## Current closest-work reference for AMOG-Net proposal review
+
+Chai Z, Liu C, Qin R, Zhao D, Shi A. (2026). *Anatomy-guided context-aware deep learning for lumbar degenerative disease grading and burden-aware risk assessment on MRI*. Frontiers in Medicine, 13:1848548. https://doi.org/10.3389/fmed.2026.1848548

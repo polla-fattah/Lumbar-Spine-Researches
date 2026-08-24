@@ -1,120 +1,168 @@
-# MSc Project Plan — Student 1: Kurdish Population Lumbar Epidemiology
+# MSc Project Plan — Student 1: Tertiary-Hospital Lumbar MRI Cohort Characterisation
 
-**Project Title:** Prevalence, Level Distribution, and Demographic Patterns of Lumbar Spine Degeneration: The First MRI-Based Cohort Study in Kurdistan/Iraq  
+**Project Title:** Level-Specific Distribution and Demographic Patterns of Lumbar Degenerative MRI Findings in a Tertiary-Hospital Cohort in the Kurdistan Region of Iraq  
 **Academic Supervisor:** Dr. Polla Abdulhamid Fattah  
-**Target Degree:** MSc in Data Science / Medical Informatics / Computer Science  
-**Duration:** 4–6 Months  
+**Best-Fit Degrees:** MSc in Data Science / Medical Informatics / Public Health / Clinical Data Science  
+**Computer Science fit:** acceptable only where programme regulations permit an applied health-analytics thesis  
+**Duration:** 4–6 Months
 
 ---
 
-## 1. Executive Summary & Clinical Gap
+## 1. Research Gap and Correct Clinical Framing
 
-* **Clinical Gap:** Published lumbar spine MRI epidemiological cohorts are almost exclusively from North America, Western Europe, China, Japan, or South Korea. No MRI-based descriptive epidemiological baseline exists for Middle Eastern, specifically Kurdish/Iraqi, populations.
-* **Project Objective:** Conduct the first comprehensive descriptive epidemiological study of lumbar degenerative findings (L1–L2 … L5–S1) utilizing the 299 audited clinical radiology reports from Rizgary Teaching Hospital.
-* **Why it's ideal for MSc:** **Zero AI model training required.** Requires statistical analysis, data visualization, and literature synthesis. Fast execution with high publication certainty.
+Published lumbar MRI epidemiology is dominated by large cohorts from North America, Europe and East Asia. Regional Iraqi / Kurdish MRI studies exist, so this project must **not** claim to be the first MRI study in Iraq or Kurdistan and must **not** infer population prevalence from a hospital referral cohort.
 
----
+The defensible contribution is narrower:
 
-## Who this project suits
+> **Provide a carefully verified, level-resolved description of lumbar degenerative MRI findings among patients who underwent lumbar MRI at a tertiary teaching hospital in the Kurdistan Region, and compare the observed pattern with published cohorts.**
 
-**Technical difficulty: LOW.** The most accessible project in the programme, and the one
-most likely to produce a publication within the degree.
-
-**You will need**
-- Comfortable statistics: prevalence, confidence intervals, chi-square, logistic regression
-- Python (pandas, statsmodels) **or** R — either is fine
-- Willingness to read clinical literature carefully and build a comparison table
-- Patience for careful manual data work: roughly 25–40 hours structuring 299 reports
-
-**You will NOT need**
-- Any deep learning
-- Any GPU
-- Any DICOM or image processing
-
-**You will gain**
-- Epidemiological study design and STROBE reporting
-- Publication-quality statistical analysis and visualisation
-- A first-author clinical paper on a genuinely unstudied population
-
-**Best fit:** Data Science, Medical Informatics, Public Health, or a clinically minded
-Computer Science student who wants a clinical rather than an engineering thesis.
+This is a **retrospective symptomatic / referral cohort**, not a random sample of the general Kurdish population.
 
 ---
 
-## 2. Specific Research Objectives
+## 2. Research Questions
 
-1. Determine the level-by-level (L1–L2 … L5–S1) prevalence of:
-   - Intervertebral disc bulge, protrusion, and extrusion.
-   - Central canal stenosis (reported in 97% of cases) and neural foraminal stenosis (78%).
-   - **Not subarticular / lateral recess stenosis.** Verified across all 299 reports under
-     six spellings: it appears in **0%**. Rizgary radiologists do not report that
-     compartment, so it cannot be included as an objective. Its absence is itself a
-     reportable finding for the reporting-completeness discussion.
-   - Facet joint arthrosis, ligamentum flavum hypertrophy, and nerve root compression.
-2. Analyze age-stratified prevalence curves and identify the peak age of onset for severe herniation vs. canal stenosis.
-3. Compare sex-specific differences in degenerative prevalence across age groups.
-4. Evaluate level-coupling dominance (e.g., whether L4–L5 and L5–S1 dominance matches Western and East Asian published norms).
+**RQ1.** What are the observed frequencies and 95% confidence intervals of major degenerative findings at L1–L2 through L5–S1 in this hospital MRI cohort?
 
----
+**RQ2.** How do finding frequencies vary across age groups and sex?
 
-## 3. Data Source & Preparation
+**RQ3.** Which lumbar levels show the highest observed burden of disc herniation morphology, central canal stenosis and other reported degenerative changes?
 
-* **Dataset:** The 299-case structured matrix derived from Rizgary Teaching Hospital narrative `.docx` reports.
+**RQ4.** After accounting for repeated levels within the same patient, what associations remain between age / sex and specific imaging findings?
 
-> [!IMPORTANT]
-> **Dependency removed deliberately.** This project was originally gated on Phase 1 of
-> Selar's PhD producing the matrix. That is an unnecessary blocking dependency: 299
-> reports can be structured by hand in roughly 25--40 hours of student time. **This
-> project should not wait for anyone.** Extract manually, start immediately, and
-> reconcile against the automated NLP output when MSc Project 3 delivers it -- the
-> agreement between the two then becomes a validation result for MSc 3 rather than a
-> delay for MSc 1.
-* **Sample Size:** N = 299 patients (294 with matching multi-sequence DICOM series).
-* **Variables:** Age, Sex, Spinal Level (L1–L2 to L5–S1), Finding Categories (Bulge, Protrusion, Extrusion, Stenosis, Nerve Root Compression, Facet Arthrosis).
+**RQ5.** How does the level distribution in this cohort compare descriptively with major published lumbar MRI cohorts, while acknowledging differences in referral criteria and case mix?
+
+Do not use the phrase **"age of onset"**. The data contain age at imaging, not age when pathology began.
 
 ---
 
-## 4. Methodological Workflow & Timeline
+## 3. Data Source
 
-```mermaid
-flowchart LR
-    Step1[Month 1: Data Structuring & Hygiene] --> Step2[Month 2: Descriptive & Inferential Statistics]
-    Step2 --> Step3[Month 3: Comparative Literature Synthesis]
-    Step3 --> Step4[Months 4-5: Manuscript Writing & Journal Submission]
-```
+- 299 anonymised narrative lumbar MRI radiology reports from Rizgary Teaching Hospital.
+- Reports are the primary source.
+- The structured analysis matrix must be created from / reconciled to the reports and quality-checked before analysis.
 
-### Month 1: Data Import & Variable Definition
-- Import audited 299-case matrix into Python (Pandas / Statsmodels) or R.
-- Perform sanity checks on age/sex distributions, removing transcription artifacts.
-- Code binary and ordinal severity indicators per spinal level.
+### Findings available for study
 
-### Month 2: Statistical Analysis
-- Calculate overall and level-specific prevalence (%) with 95% Confidence Intervals (CI).
-- Run chi-square (χ²) tests and Fisher's exact tests for sex-stratified comparisons.
-- Perform multi-variable logistic regression to compute Odds Ratios (OR) for degeneration as a function of age deciles.
-- Generate high-publication-quality heatmaps of finding prevalence across spinal levels.
+- disc bulge;
+- protrusion;
+- extrusion;
+- central canal stenosis;
+- neural foraminal narrowing where reported;
+- nerve-root pressure / compression where reported;
+- facet arthrosis;
+- ligamentum flavum hypertrophy;
+- osteophytes / related degenerative findings where consistently extractable.
 
-### Month 3: Literature Benchmark & Meta-Comparison
-- Compile comparative literature benchmark table comparing Kurdistan prevalence metrics against major published cohorts (e.g., Framingham Heart Study spine cohort, Wakayama Spine Study, Asian/European datasets).
-- Highlight key regional concordances and discordances.
+### Known coverage limitations
 
-### Months 4–5: Manuscript Preparation & Submission
-- Draft manuscript according to STROBE guidelines for observational cross-sectional studies.
-- Submit to target journal.
+- subarticular / lateral-recess stenosis is not reliably present in the local reports and is excluded;
+- laterality is incompletely recorded;
+- this is a tertiary-hospital referral cohort, so observed frequencies are affected by referral / selection bias.
 
 ---
 
-## 5. Target Venues & Target Outputs
+## 4. Methodology
 
-* **Targets** — Reach: *European Spine Journal* (IF ~2.8). Target: *Journal of Orthopaedic Surgery and Research* (IF ~2.6). Floor: *BMC Musculoskeletal Disorders*.
-* **Note:** the highest-certainty publication in the programme. Descriptive epidemiology of an unstudied population is a well-understood contribution that reviewers know how to assess, and it needs no model to work.
-* **Primary Output:** 1 peer-reviewed clinical journal paper **submitted** (acceptance typically lands after the degree ends) + MSc Thesis Dissertation.
+### Month 1 — Data structuring and audit
+
+1. Define a codebook before statistical analysis.
+2. Structure each report into patient-level and level-specific variables.
+3. Double-check all non-normal findings against the source text.
+4. Audit missing age / sex / level information.
+5. Document exclusions without silently deleting difficult cases.
+
+### Month 2 — Descriptive analysis
+
+- patient-level demographics;
+- level-specific finding frequencies with 95% CIs;
+- stacked distributions by level;
+- age-band and sex stratification;
+- co-occurrence matrix across levels / findings;
+- publication-quality heatmaps.
+
+Use **"observed proportion" / "cohort frequency"** when discussing the hospital sample. If the word "prevalence" is used, qualify it as **prevalence within the imaged referral cohort**, not population prevalence.
+
+### Month 2–3 — Inferential modelling
+
+Because one patient contributes up to five lumbar levels, level observations are correlated.
+
+Preferred approach:
+
+- **GEE logistic regression** or
+- **mixed-effects logistic regression with patient as a random intercept**.
+
+Potential predictors:
+
+- age (continuous where possible; age bands for descriptive plots);
+- sex;
+- lumbar level;
+- age × level interaction where scientifically justified.
+
+Report odds ratios with 95% CIs. Avoid excessive hypothesis testing across many findings; pre-specify primary outcomes and apply multiplicity control for secondary comparisons where appropriate.
+
+### Month 3 — Literature comparison
+
+Construct a comparison table containing:
+
+- country / cohort;
+- symptomatic vs population-based sampling;
+- age distribution;
+- MRI protocol;
+- finding definition;
+- spinal level;
+- reported frequency.
+
+Do **not** interpret numerical differences as ethnic / biological differences unless study design and referral effects have been addressed.
+
+### Months 4–5 — Thesis and manuscript
+
+Report according to **STROBE** and prepare a manuscript suitable for submission.
 
 ---
 
-## 6. Risk Management
+## 5. Student Fit
 
-| Potential Risk | Severity | Mitigation Strategy |
-| :--- | :---: | :--- |
-| Sample size (N = 299) questioned by reviewers | Low | Emphasize that this is a *single-center descriptive baseline* for an unstudied region; compute exact 95% CIs. |
-| Missing clinical symptom data | Low | Frame study strictly as a *radiological prevalence study* rather than a clinical symptom-correlation study. |
+**Technical difficulty:** LOW–MEDIUM.
+
+The student should be comfortable with:
+
+- R or Python;
+- descriptive statistics;
+- confidence intervals;
+- logistic regression;
+- GEE / mixed-effects models;
+- careful clinical-literature reading.
+
+No deep-learning model or GPU is required.
+
+---
+
+## 6. Expected Outputs
+
+- MSc dissertation;
+- verified analysis code and variable dictionary;
+- cohort-level figures / tables;
+- **one manuscript prepared for peer-reviewed journal submission**.
+
+Possible venues should be chosen after the results are known; likely audiences include musculoskeletal / spine / medical-imaging journals. No publication outcome is guaranteed.
+
+---
+
+## 7. Principal Risks
+
+| Risk | Mitigation |
+|---|---|
+| Reviewers reject "population prevalence" inference | Do not make that inference; frame as a symptomatic / referred tertiary-hospital cohort. |
+| Claim of "first in Iraq/Kurdistan" is challenged | Remove it; describe regional evidence as limited and fragmented, not absent. |
+| N = 299 considered modest | Emphasise precise level-resolved characterisation and report CIs; avoid overfitting large multivariable models. |
+| Repeated lumbar levels treated as independent | Use GEE / mixed-effects modelling. |
+| Missing clinical symptoms | Keep the study radiological; do not claim symptom or outcome relationships. |
+
+---
+
+## Regional literature that prevents an overbroad "first" claim
+
+- Akreyi HA, Awdish HY. (2012). *Assessment of ligamentum flavum thickness correlation with demographic variables and disc degeneration in Erbil governorate population sample*. Zanco Journal of Medical Sciences, 16(2). https://zjms.hmu.edu.krd/index.php/zjms/article/view/407
+- Saeed SM, Abass AK, Rasool MM. (2019). *Inter-observer agreement in MRI assessment of lumbar intervertebral discs and nerve roots using Pfirrmann classification*. Journal of Sulaimani Medical College, 9(3), 225–237. https://jsmc.univsul.edu.iq/article?id=206
+- *The Role of Lumbosacral Spine MRI in Evaluation of The Low Backache of Patients in Mosul City*. Annals of the College of Medicine Mosul, 47(1), 2025. https://mmed.uomosul.edu.iq/index.php/mmed/article/view/37160

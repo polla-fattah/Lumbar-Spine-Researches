@@ -1,117 +1,313 @@
 # PhD Research Plan — Candidate: Selar
 
-**Thesis Title:** Cross-Institutional Domain-Transferable Graph Deep Learning for Multi-Sequence Lumbar Spine MRI Assessment  
+**Proposed Thesis Title:** Disease-Adaptive Heterogeneous Graph Learning with Missing-Modality Robustness and Cross-Institutional Transfer for Lumbar Spine MRI  
 **Supervisor:** Dr. Polla Abdulhamid Fattah  
 **Target Degree:** PhD in Computer Science / Artificial Intelligence  
 **Duration:** 21–24 Months  
+**Working System Name:** AMOG-Net v2 — Anatomy- and Modality-Aware Heterogeneous Graph Network
 
 ---
 
-## 1. Executive Summary & Research Scope
+## 1. Doctoral Research Problem
 
-This PhD project addresses a major challenge in clinical medical imaging AI: **cross-institutional generalizability and multi-sequence fusion for multi-label anatomical structures.**
+Automated lumbar MRI grading has progressed beyond simple image classification. Recent systems already use anatomical localisation, multi-sequence ROIs, cross-view attention, anatomical biomarkers, multi-level context and ordinal grading. Therefore this PhD does **not** claim novelty from any of those components alone.
 
-Rather than getting bogged down in localized clinical data collection or broad non-technical epidemiology, Selar's PhD focuses on a sharp methodological core:
-1. Developing **AMOG-Net** (Anatomical Multi-sequence Ordinal Graph Network), trained on international benchmark datasets (**RSNA LumbarDISC Kaggle release**, N = 1,975 held studies).
-2. Quantifying and solving domain transfer degradation when evaluating on a regional, unseen single-center clinical cohort (**Rizgary Teaching Hospital**, N = 294).
-3. **Target Schema Scoping:** Evaluating zero-shot transfer on **Spinal Canal Stenosis (5 targets: L1-L2 through L5-S1)**—which appears in 97% of local reports and directly matches benchmark papers like M-SCAN—while treating local herniation morphology as a separate multi-label classification task.
-4. Formulating a **Few-Shot Domain Adaptation** mechanism that enables clinical models to adapt to local scanner protocols with minimal local labeling effort.
+The revised doctoral problem is:
 
----
+> **Can explicit disease–anatomy relationships, disease-conditioned MRI sequence routing, anatomically aligned cross-sequence self-supervision, and annotation-efficient cross-institutional adaptation improve the robustness and clinical coherence of lumbar degenerative disease grading?**
 
-## 2. Research Questions (RQs)
-
-* **RQ1 (Multi-Sequence Graph Fusion):** How can spatial dependencies across lumbar levels (L1–L2 … L5–S1) and multi-sequence MRI views (Sagittal T1, Sagittal T2, Axial T2) be jointly modeled to improve multi-label stenosis grading accuracy over standard 2D/3D CNNs?
-* **RQ2 (Domain Shift & Schema Alignment):** What is the exact magnitude of performance degradation (zero-shot transfer loss) when evaluating an RSNA-trained model on local Middle Eastern clinical scanners for spinal canal stenosis (5 targets)?
-* **RQ3 (Few-Shot Adaptation Efficiency):** How many local cases (N = 10, 25, 50, 100) are required under parameter-efficient fine-tuning (PEFT/Adapter modules) to recover ≥95% of benchmark diagnostic accuracy on local hospital data?
+The work is trained primarily on public benchmark data and then tested on a genuinely independent Middle Eastern hospital cohort, restricted to local targets for which defensible ground truth exists.
 
 ---
 
-## 3. Four-Phase Work Plan & Timeline
+## 2. Closest Work and Novelty Boundary
 
-```mermaid
-gantt
-    title Selar PhD Execution Timeline
-    dateFormat  YYYY-MM
-    axisFormat %b %Y
+### Chai et al. 2026 — closest recent overlap
 
-    section Phase 1: Data Audit
-    NLP Parsing & Manual Verification       :p1, 2026-09, 3m
+Chai et al. already combine:
 
-    section Phase 2: AMOG-Net Core
-    Model Architecture & RSNA Pretraining   :p2a, 2026-12, 5m
-    Paper 1 Preparation & Submission (MedIA):p2b, 2027-04, 3m
+- anatomy-guided vertebra / disc / canal segmentation;
+- level-specific multi-sequence ROIs;
+- quantitative anatomical biomarkers;
+- Transformer-based inter-level context;
+- ordinal grading of lumbar degenerative findings;
+- consistency regularisation and patient-level burden assessment.
 
-    section Phase 3: Domain Transfer
-    Zero-Shot Canal Stenosis Evaluation    :p3a, 2027-06, 3m
-    Few-Shot Domain Adaptation Experiments :p3b, 2027-09, 3m
-    Paper 2 Preparation & Submission (RadAI):p3c, 2027-11, 2m
+Therefore **"anatomy + multi-sequence + inter-level Transformer + ordinal grading" is not sufficient novelty in 2026.**
 
-    section Phase 4: Thesis
-    Dissertation Writing & Defense          :p4, 2027-12, 4m
+### Revised doctoral contributions
+
+1. **Heterogeneous disease–anatomy graph**  
+   Represent each condition / level / side as its own node (up to 25 RSNA targets) with typed edges for adjacent levels, bilateral anatomy and same-level disease interactions.
+
+2. **Disease-conditioned adaptive sequence routing with missing-modality robustness**  
+   Learn which sequence(s) should contribute to each target and each patient rather than assuming a fixed fusion rule. Train with modality dropout so the model can operate when one or more sequences are unavailable.
+
+3. **Anatomically aligned cross-sequence self-supervised learning**  
+   Use DICOM patient-space correspondence to define positive relationships among T1, sagittal T2/STIR and axial T2 representations of the same patient and spinal level.
+
+4. **Cross-institutional zero-shot and few-shot transfer analysis**  
+   Quantify the real degradation from a public multinational benchmark to an unseen local clinical cohort, then measure the annotation-efficiency of adaptation.
+
+### Supporting, not standalone novelty
+
+- localisation / segmentation;
+- 2.5D ROI extraction;
+- ordinal loss;
+- class-imbalance handling;
+- uncertainty calibration;
+- standard CNN / Transformer backbones.
+
+These remain part of the system but are not individually advertised as original contributions.
+
+---
+
+## 3. Research Questions
+
+**RQ1 — Heterogeneous anatomical reasoning**  
+Does relation-aware modelling of condition, level and laterality improve multi-target grading compared with independent target heads and a simple five-level sequence Transformer?
+
+**RQ2 — Disease-conditioned modality routing**  
+Can the model learn target-specific MRI sequence importance and remain robust when one or more sequences are missing, without requiring a separately trained network for every modality combination?
+
+**RQ3 — Anatomically aligned self-supervision**  
+Does cross-sequence pretraining based on DICOM anatomical correspondence improve grading performance and label efficiency compared with ImageNet / generic volumetric pretraining and ordinary augmentation-based self-supervision?
+
+**RQ4 — Cross-institutional generalisation and adaptation**  
+What performance degradation occurs when a benchmark-trained model is applied zero-shot to Rizgary, and how does performance recover as local labelled cases increase (e.g., N = 10, 25, 50, 100) under parameter-efficient adaptation?
+
+No fixed recovery percentage is a success criterion. The recovery curve itself is the scientific result.
+
+---
+
+## 4. Data and Target Definition
+
+### 4.1 Public development data
+
+- **LumbarDISC / RSNA 2024:** use the locally held labelled Kaggle training subset (approximately 1,975 studies) for core model development, while citing the full published cohort correctly as 2,697 patients / 8,593 MRI series.
+- **SPIDER:** use for anatomical segmentation / localisation benchmarking and pretraining where licence terms permit.
+
+### 4.2 Local external test data
+
+- 294 currently identified eligible multi-sequence Rizgary imaging cases, after the raw-study reconciliation and DICOM de-identification are complete.
+- 299 narrative reports used to construct / verify local reference labels.
+
+### 4.3 Local target scope
+
+Do **not** pretend that Rizgary reproduces the RSNA 25-target schema.
+
+Primary external-transfer target:
+
+- **central canal stenosis at L1–L2 through L5–S1 (5 targets)**
+
+Secondary local morphology task, analysed separately:
+
+- bulge / protrusion / extrusion at reported lumbar levels.
+
+Foraminal transfer is included only where laterality and grade are sufficiently documented or after fresh radiologist annotation. Subarticular / lateral-recess transfer is excluded unless new reference grading is created.
+
+---
+
+## 5. Proposed Architecture
+
+```text
+DICOM volumes
+    ↓
+Anatomical localisation / disease-specific ROI extraction
+    ↓
+Sequence-specific encoders
+    ↓
+Anatomically aligned cross-sequence self-supervised representation
+    ↓
+Disease-conditioned sequence router
+    ↓
+Heterogeneous disease–anatomy graph transformer
+    ↓
+Ordinal / cost-sensitive grading heads
+    ↓
+Probability calibration + uncertainty / selective prediction
 ```
 
-### Phase 1: Ground Truth Audit & Infrastructure (Months 1–3)
-- **Task 1.1:** Develop the NLP report extraction script to parse 299 English `.docx` reports into a level-resolved matrix.
-- **Task 1.2 (Mandatory Verification):** Perform a 100% manual verification pass on all non-normal extracted findings against the raw text to produce the official **Rizgary Gold Standard Matrix** (focusing on canal stenosis, foraminal narrowing, and herniation morphology).
-- **Task 1.3:** Preprocess and harmonize the **RSNA LumbarDISC** held DICOM dataset (N = 1,975) and **SPIDER** segmentation masks.
+### 5.1 Graph definition
 
-### Phase 2: AMOG-Net Development & Benchmark Training (Months 4–10)
-- **Task 2.1:** Implement **AMOG-Net**:
-  - *Slice-to-Volume ROI Extractor:* 2.5D crop around intervertebral discs and central canal.
-  - *Cross-Sequence Feature Fusion:* Attention mechanism combining Sagittal T1, Sagittal T2, and Axial T2 features.
-  - *Anatomical Graph Transformer:* Nodes represent lumbar levels (L1–L2 … L5–S1), edges represent biomechanical coupling.
-  - *Ordinal & Uncertainty Loss:* Ordinal cross-entropy loss for stenosis grading + Monte Carlo Dropout / Evidential Loss for confidence estimation.
-- **Task 2.2:** Train and validate on RSNA benchmark (N = 1,975). Compare against standard ResNet, Swin UNETR, and M-SCAN baseline architectures.
-- **Deliverable — Paper 1:** *"AMOG-Net: Anatomical Graph Transformers for Multi-Sequence Lumbar Spine MRI Assessment."*  
-  *Targets* — Reach: *IEEE TMI* or *Medical Image Analysis*. Target: *IEEE JBHI* or MICCAI main track. Floor: *Computers in Biology and Medicine*.
-  *Timing:* submitted ~month 10. Expect a first decision at months 16-22 and acceptance possibly after the viva -- plan the graduation criteria against submission, not acceptance.
+At full RSNA scope:
 
-### Phase 3: Zero-Shot Transfer & Few-Shot Domain Adaptation (Months 11–16)
-- **Task 3.1 (Zero-Shot Evaluation):** Deploy RSNA-trained AMOG-Net directly onto the 294 Rizgary DICOM studies for Spinal Canal Stenosis (5 targets) without local tuning. Measure macro F1, AUROC, and class-wise sensitivity degradation per spinal level.
-- **Task 3.2 (Domain Shift Analysis):** Analyze root causes of domain shift (slice thickness differences, Siemens Avanto magnetic field artifacts, regional anatomical variations).
-- **Task 3.3 (Few-Shot Adaptation):** Implement parameter-efficient domain adaptation (Adapter modules / LoRA fine-tuning) using subsets of local cases (N=10, 25, 50, 100). Plot efficiency curves showing performance recovery vs. annotation cost.
-- **Deliverable — Paper 2:** *"Cross-Institutional Generalizability of Multi-Sequence Lumbar MRI Models: Zero-Shot vs Few-Shot Transfer to a Middle Eastern Cohort."*  
-  *Targets* — Reach: *Radiology: Artificial Intelligence*. Target: *European Radiology*. Floor: *European Spine Journal* or *Scientific Reports*.
-  *Note:* this is the stronger clinical contribution of the two, since no published evaluation covers a Middle Eastern cohort.
+```text
+5 lumbar levels × 5 condition/laterality targets = 25 nodes
+```
 
-### Phase 4: Dissertation Synthesis & Defense (Months 17–24)
-- **Task 4.1:** Write the comprehensive PhD dissertation combining Phase 1–3 methodology, benchmarks, and clinical validation.
-- **Task 4.2:** Internal review, thesis submission, and viva voce defense.
+Typed relations include:
 
----
+- adjacent-level relations;
+- bilateral relations;
+- same-level cross-condition relations.
 
-## 4. Key Performance Indicators & Graduation Criteria
+The graph must be tested against:
 
-1. **Publications:** Two papers **submitted** to the named venues, with at least one
-   accepted. Acceptance timing at *IEEE TMI* / *MedIA* runs 6–12 months and is outside the
-   candidate's control, so "two accepted" is not a safe gate on a 21–24 month programme.
-   Name a fallback venue for each paper at submission time (e.g. *Computers in Biology and
-   Medicine*, *Scientific Reports*).
-2. **Open Data / Code:** Release cleaned AMOG-Net codebase with reproducible pre-trained weights.
-3. **Robustness:** Characterise cross-institutional transfer quantitatively — report the
-   zero-shot degradation and the few-shot recovery curve across N = 10,25,50,100
-   local cases.
+- independent target heads;
+- a simple ordered five-level Transformer;
+- a homogeneous graph without typed relations.
 
-> [!WARNING]
-> **A numeric recovery threshold must not be a graduation criterion.** An earlier version
-> of this section required ≥90% AUROC recovery using ≤50 local cases. If domain
-> shift proves severe, that target may be unreachable for reasons that are a property of
-> the data rather than of the candidate's work — and the risk table below already
-> (correctly) says a large drop should be framed as the **primary scientific finding** of
-> Paper 2. Those two statements contradict one another. The finding is the contribution;
-> the number is not the bar.
+This is essential to show that the heterogeneous topology—not merely "using a graph"—adds value.
+
+### 5.2 Adaptive sequence routing
+
+For target c at level l:
+
+```text
+F(c,l) = Σ_m g(c,l,m,x) · F_m(l)
+```
+
+where `m` indexes available MRI sequences and `g` is a learned, normalised target- and patient-dependent gate.
+
+Training includes modality dropout and explicit missing-modality experiments.
+
+### 5.3 Anatomical self-supervision
+
+Positive relationships are defined using DICOM geometry:
+
+- same patient + same level + different sequence → strong positive;
+- same patient + adjacent level → optional soft relation;
+- unrelated patient / level combinations → negatives or non-positive pairs according to the selected objective.
+
+The method is compared with ordinary augmentation-based contrastive learning and generic pretraining.
 
 ---
 
-## 5. Risk Management & Fallback Strategies
+## 6. Experimental Programme
 
-| Potential Risk | Severity | Mitigation Strategy |
-| :--- | :---: | :--- |
-| Zero-shot performance on Rizgary drops severely (>30% F1 drop) | Medium | Frame this as the primary scientific finding of Paper 2; emphasize the Necessity of Few-Shot Domain Adaptation. |
-| Model training on RSNA cases requires excessive compute | Low | Use 2.5D ROI cropping to reduce input memory footprint; leverage mixed-precision (FP16/BF16) training. |
-| Schema mismatch on subarticular stenosis | Solved | Scope zero-shot evaluation to Spinal Canal Stenosis (5 targets), matching M-SCAN benchmarks. |
-| **AMOG-Net specifies six novel components** (localiser, 2.5D ROI, cross-sequence SSL, adaptive fusion, graph transformer, ordinal + uncertainty heads) for a 5-month build | **High** | Stage the novelty. Build and validate a working baseline (localiser + 2.5D + fusion) first, then add graph, ordinal and uncertainty as measured increments up the E0–E8 ablation ladder. A partial system that works beats six components that half-work. See [`08_PUBLICATION_PLAN.md`](08_PUBLICATION_PLAN.md). |
-| **Compute capacity unspecified** | **Medium** | Confirm GPU access before Phase 2 begins. Multi-sequence training over 1,975 studies is not laptop work. Note that hospital-owned data may restrict which cloud providers are permissible. |
-| **Local DICOMs are unanonymised** (PatientName, DOB, sex and study date populated in every study sampled) | **Medium** | De-identify before the data reaches MSc students or any external compute environment. More people touching the data raises exposure; keep the de-identification key outside the repository. |
-| **Curriculum load competes with Phase 1** | Medium | Phase A of [`09_TRAINING_CURRICULUM.md`](09_TRAINING_CURRICULUM.md) is 13–16 weeks and must precede real data work. It overlaps Phase 1 deliberately — concepts 1 and 2 are exactly what report extraction and DICOM harmonisation require. Phases B and C are learned while building, not before. |
+### Phase 1 — Benchmark infrastructure and foundations (Months 1–3)
+
+- preprocess / harmonise the labelled RSNA subset;
+- reconstruct patient-space geometry from DICOM metadata;
+- implement / verify patient-level splits;
+- implement anatomical localisation using SPIDER or an established segmentation model;
+- reproduce at least one strong baseline;
+- complete the literature closest-work matrix, including Chai et al. 2026, M-SCAN and relevant GNN lumbar work.
+
+**Important:** automated local report extraction is an MSc 3 task, not a mandatory PhD deliverable. The PhD consumes the verified local matrix when available.
+
+### Phase 2 — Core methods (Months 4–10)
+
+Build progressively rather than attempting the full architecture at once:
+
+| Step | Experiment |
+|---|---|
+| E0 | Independent ROI classifier baseline |
+| E1 | + anatomically correct cross-sequence ROI alignment |
+| E2 | + disease-conditioned adaptive sequence routing |
+| E3 | + missing-modality / modality-dropout training |
+| E4 | + anatomically aligned cross-sequence self-supervision |
+| E5 | + heterogeneous disease–anatomy graph |
+| E6 | + cost-sensitive ordinal heads and calibration |
+| E7 | full system |
+
+Every increment receives confidence intervals and paired statistical comparison. Components that do not help remain reported as negative findings.
+
+### Phase 3 — Cross-institutional transfer (Months 11–16)
+
+After local DICOM de-identification and reference-label approval:
+
+1. freeze the public-data model;
+2. evaluate zero-shot on local canal-stenosis targets;
+3. stratify degradation by level, scanner / acquisition features and severity;
+4. adapt using N = 10, 25, 50, 100 local labelled cases;
+5. compare PEFT / adapter approaches with full fine-tuning and simple intensity harmonisation where feasible;
+6. report annotation-efficiency curves rather than a predetermined success threshold.
+
+### Phase 4 — synthesis, external credibility and thesis (Months 17–24)
+
+- final site-held-out / external analyses;
+- integrated ablation and robustness study;
+- dissertation synthesis;
+- code / reproducibility package subject to dataset licence and hospital policy;
+- optional reader / clinical-impact study only if separately approved and feasible.
+
+---
+
+## 7. Evaluation
+
+### Primary grading metrics
+
+- macro F1;
+- balanced accuracy;
+- quadratic weighted kappa;
+- per-class sensitivity / recall, especially Severe;
+- one-vs-rest AUROC;
+- Severe → Normal error rate;
+- confidence intervals via patient-level bootstrap.
+
+### Calibration / uncertainty
+
+- Expected Calibration Error;
+- Brier score;
+- reliability diagrams;
+- coverage vs risk for selective prediction.
+
+### Localisation
+
+- localisation error in mm;
+- PCK or equivalent landmark accuracy;
+- surface / Dice metrics only where masks exist.
+
+### Robustness
+
+- institution-held-out validation where public data permit;
+- missing-sequence performance;
+- scanner / protocol subgroup analysis;
+- zero-shot local degradation;
+- few-shot recovery curve.
+
+### Efficiency
+
+- parameters;
+- FLOPs / MACs where appropriate;
+- VRAM;
+- inference time;
+- training time / compute budget.
+
+---
+
+## 8. Publication Plan
+
+The PhD is not required to publish every architectural component separately.
+
+**Working target:** 3–4 original manuscripts submitted, with at least 1–2 accepted during candidature if review timelines allow.
+
+### Candidate Paper A — Cross-sequence anatomical pretraining + disease-adaptive routing
+
+Core contribution: anatomically aligned SSL plus target-specific modality routing and missing-modality robustness.
+
+### Candidate Paper B — Heterogeneous disease–anatomy graph
+
+Core contribution: typed 25-node anatomical-condition graph, directly compared with independent heads and simple inter-level Transformers.
+
+### Candidate Paper C — Cross-institutional zero-shot and few-shot transfer
+
+Core contribution: performance degradation and annotation-efficiency when transferring from the public benchmark to the unseen Rizgary cohort.
+
+### Candidate Paper D — Integrated system / clinical validation
+
+Only if the full system and local validation are strong enough to justify an integrated manuscript.
+
+Submission is controllable; acceptance timing is not. Each manuscript should have a reach, target and fallback venue selected at the time of writing.
+
+---
+
+## 9. Key Risks and Mitigation
+
+| Risk | Severity | Mitigation |
+|---|---:|---|
+| Chai et al. 2026 overlaps with anatomy + multi-sequence + inter-level context + ordinal grading | **High if ignored** | Explicitly differentiate through heterogeneous condition-level graph, adaptive routing, anatomical SSL and external transfer. |
+| Full system becomes too large | High | Stage E0–E7; three central innovations are sufficient if supported rigorously. |
+| Heterogeneous graph adds little | Medium | Publish the negative result; retain routing / SSL / transfer contribution. |
+| Local zero-shot performance drops severely | Medium | Treat domain shift as a scientific finding; quantify and analyse it. |
+| Local labels do not match RSNA schema | Solved by scope | Restrict external grading to defensible overlapping targets. |
+| Compute unavailable | Medium | Confirm GPU access before Phase 2; use 2.5D ROIs, mixed precision and staged models. |
+| Local DICOM governance incomplete | High for local phase | No student / external-compute access until de-identification and permissions are complete. |
+
+---
+
+## 10. Closest-Work Reference
+
+Chai, Z., Liu, C., Qin, R., Zhao, D., & Shi, A. (2026). Anatomy-guided context-aware deep learning for lumbar degenerative disease grading and burden-aware risk assessment on MRI. *Frontiers in Medicine, 13*, 1848548. https://doi.org/10.3389/fmed.2026.1848548

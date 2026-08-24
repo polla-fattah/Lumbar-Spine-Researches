@@ -1,748 +1,531 @@
-# AMOG-Net — Technical Specification
+# AMOG-Net v2 — Technical Specification
 
-**Anatomy-Guided Multi-View Ordinal Graph Learning for Lumbar Spine Degenerative Disease Classification**
-
-Supervisor: Dr. Polla Abdulhamid Fattah · Candidate: Selar
-Companion to [`01_SELAR_PHD_ROADMAP.md`](01_SELAR_PHD_ROADMAP.md), which schedules the work this document specifies.
-
----
-
-## Rationale for the research problem
-
-An existing MSc thesis on this dataset performs direct image-level three-class
-classification and explicitly avoids anatomical segmentation and localisation. Its main
-experiment compares established architectures under multi-sequence versus
-Sagittal-T2-only input.
-
-That is a legitimate MSc question, and it is being published separately. It is not,
-however, a sufficient basis for a doctorate: it selects among existing methods rather
-than questioning the formulation they share. Substituting a newer backbone —
-ResNet50 for Swin, Swin for Mamba — would not change that.
-
-This specification therefore **changes the research problem** rather than the model. It
-proposes a system that represents the structured anatomy of the lumbar spine explicitly,
-on the argument developed in Chapter 2 that the field's prevailing formulation — grading
-each level, condition and side as an independent prediction — discards real anatomical
-structure.
+**Disease-Adaptive Heterogeneous Graph Learning with Anatomically Aligned Multi-Sequence MRI Representations**  
+Supervisor: Dr. Polla Abdulhamid Fattah · Candidate: Selar  
+Companion to [`01_SELAR_PHD_ROADMAP.md`](01_SELAR_PHD_ROADMAP.md)
 
 ---
 
-## Proposed system
+## 1. Novelty Boundary First
 
-A possible working name is:
+The technical design has been revised because the 2026 literature now occupies much of the obvious "anatomy + multi-sequence + inter-level context + ordinal grading" space.
 
-**AMOG-Net — Anatomy-aware Multi-view Ordinal Graph Network**
+### Closest recent method: Chai et al. 2026
 
-The central research question becomes:
+Chai et al. already provide:
 
-> **Can an AI model improve lumbar degenerative disease grading by explicitly modeling spinal anatomy, relationships between adjacent disc levels, relationships between multiple degenerative conditions, and the ordinal nature of disease severity while integrating complementary MRI sequences?**
+- vertebra / disc / canal segmentation;
+- level-specific multi-sequence MRI ROIs;
+- quantitative anatomical biomarkers;
+- Transformer context across lumbar levels;
+- ordinal grading for canal, foraminal and subarticular disease;
+- consistency regularisation;
+- patient-level degeneration-burden assessment.
 
-This is a materially stronger question than:
+Therefore the PhD must **not** claim novelty from those ingredients alone.
 
-> Which performs better, ResNet or Swin?
+### Other nearby work
+
+- **M-SCAN (2025):** lumbar localisation, sagittal / axial multi-view fusion and cross-attention for spinal-canal stenosis.
+- **CNN–GNN IVD grading work:** automated disc segmentation / 3D representation followed by graph-based Pfirrmann grading.
+
+### Revised novelty claim
+
+The doctoral contribution is concentrated in three methodological ideas plus one translational validation programme:
+
+1. **A heterogeneous disease–anatomy graph** over condition, level and laterality, with typed anatomical relations.
+2. **Disease-conditioned adaptive MRI sequence routing** that remains functional when sequences are missing.
+3. **Anatomically aligned cross-sequence self-supervised learning** using DICOM patient-space correspondence.
+4. **Cross-institutional zero-shot → few-shot transfer analysis** on an independent Middle Eastern clinical cohort.
+
+Localisation, 2.5D ROIs, ordinal losses and uncertainty remain supporting components.
 
 ---
 
-## 1. First, redefine the prediction problem correctly
+## 2. Prediction Problem
 
-LumbarDISC is not fundamentally a generic Normal/Mild–Moderate–Severe image classification dataset. The published dataset contains multisequence MRI from 2,697 patients and 8,593 series collected across eight institutions in six countries. Disease is graded at individual intervertebral levels, involving the spinal canal, neural foramina and subarticular recesses. ([arXiv][1])
+LumbarDISC is a structured multi-target grading problem, not a generic image-level Normal / Moderate / Severe task.
 
-The system predicts **25 anatomical-condition targets per examination**:
+At full benchmark scope the model predicts:
 
-| Level | Targets                                                |
-| ----- | ------------------------------------------------------ |
-| L1–L2 | Canal + left/right foraminal + left/right subarticular |
-| L2–L3 | Same 5                                                 |
-| L3–L4 | Same 5                                                 |
-| L4–L5 | Same 5                                                 |
-| L5–S1 | Same 5                                                 |
-
-Each target then receives:
-
-**Normal/Mild → Moderate → Severe**
-
-This gives a structured output:
-
-```
-5 levels x 5 conditions  =  25 severity predictions
+```text
+5 lumbar levels × 5 anatomical-condition targets = 25 targets
 ```
 
-This is already scientifically much more meaningful than assigning one generic severity label to an MRI slice.
+Per level:
+
+- spinal canal stenosis;
+- left neural foraminal narrowing;
+- right neural foraminal narrowing;
+- left subarticular stenosis;
+- right subarticular stenosis.
+
+Each target receives the ordered grade:
+
+```text
+Normal/Mild < Moderate < Severe
+```
+
+The local Rizgary external cohort does **not** provide all 25 targets. External transfer is restricted to the defensible overlap—primarily five central-canal targets—unless fresh radiologist annotation expands the reference standard.
 
 ---
 
-# 2. Proposed architecture
+## 3. System Overview
+
+```text
+DICOM MRI volumes
+    ↓
+Patient-space geometry reconstruction
+    ↓
+Anatomical localisation / disease-specific ROI generation
+    ↓
+Sequence-specific encoders
+    ↓
+Anatomically aligned cross-sequence self-supervised representation
+    ↓
+Disease-conditioned sequence router with modality dropout
+    ↓
+Heterogeneous disease–anatomy graph transformer
+    ↓
+Ordinal / cost-sensitive target heads
+    ↓
+Calibration + uncertainty / selective prediction
+```
+
+The novelty lives in the **representation / routing / graph reasoning**, not in choosing a newer backbone.
+
+---
+
+## 4. Preserve DICOM Geometry
+
+Do not reduce DICOM to PNG as the primary scientific representation.
+
+Use patient-space metadata such as:
+
+- `ImagePositionPatient`;
+- `ImageOrientationPatient`;
+- `PixelSpacing`;
+- `SliceThickness` / spacing information;
+- series orientation and instance ordering.
+
+The system must be able to determine that a sagittal L4–L5 region corresponds anatomically to specific axial slices.
+
+This geometry supports both ROI extraction and the anatomical self-supervision objective.
+
+---
+
+## 5. Anatomical Localisation — Enabling Technology, Not Novelty
+
+Use an established strong anatomical method rather than inventing another U-Net unless the localisation task itself produces a substantial new finding.
+
+Possible implementation:
+
+- 3D / 2.5D nnU-Net / MONAI model;
+- heatmap landmark regression;
+- SPIDER-pretrained vertebra / disc / canal parser;
+- other state-of-the-art model selected at implementation time.
+
+Outputs:
+
+```text
+L1–L2, L2–L3, L3–L4, L4–L5, L5–S1 centres
++ relevant canal / disc / foraminal geometry
+```
+
+Evaluation:
+
+- localisation error in millimetres;
+- PCK / landmark accuracy;
+- Dice / surface metrics where masks are available.
+
+---
+
+## 6. Disease-Specific 2.5D ROIs
+
+Different targets should not receive identical evidence by default.
+
+Examples:
+
+- **canal stenosis:** sagittal T2/STIR context + corresponding axial T2 stack;
+- **foraminal narrowing:** sagittal T1 / sagittal T2 with side-aware ROI;
+- **subarticular stenosis:** axial T2 dominant evidence plus sagittal context.
+
+Use a small stack around the target rather than a single arbitrary slice:
+
+```text
+[I(-2), I(-1), I(0), I(+1), I(+2)]
+```
+
+2.5D itself is not novel; it is a memory-efficient representation that supports the core methods.
+
+---
+
+# 7. Core Contribution I — Anatomically Aligned Cross-Sequence Self-Supervised Learning
+
+The self-supervised objective uses anatomical correspondence rather than only generic image augmentation.
+
+For patient `p`, level `l`, sequences `m1` and `m2`:
+
+```text
+z(p,l,m1)  ↔  z(p,l,m2)
+```
+
+should represent the same underlying anatomical level even when visual appearance differs.
+
+A contrastive objective may use:
+
+```text
+L_AC = -log exp(sim(z_i,z_i+)/τ) / Σ_j exp(sim(z_i,z_j)/τ)
+```
+
+### Pairing hierarchy
+
+- same patient + same level + different sequence → strong positive;
+- same patient + adjacent level → optional soft relation, tested rather than assumed;
+- different patient + same level → optional semantic relation in a separate objective;
+- unrelated patient / target → negative or non-positive pair.
+
+### Required baselines
+
+Compare against:
+
+- ImageNet / generic pretrained encoder;
+- generic medical volumetric pretraining;
+- ordinary augmentation-based contrastive learning;
+- supervised training from scratch.
+
+### Primary question
+
+Does anatomical cross-sequence pretraining improve:
+
+- macro F1 / kappa;
+- label efficiency at 10%, 25%, 50%, 100% labelled data;
+- cross-institutional robustness?
+
+---
+
+# 8. Core Contribution II — Disease-Conditioned Adaptive Sequence Routing
+
+The model should not assume that every disease requires every MRI sequence equally.
+
+For condition `c`, level `l`, patient `x`, available modality `m`:
+
+```text
+F(c,l,x) = Σ_m g(c,l,m,x) · F_m(l,x)
+```
+
+with:
+
+```text
+Σ_m g(c,l,m,x) = 1   over available modalities
+```
+
+The gate `g` may be implemented with:
+
+- a lightweight gating MLP;
+- mixture-of-experts routing;
+- target-conditioned attention;
+- another transparent learned routing mechanism.
+
+### Missing-modality training
+
+Randomly remove sequences during training:
+
+- no sagittal T1;
+- no axial T2;
+- no sagittal T2;
+- two-sequence combinations;
+- single-sequence edge cases.
+
+The model must explicitly mask unavailable modalities rather than encode missing data as arbitrary zeros without training for that condition.
+
+### Required comparisons
+
+1. fixed concatenation / average fusion;
+2. ordinary cross-attention;
+3. disease-conditioned routing;
+4. disease-conditioned routing + modality dropout.
+
+### Interpretability claim
+
+Routing weights are **not proof of causal importance**. They are learned model allocations. Their clinical plausibility should be compared with known sequence utility and validated by controlled ablation.
+
+---
+
+# 9. Core Contribution III — Heterogeneous Disease–Anatomy Graph
+
+Do not represent the lumbar spine as only five ordered level tokens.
+
+Create a target-level graph:
+
+```text
+v(L4-L5, Canal)
+v(L4-L5, LeftForamen)
+v(L4-L5, RightForamen)
+v(L4-L5, LeftSubarticular)
+v(L4-L5, RightSubarticular)
+...
+```
+
+At full benchmark scope:
+
+```text
+|V| = 25
+```
+
+### Typed edge families
+
+**A. Adjacent-level edges**
+
+```text
+L3–L4 ↔ L4–L5 ↔ L5–S1
+```
+
+for the same or clinically related targets.
+
+**B. Same-level cross-condition edges**
+
+```text
+Canal ↔ Foraminal ↔ Subarticular
+```
+
+**C. Bilateral edges**
+
+```text
+LeftForamen ↔ RightForamen
+LeftSubarticular ↔ RightSubarticular
+```
+
+The exact topology must be clinically justified and ablated.
+
+### Relation-aware message passing
 
 Conceptually:
 
-**DICOM MRI volumes**
-↓
-**Anatomical localization**
-↓
-**Condition-specific 2.5D ROIs**
-↓
-**Sequence-specific feature encoders**
-↓
-**Adaptive cross-view fusion**
-↓
-**Anatomical Graph Transformer**
-↓
-**Ordinal + uncertainty-aware classification**
-↓
-**25 disease/level severity predictions**
+```text
+h_i' = Σ_{j∈N(i)} α(i,j,r) · W_r h_j
+```
 
-The important novelty is in the middle, not just the choice of backbone.
+where `r` denotes relation type.
+
+### Required graph baselines
+
+- independent target heads;
+- ordered five-level Transformer;
+- homogeneous GAT / GraphSAGE;
+- heterogeneous relation-aware graph;
+- shuffled / random edge control.
+
+The random-edge control is important: if a graph with arbitrary edges performs equally well, the anatomical topology has not been shown to matter.
 
 ---
 
-# 3. Stage A — preserve the original 3D DICOM geometry
+# 10. Supporting Method — Ordinal and Cost-Sensitive Grading
 
-DICOM must **not** be reduced to ordinary PNG as the primary representation.
+Severity is ordered:
 
-Use:
+```text
+Normal/Mild < Moderate < Severe
+```
 
-`ImagePositionPatient`
-`ImageOrientationPatient`
-`PixelSpacing`
-`SliceThickness`
-series orientation and spatial coordinates
+Use ordinary cross-entropy as a mandatory baseline. Test ordinal objectives such as cumulative-link / CORAL / CORN rather than assuming they will be superior.
 
-to reconstruct patient-space geometry.
+A clinically motivated cost term may penalise:
 
-This allows the system to know that:
+```text
+Severe → Normal
+```
 
-> this sagittal location at L4–L5 corresponds spatially to these axial slices.
+more heavily than:
 
-That is important because the official dataset itself uses anatomical localizers across L1–L2 through L5–S1, and the sagittal and axial views provide complementary localization information. ([RSNA Publications Online][2])
+```text
+Severe → Moderate
+```
 
-The MRI may still be converted internally to normalized tensors, but **the 3D anatomical coordinate system should never be discarded**.
+but the cost matrix must be clinically justified and sensitivity-tested.
+
+This component is **supporting methodology**, because ordinal lumbar grading is already active in the literature.
 
 ---
 
-# 4. Stage B — automatic anatomical localisation
+# 11. Supporting Method — Calibration and Uncertainty
 
-The first learned model should **not classify disease**.
+Model output should include probability reliability, not only a class.
 
-It should identify:
+Evaluate:
 
-L1–L2
-L2–L3
-L3–L4
-L4–L5
-L5–S1
+- temperature scaling;
+- deep ensembles / MC dropout / other feasible uncertainty methods;
+- Expected Calibration Error;
+- Brier score;
+- selective prediction curves.
 
-and relevant structures around each level.
+Example decision rule:
 
-A heat-map regression network is appropriate here.
-
-For example:
-
-**3D/2.5D U-Net or a modern medical segmentation encoder → five disc-level heatmaps**
-
-Instead of outputting only segmentation masks, it can output a probability distribution for the center of each disc level.
-
-Then convert these locations into DICOM patient coordinates.
-
-This gives:
-
-```
-p_l(x, y, z)     heat-map probability for disc level l
+```text
+if uncertainty(x) > δ:
+    abstain / refer for human review
 ```
 
-for level (l).
-
-A modern segmentation model could be used for this stage, but the PhD contribution does not need to be inventing yet another U-Net. Current research already provides strong lumbar vertebral/disc segmentation architectures. ([arXiv][3])
+Do not imply that uncertainty calibration alone proves clinical safety.
 
 ---
 
-# 5. Stage C — condition-specific ROI generation
+# 12. Training Objective
 
-A key design decision follows.
+A possible composite objective is:
 
-Each disease classifier must not receive the same image.
+```text
+L_total =
+    L_grade
+  + λ1 L_anatomical_SSL
+  + λ2 L_graph
+  + λ3 L_cost
+  + λ4 L_consistency
+```
 
-Different conditions should receive anatomically appropriate evidence.
+where:
 
-For **spinal canal stenosis**, for example:
+- `L_grade`: mandatory supervised classification / ordinal objective;
+- `L_anatomical_SSL`: pretraining or joint anatomical alignment objective;
+- `L_graph`: graph regularisation / supervised graph contribution where required;
+- `L_cost`: optional clinically cost-sensitive term;
+- `L_consistency`: optional missing-modality / prediction consistency term.
 
-Sagittal T2/STIR
-
-* corresponding axial T2 stack
-
-For **neural foraminal narrowing**:
-
-Sagittal T1
-
-* Sagittal T2
-* appropriate ipsilateral region
-
-For **subarticular stenosis**:
-
-Axial T2
-
-* Sagittal contextual information
-
-The published dataset itself distinguishes spinal-canal, foraminal and subarticular localizers and different MRI views. ([RSNA Publications Online][2])
-
-Therefore the model becomes **disease-aware before classification even begins**.
-
-This is a substantive methodological improvement.
+Every λ term must be ablated. A loss term that adds no measurable value should be removed or reported as a negative result.
 
 ---
 
-# 6. Use 2.5D rather than one 2D slice
+# 13. Experimental Ladder
 
-Instead of a single slice `I(L4-L5)`, the model receives a stack:
+| Experiment | Model |
+|---|---|
+| **E0** | Independent ROI classifier |
+| **E1** | + DICOM-aligned multi-sequence ROIs |
+| **E2** | + disease-conditioned sequence routing |
+| **E3** | + missing-modality / modality-dropout training |
+| **E4** | + anatomical cross-sequence SSL |
+| **E5** | + homogeneous graph baseline |
+| **E6** | + heterogeneous typed graph |
+| **E7** | + ordinal / cost-sensitive / calibration support |
+| **E8** | complete system + external transfer |
 
-```
-[ I(-2), I(-1), I(0), I(+1), I(+2) ]
-```
+The key comparisons are not only "E8 vs E0". They must isolate:
 
-around the target location.
-
-That gives anatomical context without the memory expense of training a huge full-volume 3D network.
-
-This is already a strong direction in lumbar MRI work. Recent M-SCAN research, for example, uses localization, sagittal/axial information and multi-view processing rather than treating arbitrary individual slices independently. ([arXiv][4])
-
-So **2.5D itself is not sufficiently novel for the PhD**.
-
-Further contribution is required.
-
----
-
-# 7. Novel Component I — Cross-Sequence Anatomical Contrastive Learning
-
-This is one of the clearest opportunities for an original contribution.
-
-Before supervised disease training, teach the network:
-
-> "These different MRI views show the same anatomical level."
-
-For example:
-
-Sagittal T1 L4–L5
-Sagittal T2 L4–L5
-Axial T2 L4–L5
-
-should have related latent representations even though their visual appearance is very different.
-
-Define:
-
-```
-z_T1(L4-L5),   z_T2sag(L4-L5),   z_T2ax(L4-L5)
-```
-
-and introduce a contrastive loss that pulls anatomically corresponding representations together:
-
-```
-L_AC  =  -log [ exp( sim(z_i, z_i+) / tau )
-                / sum over j of exp( sim(z_i, z_j) / tau ) ]
-
-  z_i    anchor embedding
-  z_i+   positive: same patient, same level, different sequence
-  tau    temperature
-```
-
-The objective is made **anatomically hierarchical**.
-
-Same patient + same level + different sequence
-→ strongest positive.
-
-Same patient + adjacent level
-→ weak/soft positive.
-
-Different patient + corresponding anatomical level
-→ semantic positive depending on training formulation.
-
-Different condition/location
-→ negative.
-
-This becomes a form of:
-
-### Anatomical Contrastive Pretraining
-
-rather than ordinary image contrastive learning.
-
-Recent medical imaging research strongly supports self-supervised representation learning, including structure-aware approaches, so the concept is scientifically well grounded. ([CVPR Open Access][5])
-
-The **lumbar-specific cross-sequence anatomical correspondence objective** is where the novelty lies.
+- anatomical SSL effect;
+- adaptive routing effect;
+- missing-modality effect;
+- heterogeneous topology effect;
+- external generalisation effect.
 
 ---
 
-# 8. Novel Component II — the spine becomes a graph
+# 14. Closest-Work Differentiation
 
-This is the part I find most interesting for a PhD.
+| Feature | M-SCAN | Chai et al. 2026 | Proposed AMOG-Net v2 |
+|---|---|---|---|
+| Level localisation / ROI | Yes | Yes | Yes — supporting |
+| Multi-sequence / multi-view | Yes | Yes | Yes |
+| Inter-level context | Limited / task-specific | **Yes, Transformer** | Yes, but not the core novelty |
+| Ordinal grading | Task dependent | **Yes** | Supporting baseline / extension |
+| Quantitative biomarkers | Not core | **Yes** | Optional supporting features |
+| Graph structure | No explicit 25-target heterogeneous graph | No typed 25-target disease graph | **Core contribution** |
+| Disease-conditioned sequence routing | No | No explicit target-conditioned missing-modality router | **Core contribution** |
+| Arbitrary missing-sequence robustness | Not core | Not core | **Core contribution** |
+| Anatomical cross-sequence SSL | No | No | **Core contribution** |
+| Independent Middle Eastern external test | No | No | **Core translational validation** |
+| Few-shot annotation-efficiency transfer | No | No | **Core translational validation** |
 
-Do not classify L4–L5 in isolation.
-
-The lumbar spine has a natural topology:
-
-[
-L1!-!L2
-\leftrightarrow
-L2!-!L3
-\leftrightarrow
-L3!-!L4
-\leftrightarrow
-L4!-!L5
-\leftrightarrow
-L5!-!S1
-]
-
-Moreover, at each level there are several related conditions.
-
-So construct **25 graph nodes**.
-
-For example:
-
-```
-v_{L4-L5,Canal}
-```
-
-```
-v_{L4-L5,LeftForamen}
-```
-
-```
-v_{L4-L5,RightForamen}
-```
-
-```
-v_{L4-L5,LeftSubarticular}
-```
-
-```
-v_{L4-L5,RightSubarticular}
-```
-
-Each node contains the MRI features extracted for that anatomical target.
+This table should be updated again immediately before proposal submission and before each paper submission.
 
 ---
 
-## And introduce three different edge types
+# 15. External Validation and Domain Adaptation
 
-**Longitudinal anatomical edges**
+### Zero-shot experiment
 
-```
-L3-L4 leftrightarrow L4-L5
-```
+Train on public benchmark data only, then freeze the model and evaluate on Rizgary without local tuning.
 
-These allow neighbouring levels to exchange information.
+Primary local overlap:
 
-**Disease-interaction edges**
-
-At one level:
-
-```
-Canal
-leftrightarrow
-Foraminal
-leftrightarrow
-Subarticular
+```text
+central canal stenosis × 5 levels
 ```
 
-**Bilateral edges**
+### Few-shot experiment
 
-```
-Left\ Foramen leftrightarrow Right\ Foramen
-```
+Adapt with:
 
-and similarly for subarticular narrowing.
-
-Now use a **relation-aware Graph Transformer**.
-
-Something like:
-
-```
-h_i'  =  sum over j in N(i) of  alpha(i,j,r) * W_r * h_j
-
-  r          edge type: adjacent-level | same-level | left-right
-  alpha      relation-aware attention weight
-  W_r        per-relation projection
+```text
+N = 10, 25, 50, 100 local labelled cases
 ```
 
-where (r) specifies whether the relationship is:
+Compare:
 
-adjacent-level, same-level pathology, or left-right anatomical symmetry.
+- no adaptation;
+- intensity harmonisation only;
+- adapter / PEFT;
+- full fine-tuning where feasible.
 
-This is considerably more sophisticated than ordinary attention.
+Plot:
 
-And crucially, it incorporates **medical anatomical prior knowledge into the architecture**.
+```text
+performance vs local annotation count
+```
 
-My targeted literature search found localization/multi-view lumbar classifiers and disc-centric models, but I did **not** find a directly matching 25-target anatomical graph formulation for LumbarDISC. That makes this particularly interesting, although a proper systematic literature review would still be required before claiming worldwide novelty. ([arXiv][6])
+No predetermined recovery percentage defines success.
 
 ---
 
-# 9. Novel Component III — severity should not be ordinary multiclass classification
+# 16. Evaluation Metrics
 
-This is another major correction.
+### Grading
 
-Normal/Mild, Moderate and Severe are **ordered**.
+- macro F1;
+- balanced accuracy;
+- quadratic weighted kappa;
+- per-class recall / specificity;
+- Severe → Normal error rate;
+- AUROC;
+- patient-level bootstrap CIs.
 
-Ordinary cross entropy acts as though:
+### Calibration
 
-Normal → Severe
+- ECE;
+- Brier score;
+- reliability curves;
+- risk–coverage / selective prediction.
 
-is no worse than:
+### Robustness
 
-Moderate → Severe.
+- missing-modality configurations;
+- site-held-out public validation where possible;
+- local zero-shot external validation;
+- few-shot adaptation curves;
+- subgroup analysis by acquisition characteristics where sample size supports it.
 
-Scientifically, that makes little sense.
+### Efficiency
 
-Instead of one three-class softmax:
-
-[
-P(N),P(M),P(S)
-]
-
-use ordinal thresholds:
-
-[
-P(Y > Normal)
-]
-
-and
-
-[
-P(Y > Moderate)
-]
-
-Then:
-
-Normal/Mild:
-
-[
-P(Y>Normal)≈0
-]
-
-Moderate:
-
-```
-P(Y>Normal)≈1,quad
-P(Y>Moderate)≈0
-```
-
-Severe:
-
-```
-P(Y>Normal)≈1,quad
-P(Y>Moderate)≈1
-```
-
-Ordinal deep-learning methods are specifically designed for disease severity problems, and recent medical-imaging work shows that treating severity as ordered rather than categorical can materially change model behaviour. ([arXiv][7])
+- inference time;
+- parameters;
+- VRAM;
+- training time / compute budget.
 
 ---
 
-# 10. Asymmetric ordinal loss
+# 17. Disciplined Final Novelty Statement
 
-Make:
+A defensible proposal claim is:
 
-**Severe → Normal**
+> **This PhD investigates whether lumbar degenerative grading can be improved by representing disease targets as a typed anatomical graph, learning disease- and patient-specific MRI sequence routing that remains robust to missing modalities, and pretraining cross-sequence representations using anatomical correspondence, with independent cross-institutional zero-shot and few-shot validation.**
 
-much more expensive than:
-
-**Severe → Moderate**.
-
-For example define a cost matrix:
-
-| True ↓ / Pred → | Normal | Moderate | Severe |
-| --------------- | -----: | -------: | -----: |
-| Normal          |      0 |        1 |      2 |
-| Moderate        |      1 |        0 |      1 |
-| Severe          |  **4** |        1 |      0 |
-
-Then:
-
-```
-L =
-L_{ordinal}
-+
-lambda L_{cost}
-```
-
-This directly attacks the major weakness we found in the MSc thesis: poor Moderate and Severe performance hidden behind high overall accuracy.
+It deliberately does **not** claim that anatomy-guided ROIs, multi-sequence MRI, inter-level Transformers or ordinal grading are new by themselves.
 
 ---
 
-# 11. Novel Component IV — adaptive missing-sequence fusion
-
-The MSc design is deliberately not repeated:
-
-> train one all-sequence model
-> versus
-> train another T2-only model.
-
-Instead train **one system** capable of using whatever sequences exist.
-
-During training randomly remove modalities:
-
-Sagittal T1 missing
-Axial T2 missing
-Sagittal T2 missing
-
-This is modality dropout.
-
-The network learns:
-
-```
-F  =  sum over m of  g_m * F_m        subject to   sum over m of g_m = 1
-```
-
-and (g_m) is a learned confidence for each available sequence.
-
-So a patient with all three sequences may get:
-
-[
-0.20T1+
-0.35T2Sag+
-0.45T2Ax
-]
-
-while a study missing Axial T2 might automatically reweight:
-
-[
-0.35T1+
-0.65T2Sag.
-]
-
-Now the MSc question—
-
-> "Can T2 alone work?"
-
-—becomes something considerably more PhD-like:
-
-> **Can the model dynamically determine how much diagnostic information each MRI sequence contributes for each disease, level and patient?**
-
-That is a much richer scientific question.
-
----
-
-# 12. Add uncertainty, not just probability
-
-The output should not merely say:
-
-**Severe: 0.71**
-
-It should be able to say:
-
-**Severe: 0.71 — high uncertainty**
-
-versus
-
-**Severe: 0.71 — low uncertainty**.
-
-For clinical AI, this matters.
-
-The system can then implement selective prediction:
-
-```
-if U(x) > delta:   refer to radiologist
-```
-
-rather than forcing every examination into a confident prediction.
-
-This creates another interesting research question:
-
-> Can anatomical graph consistency reduce diagnostic uncertainty?
-
-For instance, a Severe prediction at L4–L5 that is consistent with neighbouring pathology might have lower uncertainty than an isolated prediction with contradictory surrounding evidence.
-
----
-
-# 13. The complete proposed model
-
-The full model is therefore defined as:
-
-```
-MRI
-→
-Localization
-→
-2.5D\ ROIs
-→
-MultiView\ Encoder
-```
-
-```
-→
-Anatomical\ Contrastive\ Representation
-```
-
-```
-→
-Adaptive\ CrossSequence\ Attention
-```
-
-```
-→
-Anatomical\ Graph\ Transformer
-```
-
-```
-→
-Ordinal\ Severity\ Heads
-```
-
-```
-→
-Uncertainty\ Calibration
-```
-
-producing:
-
-```
-25×
-{severity,\ probability,\ uncertainty}.
-```
-
-That is a substantially different research methodology.
-
----
-
-# 14. Why this is stronger than M-SCAN
-
-This distinction is important because a 2025 method, M-SCAN, already localizes spinal levels, selects corresponding axial slices, extracts ROIs and uses multi-view cross-attention. It reports an AUROC of 0.971 for **spinal canal stenosis**. ([arXiv][4])
-
-Therefore:
-
-**Localization + multi-view + attention alone is no longer enough novelty.**
-
-Your PhD system would extend beyond that in several important ways:
-
-| M-SCAN direction                   | Proposed PhD                     |
-| ---------------------------------- | -------------------------------- |
-| Mainly spinal canal stenosis       | All disease targets              |
-| 5 spinal levels                    | 25 disease-level nodes           |
-| Multi-view attention               | Adaptive disease-specific fusion |
-| Levels largely outputs             | Levels form anatomical graph     |
-| Multiclass grading                 | Ordinal severity modeling        |
-| Standard supervised representation | Anatomy-aware cross-sequence SSL |
-| Fixed available modalities         | Missing-sequence robustness      |
-| Point prediction                   | Prediction + uncertainty         |
-
-That is a meaningful methodological distinction. ([arXiv][4])
-
----
-
-# 15. Experimental design needs to be PhD quality too
-
-The architecture alone does not make it PhD research.
-
-The evidence is structured around a progressive ablation:
-
-| Experiment | Model                                |
-| ---------- | ------------------------------------ |
-| E0         | Whole-image CNN baseline             |
-| E1         | ROI-localized CNN                    |
-| E2         | 2.5D ROI model                       |
-| E3         | + Multi-view attention               |
-| E4         | + Ordinal loss                       |
-| E5         | + Anatomical contrastive pretraining |
-| E6         | + Graph Transformer                  |
-| E7         | + Missing-modality training          |
-| **E8**     | **Complete AMOG-Net**                |
-
-This lets you answer:
-
-**What does each proposed component actually contribute?**
-
-Not simply:
-
-> My final model is better.
-
-That distinction matters enormously at PhD level.
-
----
-
-# 16. Evaluation metrics should change
-
-Accuracy should be almost secondary.
-
-The primary grading metrics should include:
-
-**Macro F1**, because of imbalance.
-
-**Per-class sensitivity/recall**, especially Severe.
-
-**Quadratic Weighted Kappa**, because grading is ordinal.
-
-**Balanced accuracy**.
-
-**Macro AUROC / one-vs-rest AUROC**.
-
-**Severe→Normal error rate**, because this is clinically particularly problematic.
-
-**Expected Calibration Error and Brier score**, for probability reliability.
-
-For localization:
-
-**mean localization error in mm** and possibly PCK.
-
-For robustness:
-
-performance by sequence availability and external dataset.
-
-For efficiency:
-
-parameters, FLOPs, VRAM, inference time and training cost.
-
----
-
-# 17. The strongest validation would be an external cohort
-
-This is what would elevate the work from an algorithm thesis into a strong doctoral contribution.
-
-LumbarDISC itself is already multinational and multicenter. ([arXiv][1])
-
-But the best final experiment would still be:
-
-**Train without any local hospital data → test on a completely independent clinical cohort.**
-
-Then optionally:
-
-zero-shot external evaluation
-→ limited fine-tuning
-→ full fine-tuning.
-
-That gives you a genuine study of **domain generalization**, not simply another random split of a public dataset.
-
-It would also expose scanner/vendor/protocol shift.
-
----
-
-# 18. Claimed novelty
-
-The claimed novelty is kept deliberately disciplined:
-
-> **A unified anatomy-aware framework for multilevel, multi-condition lumbar degenerative disease grading that combines disease-specific multi-view MRI representations with relational modeling of lumbar anatomy and ordinal severity learning.**
-
-The potentially novel research contributions would then be one coherent set:
-
-1. **An anatomical graph representation of multilevel lumbar degenerative disease**, jointly modeling disease, level, laterality and neighbouring anatomy.
-2. **Cross-sequence anatomically aligned self-supervised learning**, using DICOM spatial correspondence rather than generic image similarity.
-3. **Adaptive disease-specific multi-view fusion that remains functional when MRI sequences are missing.**
-4. **Clinically cost-aware ordinal grading with uncertainty estimation**, rather than flat three-class classification.
-
-That is starting to look like a **PhD research programme**, not simply a bigger MSc experiment.
-
----
-
-## The central contribution
-
-The **graph, ordinal and multi-view anatomical model** is the central PhD contribution. A comparison of backbones -- Mamba against Transformer against CNN -- is deliberately not the thesis: those architectures will be superseded, whereas the research idea is durable:
-
-> **The spine is not a collection of independent pictures. It is a structured anatomical system, and the diseases, vertebral levels, left/right anatomy and MRI sequences are related. Can encoding those relationships explicitly produce more accurate, robust and clinically meaningful AI grading?**
-
-That is a much more durable scientific question.
-
-And it directly fixes the biggest conceptual weakness we discovered in the current MSc thesis: the loss of **condition, level and anatomical correspondence** when classification is reduced to generic image severity.
-
-If you want to develop this further, the next useful step is for us to turn **AMOG-Net into a complete PhD proposal methodology**—research problem, hypotheses, mathematical architecture, objectives, datasets, experiments, ablation studies and 3–4 publishable papers that could come out of the PhD.
-
-[1]: https://arxiv.org/abs/2506.09162?utm_source=chatgpt.com "The RSNA Lumbar Degenerative Imaging Spine Classification (LumbarDISC) Dataset"
-[2]: https://pubs.rsna.org/doi/abs/10.1148/ryai.250480 "The RSNA Lumbar Degenerative Imaging Spine Classification (LumbarDISC) Dataset | Radiology: Artificial Intelligence"
-[3]: https://arxiv.org/pdf/2401.09627?utm_source=chatgpt.com "SymTC: A Symbiotic Transformer-CNN Net for Instance ..."
-[4]: https://arxiv.org/html/2503.01634v1 "M-SCAN: A Multistage Framework for Lumbar Spinal Canal Stenosis Grading Using Multi-View Cross Attention"
-[5]: https://openaccess.thecvf.com/content/ICCV2025/papers/Pan_Structure-aware_Semantic_Discrepancy_and_Consistency_for_3D_Medical_Image_Self-supervised_ICCV_2025_paper.pdf?utm_source=chatgpt.com "Structure-aware Semantic Discrepancy and Consistency for ..."
-[6]: https://arxiv.org/abs/2503.01634?utm_source=chatgpt.com "M-SCAN: A Multistage Framework for Lumbar Spinal Canal Stenosis Grading Using Multi-View Cross Attention"
-[7]: https://arxiv.org/abs/2402.05685 "An Ordinal Regression Framework for a Deep Learning Based Severity Assessment for Chest Radiographs"
+## References Most Important to the Novelty Boundary
+
+1. Chai Z, Liu C, Qin R, Zhao D, Shi A. (2026). *Anatomy-guided context-aware deep learning for lumbar degenerative disease grading and burden-aware risk assessment on MRI*. Frontiers in Medicine, 13:1848548. https://doi.org/10.3389/fmed.2026.1848548
+2. M-SCAN: A Multistage Framework for Lumbar Spinal Canal Stenosis Grading Using Multi-View Cross Attention. 2025. https://arxiv.org/abs/2503.01634
+3. Automated Three-Dimensional Imaging and Pfirrmann Classification of Intervertebral Disc Using a Graphical Neural Network in Sagittal MRI of the Lumbar Spine. https://pubmed.ncbi.nlm.nih.gov/39266913/
+4. LumbarDISC dataset publication / RSNA benchmark documentation. https://pubs.rsna.org/doi/10.1148/ryai.250480
