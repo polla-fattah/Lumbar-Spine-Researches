@@ -393,6 +393,97 @@ check("BH rejects nothing when no p-value is small",
                                                     0.05)[0]))))
 
 # --------------------------------------------------------------------------- #
+print("\n11. Ladder integrity -- every rung must implement what it claims")
+print("-" * 70)
+
+import inspect  # noqa: E402
+import amog_train  # noqa: E402
+from amog_train import AMOGNet, N_MODALITIES  # noqa: E402
+
+train_src = inspect.getsource(amog_train)
+
+
+def used_outside_import(src, name):
+    """True if `name` appears somewhere other than an import statement."""
+    return any(name in ln and not ln.strip().startswith(("from ", "import ", "#"))
+               and not ln.strip().endswith(",")
+               for ln in src.splitlines())
+
+
+# E4 is Core Contribution I. run_ladder.py declares the comparison
+# ("E4", "E3", "anatomical cross-sequence SSL (CC I)"), so E4 must differ from
+# E3 by more than an unused parameter block or that comparison measures nothing.
+sig3 = {n: tuple(p.shape) for n, p in AMOGNet("E3", "resnet18", 64).named_parameters()
+        if not n.startswith("projector")}
+sig4 = {n: tuple(p.shape) for n, p in AMOGNet("E4", "resnet18", 64).named_parameters()
+        if not n.startswith("projector")}
+check("E4 is not structurally identical to E3",
+      sig3 != sig4,
+      "E4 and E3 build the same modules. The only difference is an ACSSLProjector "
+      "that no forward path uses, so run_ladder's 'E4 vs E3 = CC I' comparison "
+      "would report seed noise as the effect of anatomical SSL.")
+
+check("the ACSSL contrastive objective is actually called",
+      used_outside_import(train_src, "info_nce("),
+      "info_nce is imported by amog_train.py and never invoked; there is no "
+      "self-supervised pretraining loop anywhere in the pipeline.")
+
+torch.manual_seed(0)
+m4 = AMOGNet("E4", "resnet18", 64)
+fused, _ = m4.forward_target(torch.randn(2, N_MODALITIES, 3, 64, 64),
+                             torch.ones(2, N_MODALITIES),
+                             torch.zeros(2, dtype=torch.long),
+                             torch.zeros(2, dtype=torch.long))
+m4.head(fused).sum().backward()
+proj_grads = [p.grad for n, p in m4.named_parameters() if n.startswith("projector")]
+check("the ACSSL projector receives gradient",
+      bool(proj_grads) and all(gr is not None for gr in proj_grads),
+      f"{sum(1 for gr in proj_grads if gr is None)} of {len(proj_grads)} projector "
+      f"tensors get no gradient -- the block is dead weight that still inflates "
+      f"the reported parameter count")
+
+# E7 claims "ordinal/cost-sensitive/CALIBRATED heads" in the Chapter 3 ladder.
+check("temperature scaling is applied during training/selection",
+      used_outside_import(train_src, "TemperatureScaler("),
+      "TemperatureScaler is imported and never used. ECE is reported but never "
+      "corrected, so E7's calibration claim has no implementation.")
+
+# Chapter 3 sec:method-augmentation specifies an augmentation programme.
+aug_terms = ("flip", "gamma", "bias_field", "elastic", "augment")
+check("training augmentation exists",
+      any(used_outside_import(train_src, t) for t in aug_terms),
+      "Chapter 3 sec:method-augmentation specifies intensity scaling, gamma, "
+      "bias-field, noise, small rotation/translation and LATERALITY-AWARE flips "
+      "that swap left/right labels and graph node identity. None is implemented.")
+
+# Chapter 3 sec:method-patient-split: split lists are version-controlled and the
+# loaders consume the fixed lists.
+check("patient splits are loaded from a persisted list, not recomputed",
+      any("read_csv" in ln or "json.load" in ln
+          for ln in inspect.getsource(rsna_data.patient_split).splitlines()),
+      "Chapter 3 sec:method-patient-split: 'The split record is version-controlled "
+      "as a list of pseudonymous IDs. Data loaders consume those fixed lists rather "
+      "than performing a new random split each time the training script is "
+      "executed.' patient_split() reshuffles from a seed on every call and writes "
+      "nothing to disk.")
+
+# The split seed must not be the training seed. amog_train.py calls
+# patient_split(..., seed=args.seed), so a multi-seed campaign redraws the
+# cohort as well as the initialisation.
+big = pd.DataFrame({"study_id": np.repeat(np.arange(1974), 25)})
+te_by_seed = [rsna_data.patient_split(big, seed=s)[2] for s in (0, 1, 2)]
+shared01 = len(te_by_seed[0] & te_by_seed[1]) / len(te_by_seed[0])
+in_all = len(set.intersection(*te_by_seed)) / len(te_by_seed[0])
+ever_tested = len(set.union(*te_by_seed)) / 1974
+check("the held-out test set is the same across training seeds",
+      shared01 > 0.95,
+      f"seeds 0 and 1 share only {shared01 * 100:.1f}% of their test patients; "
+      f"only {in_all * 100:.1f}% are held out in all three; {ever_tested * 100:.1f}% "
+      f"of the cohort lands in some test set while training on others. Chapter 3 "
+      f"sec:method-stats pairs comparisons on the SAME patients, and a test set "
+      f"that moves per seed conflates seed variance with cohort resampling.")
+
+# --------------------------------------------------------------------------- #
 print("\n" + "=" * 70)
 print(f"  {len(PASS)} passed, {len(FAIL)} failed")
 print("=" * 70)
