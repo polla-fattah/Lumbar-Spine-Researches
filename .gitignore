@@ -26,3 +26,6 @@ Data_deidentified/
 
 # smoke-mode artefacts are self-tests, never results
 data/smoke/
+
+# derived ROI cache - rebuildable, 4.8 GB
+data/cache/
