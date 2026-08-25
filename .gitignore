@@ -110,3 +110,8 @@ implementation/04_rsna_targets/*.csv
 implementation/05_rsna_rois/*.npy
 implementation/05_rsna_rois/*.csv
 implementation/06_baselines/results/*.pt
+
+# ROI ablation variant caches -- large, rebuilt by extract_rsna_rois.py
+implementation/05_rsna_rois/variants/*.npy
+implementation/05_rsna_rois/variants/*.log
+implementation/05_rsna_rois/variants/**/*.pt

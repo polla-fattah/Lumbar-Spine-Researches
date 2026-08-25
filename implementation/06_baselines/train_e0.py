@@ -32,8 +32,49 @@ IMAGENET_MEAN = torch.tensor([0.485, 0.456, 0.406]).view(3, 1, 1)
 IMAGENET_STD = torch.tensor([0.229, 0.224, 0.225]).view(3, 1, 1)
 
 
+def _stats_for(n_ch):
+    """ImageNet statistics tiled to however many 2.5D slices the cache holds."""
+    if n_ch == 3:
+        return IMAGENET_MEAN, IMAGENET_STD
+    reps = (n_ch + 2) // 3
+    return (IMAGENET_MEAN.repeat(reps, 1, 1)[:n_ch],
+            IMAGENET_STD.repeat(reps, 1, 1)[:n_ch])
+
+
+def adapt_first_conv(model, n_ch):
+    """Widen the stem to n_ch inputs, preserving the pretrained filters.
+
+    The new channels are seeded with the mean of the RGB filters and the whole
+    stem is rescaled by 3/n_ch, so the expected activation magnitude entering
+    the network is unchanged. Re-initialising the stem randomly instead would
+    make an r=2 variant look worse for a reason that has nothing to do with
+    through-plane context.
+    """
+    if n_ch == 3:
+        return model
+    import torch.nn as nn
+    for name, mod in model.named_modules():
+        if isinstance(mod, nn.Conv2d) and mod.in_channels == 3:
+            w = mod.weight.data
+            new = w.mean(dim=1, keepdim=True).repeat(1, n_ch, 1, 1) * (3.0 / n_ch)
+            new[:, :3] = w * (3.0 / n_ch)
+            conv = nn.Conv2d(n_ch, mod.out_channels, mod.kernel_size,
+                             mod.stride, mod.padding, bias=mod.bias is not None)
+            conv.weight.data = new
+            if mod.bias is not None:
+                conv.bias.data = mod.bias.data.clone()
+            parent = model
+            parts = name.split(".")
+            for q in parts[:-1]:
+                parent = getattr(parent, q)
+            setattr(parent, parts[-1], conv)
+            return model
+    return model
+
+
 class ROIDataset(Dataset):
-    def __init__(self, npy_path, indices, labels, train=False):
+    def __init__(self, npy_path, indices, labels, train=False, n_ch=3):
+        self.mean, self.std = _stats_for(n_ch)
         self.npy_path = npy_path
         self.arr = None                  # opened lazily, per worker
         self.indices = np.asarray(indices)
@@ -53,7 +94,7 @@ class ROIDataset(Dataset):
                 x = torch.flip(x, dims=[2])
             if torch.rand(1).item() < 0.5:                 # mild intensity jitter
                 x = torch.clamp(x * (0.9 + 0.2 * torch.rand(1)), 0, 1)
-        x = (x - IMAGENET_MEAN) / IMAGENET_STD
+        x = (x - self.mean) / self.std
         return x, int(self.labels[i])
 
 
@@ -170,9 +211,11 @@ def main() -> int:
     gpu = torch.cuda.get_device_name(0) if device.type == "cuda" else "cpu"
     print(f"device             : {device} ({gpu})")
 
-    ds_tr = ROIDataset(args.roi_npy, idx[m_tr], labels[m_tr], train=True)
-    ds_va = ROIDataset(args.roi_npy, idx[m_va], labels[m_va])
-    ds_te = ROIDataset(args.roi_npy, idx[m_te], labels[m_te])
+    n_ch = int(np.load(args.roi_npy, mmap_mode="r").shape[1])
+    print(f"channels           : {n_ch}  (2.5D radius {(n_ch - 1) // 2})")
+    ds_tr = ROIDataset(args.roi_npy, idx[m_tr], labels[m_tr], train=True, n_ch=n_ch)
+    ds_va = ROIDataset(args.roi_npy, idx[m_va], labels[m_va], n_ch=n_ch)
+    ds_te = ROIDataset(args.roi_npy, idx[m_te], labels[m_te], n_ch=n_ch)
     dl = dict(num_workers=args.workers, pin_memory=True,
               persistent_workers=args.workers > 0)
     ld_tr = DataLoader(ds_tr, batch_size=args.batch_size, shuffle=True,
@@ -180,7 +223,8 @@ def main() -> int:
     ld_va = DataLoader(ds_va, batch_size=args.batch_size, **dl)
     ld_te = DataLoader(ds_te, batch_size=args.batch_size, **dl)
 
-    model = build_model(args.backbone).to(device).to(memory_format=torch.channels_last)
+    model = adapt_first_conv(build_model(args.backbone), n_ch)
+    model = model.to(device).to(memory_format=torch.channels_last)
     n_par = sum(p.numel() for p in model.parameters())
     print(f"backbone           : {args.backbone}  ({n_par / 1e6:.1f}M parameters)")
 

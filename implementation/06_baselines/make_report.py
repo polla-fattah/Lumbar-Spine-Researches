@@ -146,9 +146,9 @@ def main() -> int:
     L.append("```")
     L.append("")
 
-    out = os.path.join(here, "reports")
+    out = os.path.abspath(os.path.join(here, "..", "..", "thesis", "chapter4"))
     os.makedirs(out, exist_ok=True)
-    p = os.path.join(out, "e0_baseline_audit.md")
+    p = os.path.join(out, "e0_baseline.md")
     with open(p, "w", encoding="utf-8") as f:
         f.write("\n".join(L) + "\n")
     print(f"wrote {p}")

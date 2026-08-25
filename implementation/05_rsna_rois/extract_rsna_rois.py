@@ -27,6 +27,18 @@ warnings.filterwarnings("ignore", category=UserWarning)
 FOV_MM = 60.0     # physical edge length of the crop
 OUT_SIZE = 128    # pixels after resize
 
+# Chapter 3 sec:method-roi requires the crop definition to be conditioned on
+# anatomical compartment, with "greater parasagittal coverage" for foraminal
+# targets. Documented defaults, not measured optima -- build_roi_variants.py
+# exists to measure whether they earn their place.
+CONDITION_FOV_MM = {
+    "Spinal Canal Stenosis": 55.0,
+    "Left Neural Foraminal Narrowing": 80.0,
+    "Right Neural Foraminal Narrowing": 80.0,
+    "Left Subarticular Stenosis": 50.0,
+    "Right Subarticular Stenosis": 50.0,
+}
+
 
 def load_slice(path):
     """Return a float32 2-D array and (row_mm, col_mm) spacing, or (None, None)."""
@@ -44,15 +56,15 @@ def load_slice(path):
     return arr, (float(ps[0]), float(ps[1]))
 
 
-def crop_physical(arr, cx, cy, spacing):
-    """Crop FOV_MM around (cx, cy). Falls back to a pixel box if spacing is absent."""
+def crop_physical(arr, cx, cy, spacing, fov_mm=FOV_MM):
+    """Crop fov_mm around (cx, cy). fov_mm=None uses a fixed pixel box."""
     h, w = arr.shape
-    if spacing is None:
+    if spacing is None or fov_mm is None:
         half_r = half_c = OUT_SIZE // 2
     else:
         row_mm, col_mm = spacing
-        half_r = max(4, int(round(FOV_MM / 2.0 / row_mm)))
-        half_c = max(4, int(round(FOV_MM / 2.0 / col_mm)))
+        half_r = max(4, int(round(fov_mm / 2.0 / row_mm)))
+        half_c = max(4, int(round(fov_mm / 2.0 / col_mm)))
 
     r0, r1 = int(round(cy)) - half_r, int(round(cy)) + half_r
     c0, c1 = int(round(cx)) - half_c, int(round(cx)) + half_c
@@ -87,18 +99,36 @@ def main() -> int:
         os.path.dirname(__file__), "..", "04_rsna_targets", "rsna_targets.csv"))
     ap.add_argument("--out_dir", default=os.path.dirname(__file__))
     ap.add_argument("--limit", type=int, default=0, help="debug: first N targets")
+    ap.add_argument("--name", default="rsna_rois", help="output basename")
+    ap.add_argument("--radius", type=int, default=1,
+                    help="2.5D stack radius; 1 -> 3 slices, 2 -> 5 (Chapter 3 r=2)")
+    ap.add_argument("--fov_mm", type=float, default=FOV_MM,
+                    help="physical crop size in mm; 0 = fixed pixel box")
+    ap.add_argument("--per_condition", action="store_true",
+                    help="compartment-specific FOV per Chapter 3 sec:method-roi")
+    ap.add_argument("--studies", type=int, default=0,
+                    help="restrict to the first N studies (for the ROI ablation)")
     args = ap.parse_args()
 
     df = pd.read_csv(args.targets)
+    if args.studies:
+        keep = sorted(df["study_id"].unique())[:args.studies]
+        df = df[df["study_id"].isin(keep)].reset_index(drop=True)
     if args.limit:
         df = df.head(args.limit).copy()
     n = len(df)
-    print(f"targets to extract : {n:,}")
+    n_ch = 2 * args.radius + 1
+    fov = None if args.fov_mm <= 0 else args.fov_mm
+    offsets = tuple(range(-args.radius, args.radius + 1))
+    print(f"targets to extract : {n:,}  over {df.study_id.nunique():,} studies")
+    print(f"geometry           : {n_ch} slices (r={args.radius}), "
+          f"FOV {'fixed pixel box' if fov is None else str(fov) + ' mm'}"
+          f"{', per-compartment' if args.per_condition else ''}")
 
     os.makedirs(args.out_dir, exist_ok=True)
-    npy_path = os.path.join(args.out_dir, "rsna_rois.npy")
+    npy_path = os.path.join(args.out_dir, f"{args.name}.npy")
     arr_out = np.lib.format.open_memmap(
-        npy_path, mode="w+", dtype=np.uint8, shape=(n, 3, OUT_SIZE, OUT_SIZE))
+        npy_path, mode="w+", dtype=np.uint8, shape=(n, n_ch, OUT_SIZE, OUT_SIZE))
 
     ok_flags = np.zeros(n, dtype=np.uint8)
     n_no_spacing = 0
@@ -115,7 +145,20 @@ def main() -> int:
         inst = int(row.instance_number)
         chans = []
         spacing_seen = None
-        for off in (-1, 0, 1):
+        row_fov = fov
+        if fov is not None and args.per_condition:
+            row_fov = CONDITION_FOV_MM.get(row.condition, fov)
+
+        # Load the CENTRE slice first. The neighbour fallback reads
+        # slice_cache[inst], so iterating offsets in order would look for the
+        # centre before it had been cached and drop the ROI -- which silently
+        # discards exactly the series-edge annotations, and those are
+        # disproportionately axial subarticular targets.
+        if inst not in slice_cache:
+            cp = os.path.join(series_dir, f"{inst}.dcm")
+            slice_cache[inst] = load_slice(cp) if os.path.exists(cp) else (None, None)
+
+        for off in offsets:
             key = inst + off
             if key not in slice_cache:
                 p = os.path.join(series_dir, f"{key}.dcm")
@@ -128,13 +171,13 @@ def main() -> int:
                 break
             if sp is not None:
                 spacing_seen = sp
-            patch = crop_physical(a, row.cx, row.cy, sp)
+            patch = crop_physical(a, row.cx, row.cy, sp, row_fov)
             if patch is None:
                 chans = []
                 break
             chans.append(to_uint8(patch))
 
-        if len(chans) == 3:
+        if len(chans) == n_ch:
             arr_out[i] = np.stack(chans, axis=0)
             ok_flags[i] = 1
             if spacing_seen is None:
@@ -144,7 +187,7 @@ def main() -> int:
     df = df.copy()
     df["ok"] = ok_flags
     df["roi_index"] = np.arange(n)
-    idx_path = os.path.join(args.out_dir, "rsna_roi_index.csv")
+    idx_path = os.path.join(args.out_dir, f"{args.name}_index.csv")
     df.to_csv(idx_path, index=False)
 
     n_ok = int(ok_flags.sum())

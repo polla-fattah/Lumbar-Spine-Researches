@@ -243,52 +243,122 @@ def _normalise(arr: np.ndarray) -> np.ndarray:
     return np.clip((arr - lo) / (hi - lo), 0.0, 1.0).astype(np.float32)
 
 
-def _read_slice(images_root: str, study, series, instance):
+# Chapter 3 sec:method-roi: "Crops are defined in physical dimensions where
+# possible, then resampled to the network input resolution. This avoids a fixed
+# 100-pixel crop representing different anatomical widths on scanners with
+# different pixel spacing."
+#
+# and: "One rectangular crop is not assumed to be equally appropriate for every
+# target. The crop definition is conditioned on anatomical compartment... For
+# neural foraminal narrowing, the sagittal T1 stream receives greater
+# parasagittal coverage."
+#
+# These millimetre values are documented DEFAULTS chosen to bracket the relevant
+# anatomy, not measured optima. sec:method-roi says the final geometry is
+# reported after sensitivity testing, which is what build_roi_variants.py does.
+DEFAULT_FOV_MM = 60.0
+CONDITION_FOV_MM = {
+    "central_canal": 55.0,        # canal is central and compact
+    "left_foraminal": 80.0,       # "greater parasagittal coverage"
+    "right_foraminal": 80.0,
+    "left_subarticular": 50.0,    # lateral recess is a small target
+    "right_subarticular": 50.0,
+}
+
+
+def _read_slice(images_root: str, study, series, instance, want_spacing=False):
     path = os.path.join(images_root, str(study), str(series), "{}.dcm".format(instance))
     if not os.path.exists(path):
-        return None
+        return (None, None) if want_spacing else None
     try:
         import pydicom
-        return _normalise(pydicom.dcmread(path).pixel_array.astype(np.float32))
+        ds = pydicom.dcmread(path)
+        arr = _normalise(ds.pixel_array.astype(np.float32))
     except Exception:
-        return None
+        return (None, None) if want_spacing else None
+    if not want_spacing:
+        return arr
+    ps = getattr(ds, "PixelSpacing", None)
+    if ps is None or len(ps) < 2:
+        return arr, None
+    try:
+        return arr, (float(ps[0]), float(ps[1]))
+    except Exception:
+        return arr, None
 
 
-def decode_roi(images_root: str, row: dict, crop: int = CROP) -> np.ndarray | None:
-    """One 2.5D ROI: the annotated slice plus its two neighbours, cropped."""
-    centre = _read_slice(images_root, row["study_id"], row["series_id"],
-                         row["instance_number"])
+def decode_roi(images_root: str, row: dict, crop: int = CROP,
+               radius: int = 1, fov_mm: float | None = None,
+               per_condition: bool = False) -> np.ndarray | None:
+    """One 2.5D ROI: the annotated slice and its neighbours, cropped and resized.
+
+    radius        1 -> 3 slices, 2 -> 5 slices (Chapter 3's reference r=2)
+    fov_mm        physical edge length of the crop; None reproduces the old
+                  fixed-pixel box, kept only so the two can be compared
+    per_condition when True the FOV comes from CONDITION_FOV_MM, so the canal,
+                  foraminal and subarticular compartments are framed differently
+    """
+    centre, spacing = _read_slice(images_root, row["study_id"], row["series_id"],
+                                  row["instance_number"], want_spacing=True)
     if centre is None:
         return None
 
+    offsets = list(range(-radius, radius + 1))
     planes = []
-    for off in (-1, 0, 1):
+    for off in offsets:
         if off == 0:
             planes.append(centre)
             continue
         s = _read_slice(images_root, row["study_id"], row["series_id"],
                         row["instance_number"] + off)
+        # A missing or differently-shaped neighbour falls back to the centre
+        # slice rather than dropping the ROI: an edge-of-series annotation is
+        # still a valid target, it simply has less through-plane context.
         planes.append(s if (s is not None and s.shape == centre.shape) else centre)
 
     h, w = centre.shape
-    half = crop // 2
     cx, cy = int(round(float(row["x"]))), int(round(float(row["y"])))
-    x0, y0 = max(0, cx - half), max(0, cy - half)
-    x1, y1 = min(w, x0 + crop), min(h, y0 + crop)
-    x0, y0 = max(0, x1 - crop), max(0, y1 - crop)
 
-    out = np.zeros((3, crop, crop), dtype=np.float16)
-    for c, p in enumerate(planes):
-        patch = p[y0:y1, x0:x1]
-        out[c, : patch.shape[0], : patch.shape[1]] = patch.astype(np.float16)
+    if fov_mm is None or spacing is None:
+        half_r = half_c = crop // 2
+    else:
+        mm = fov_mm
+        if per_condition:
+            mm = CONDITION_FOV_MM.get(row.get("condition_key"), fov_mm)
+        row_mm, col_mm = spacing
+        half_r = max(4, int(round(mm / 2.0 / row_mm)))
+        half_c = max(4, int(round(mm / 2.0 / col_mm)))
+
+    r0, r1 = cy - half_r, cy + half_r
+    c0, c1 = cx - half_c, cx + half_c
+
+    # Pad rather than shift, so an annotation near the image border stays at the
+    # centre of its crop. Shifting the window would silently move the target
+    # off-centre exactly for the peripheral anatomy that is hardest to grade.
+    pad_t, pad_b = max(0, -r0), max(0, r1 - h)
+    pad_l, pad_rr = max(0, -c0), max(0, c1 - w)
+
+    out = np.zeros((len(offsets), crop, crop), dtype=np.float16)
+    for ci, p in enumerate(planes):
+        pp = p
+        if pad_t or pad_b or pad_l or pad_rr:
+            pp = np.pad(p, ((pad_t, pad_b), (pad_l, pad_rr)), mode="edge")
+        patch = pp[r0 + pad_t:r1 + pad_t, c0 + pad_l:c1 + pad_l]
+        if patch.size == 0:
+            return None
+        if patch.shape != (crop, crop):
+            import cv2
+            patch = cv2.resize(patch.astype(np.float32), (crop, crop),
+                               interpolation=cv2.INTER_LINEAR)
+        out[ci] = patch.astype(np.float16)
     return out
 
 
 def _worker(args):
-    images_root, chunk, crop = args
+    images_root, chunk, crop, radius, fov_mm, per_cond = args
     results = []
     for i, row in chunk:
-        roi = decode_roi(images_root, row, crop)
+        roi = decode_roi(images_root, row, crop, radius, fov_mm, per_cond)
         results.append((i, roi))
     return results
 
@@ -305,13 +375,16 @@ def cache_paths(name: str):
 
 def build_cache(rsna_dir: str, index: pd.DataFrame, name: str = "rsna_roi_v1",
                 crop: int = CROP, workers: int = 8, chunk: int = 64,
-                resume: bool = True, progress_every: int = 20) -> dict:
+                resume: bool = True, progress_every: int = 20,
+                radius: int = 1, fov_mm: float | None = None,
+                per_condition: bool = False) -> dict:
     """Decode every ROI once into a memory-mapped array."""
     arr_p, valid_p, idx_p, meta_p = cache_paths(name)
     n = len(index)
     images_root = os.path.join(rsna_dir, "train_images")
 
-    shape = (n, 3, crop, crop)
+    n_ch = 2 * radius + 1
+    shape = (n, n_ch, crop, crop)
     fresh = True
     if resume and os.path.exists(arr_p) and os.path.exists(valid_p):
         try:
@@ -337,7 +410,7 @@ def build_cache(rsna_dir: str, index: pd.DataFrame, name: str = "rsna_roi_v1",
         chunks = []
         for s in range(0, len(todo), chunk):
             part = [(i, records[i]) for i in todo[s:s + chunk]]
-            chunks.append((images_root, part, crop))
+            chunks.append((images_root, part, crop, radius, fov_mm, per_condition))
 
         done = 0
         failed = 0
