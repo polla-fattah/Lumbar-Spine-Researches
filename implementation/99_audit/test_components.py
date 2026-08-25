@@ -484,6 +484,46 @@ check("the held-out test set is the same across training seeds",
       f"that moves per seed conflates seed variance with cohort resampling.")
 
 # --------------------------------------------------------------------------- #
+print("\n12. Optimisation protocol -- Chapter 3 sec:method-optimiser")
+print("-" * 70)
+
+# "warm-up and cosine decay or a plateau scheduler used consistently across the
+# main ablation."
+sched_terms = ("lr_scheduler", "CosineAnnealing", "OneCycle", "ReduceLROnPlateau",
+               "get_last_lr", "warmup")
+check("a learning-rate schedule is used",
+      any(used_outside_import(train_src, t) for t in sched_terms),
+      "Chapter 3 sec:method-optimiser requires warm-up and cosine decay, or a "
+      "plateau scheduler, applied consistently across the main ablation. "
+      "amog_train.py constructs AdamW with a constant lr and never steps a "
+      "scheduler, so the LR is flat for the whole run.")
+
+# "Early stopping is based on a prevalence-robust validation metric such as
+# macro-F1 or weighted kappa, not raw accuracy."
+check("early stopping is implemented",
+      any(used_outside_import(train_src, t)
+          for t in ("patience", "early_stop", "no_improve")),
+      "Chapter 3 sec:method-optimiser requires early stopping on a "
+      "prevalence-robust metric, and sec:method-optimiser lists "
+      "'early-stopping patience' among the values the thesis must report. "
+      "The loop always runs the full ctx.epochs; there is no patience counter "
+      "and no termination condition.")
+
+check("the selection metric is prevalence-robust, not raw accuracy",
+      'vm["macro_f1"] > best' in train_src,
+      "best-checkpoint tracking must key on macro-F1 or weighted kappa")
+
+# The decisive one: the best checkpoint must be RESTORED before the held-out
+# test, or model selection has no effect on the reported result.
+check("the best checkpoint is restored into the model before testing",
+      "load_state_dict" in train_src,
+      "amog_train.py saves the best-macro-F1 checkpoint, re-reads it into `rl`, "
+      "asserts it round-trips, and then never calls model.load_state_dict(). "
+      "run_epoch(test_loader) is executed on the FINAL-epoch weights. Chapter 3 "
+      "sec:method-model-selection makes validation the basis of selection; as "
+      "written, selection is computed, saved, and discarded.")
+
+# --------------------------------------------------------------------------- #
 print("\n" + "=" * 70)
 print(f"  {len(PASS)} passed, {len(FAIL)} failed")
 print("=" * 70)
