@@ -23,3 +23,6 @@ $RECYCLE.BIN/
 # ---------------------------------------------------------------------------
 data/
 Data_deidentified/
+
+# smoke-mode artefacts are self-tests, never results
+data/smoke/
