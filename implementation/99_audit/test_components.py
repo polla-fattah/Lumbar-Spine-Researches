@@ -498,16 +498,22 @@ check("a learning-rate schedule is used",
       "amog_train.py constructs AdamW with a constant lr and never steps a "
       "scheduler, so the LR is flat for the whole run.")
 
-# "Early stopping is based on a prevalence-robust validation metric such as
-# macro-F1 or weighted kappa, not raw accuracy."
-check("early stopping is implemented",
-      any(used_outside_import(train_src, t)
-          for t in ("patience", "early_stop", "no_improve")),
-      "Chapter 3 sec:method-optimiser requires early stopping on a "
-      "prevalence-robust metric, and sec:method-optimiser lists "
-      "'early-stopping patience' among the values the thesis must report. "
-      "The loop always runs the full ctx.epochs; there is no patience counter "
-      "and no termination condition.")
+# Early stopping was REMOVED on 2026-08-25 by supervisor decision, so that the
+# training budget is identical across every rung and no ladder comparison is
+# partly a comparison of training length. This test pins that decision: it fails
+# if a patience counter reappears without the ladder-comparability question
+# being settled. Chapter 3 sec:method-optimiser still asks for early stopping
+# and must be amended to match.
+check("training runs a fixed budget with no early-stopping break",
+      "epochs_since_best" not in train_src and "stopped_early" not in train_src,
+      "an early-stopping counter has reappeared; if that is intended, decide how "
+      "the ladder stays budget-comparable and update Chapter 3 "
+      "sec:method-optimiser, which currently requires early stopping")
+
+check("model selection still runs (selection is not early stopping)",
+      "best_epoch = ep" in train_src and "load_state_dict" in train_src,
+      "removing early stopping must not remove best-checkpoint selection; the "
+      "held-out test must still run on the best validation epoch")
 
 check("the selection metric is prevalence-robust, not raw accuracy",
       'vm["macro_f1"] > best' in train_src,

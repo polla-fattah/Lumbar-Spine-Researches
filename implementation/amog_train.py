@@ -311,18 +311,30 @@ def main():
     ap.add_argument("--p_drop", type=float, default=0.2)
     ap.add_argument("--balance_weight", type=float, default=0.01)
     ap.add_argument("--cost_weight", type=float, default=0.0)
-    # Chapter 3 sec:method-optimiser: warm-up + cosine decay (or a plateau
-    # scheduler), and early stopping on a prevalence-robust metric. The chapter
-    # also requires the thesis to REPORT the schedule and the patience, so both
-    # are explicit flags and both are written into the run's result JSON.
+    # Chapter 3 sec:method-optimiser: warm-up + cosine decay, or a plateau
+    # scheduler. The chapter requires the thesis to REPORT the schedule, so it
+    # is an explicit flag and is written into the run's result JSON.
+    #
+    # EARLY STOPPING IS DELIBERATELY ABSENT. Every rung runs the full configured
+    # schedule so that the training budget is identical across the ladder. With
+    # early stopping the budget becomes data-dependent -- E6 might run 50 epochs
+    # while E5 stops at 20 -- and part of every ladder comparison would then be
+    # training length rather than architecture. Cosine annealing also never
+    # completes when a run is cut short, so different rungs would receive
+    # different amounts of decay. Model selection still happens: the best
+    # validation macro-F1 checkpoint is tracked and restored before the held-out
+    # test. Selection and stopping are separate mechanisms and only the latter
+    # is removed. Do not reintroduce a patience counter without also deciding
+    # how the ladder stays budget-comparable.
     ap.add_argument("--scheduler", choices=["cosine", "plateau", "none"],
                     default="cosine",
                     help="LR schedule; 'none' only for a deliberate control")
     ap.add_argument("--warmup_frac", type=float, default=0.05,
                     help="fraction of total epochs spent warming up from lr/100")
-    ap.add_argument("--patience", type=int, default=10,
-                    help="early-stopping patience in epochs on val macro-F1; "
-                         "0 disables early stopping")
+    ap.add_argument("--plateau_patience", type=int, default=5,
+                    help="epochs without val macro-F1 improvement before "
+                         "ReduceLROnPlateau lowers the LR. This decays the "
+                         "learning rate; it never stops training.")
     ap.add_argument("--shuffled", action="store_true", help="E6 control")
     ap.add_argument("--ungated", action="store_true", help="E6 ablation")
     ap.add_argument("--max_targets", type=int, default=None)
@@ -405,14 +417,14 @@ def main():
             scheduler = cosine
     elif args.scheduler == "plateau":
         scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
-            optimizer, mode="max", factor=0.5, patience=max(1, args.patience // 3))
+            optimizer, mode="max", factor=0.5, patience=args.plateau_patience)
     else:
         scheduler = None
-    print("  schedule: {}{}  patience {}".format(
+    print("  schedule: {}{}  |  {} epochs, no early stopping".format(
         args.scheduler,
         " (warmup {} ep)".format(warmup_epochs) if warmup_epochs and
         args.scheduler == "cosine" else "",
-        args.patience if args.patience > 0 else "off"))
+        ctx.epochs))
 
     hist = os.path.join(ctx.log_dir, "{}_{}_seed{}_history.csv".format(tag, ctx.mode, args.seed))
     best, best_path = -1.0, os.path.join(
@@ -424,8 +436,6 @@ def main():
         w.writerow(["mode", "stage", "seed", "epoch", "lr", "train_loss", "val_loss",
                     "val_acc", "val_macro_f1", "val_qwk", "val_ece",
                     "gate_entropy", "seconds"])
-        epochs_since_best = 0
-        stopped_early = None
         best_epoch = 0
         for ep in range(1, ctx.epochs + 1):
             t0 = time.time()
@@ -448,16 +458,15 @@ def main():
                   "  QWK {:.3f}{}  [{:.1f}s]".format(
                       ep, ctx.epochs, tm["loss"], vm["loss"], vm["accuracy"],
                       vm["macro_f1"], vm["qwk"], ge, secs))
+            # Model selection. This is NOT early stopping: training always runs
+            # the full schedule, and this only records which epoch to test.
             if vm["macro_f1"] > best:
                 best = vm["macro_f1"]
                 best_epoch = ep
-                epochs_since_best = 0
                 torch.save({"model_state_dict": model.state_dict(),
                             "optimizer_state_dict": optimizer.state_dict(),
                             "epoch": ep, "val_macro_f1": best, "stage": stage,
                             "backbone": backbone, "provenance": ctx.stamp()}, best_path)
-            else:
-                epochs_since_best += 1
 
             if scheduler is not None:
                 # ReduceLROnPlateau is driven by the metric; the others are not.
@@ -465,12 +474,6 @@ def main():
                     scheduler.step(vm["macro_f1"])
                 else:
                     scheduler.step()
-
-            if args.patience > 0 and epochs_since_best >= args.patience:
-                stopped_early = ep
-                print("  early stop: {} epochs without a val macro-F1 improvement "
-                      "over {:.4f} (epoch {})".format(args.patience, best, best_epoch))
-                break
 
     # Restore the selected weights. Chapter 3 sec:method-model-selection makes
     # validation the basis of selection, so the held-out test must run on the
@@ -487,14 +490,16 @@ def main():
     tmet.update({"stage": stage, "tag": tag, "backbone": backbone,
                  "n_parameters": int(n_params), "seed": args.seed,
                  "shuffled_control": bool(args.shuffled), "ungated": bool(args.ungated),
-                 # Chapter 3 sec:method-optimiser requires the schedule, the
-                 # patience and the selection point to be reported.
+                 # Chapter 3 sec:method-optimiser requires the schedule and the
+                 # selection point to be reported. epochs_run is recorded even
+                 # though it always equals epochs_configured, so that a future
+                 # run which does stop early cannot be mistaken for one that did
+                 # not.
                  "scheduler": args.scheduler,
                  "warmup_epochs": warmup_epochs,
-                 "patience": args.patience,
+                 "early_stopping": False,
                  "epochs_configured": ctx.epochs,
-                 "epochs_run": stopped_early or ctx.epochs,
-                 "stopped_early": stopped_early is not None,
+                 "epochs_run": ctx.epochs,
                  "selected_epoch": int(rl["epoch"]),
                  "selected_val_macro_f1": float(rl["val_macro_f1"])})
     print("  loss {:.4f}  acc {:.4f}  macro-F1 {:.4f}  QWK {:.4f}  ECE {:.4f}".format(
