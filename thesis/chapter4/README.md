@@ -15,7 +15,7 @@ open items listed in `protocol_decisions.md` must be closed first.
 
 | File | What it is | Generated? |
 | :--- | :--- | :--- |
-| `e0_baseline.md` | The E0 reference result on RSNA, with a permuted-label negative control | Yes — `implementation/06_baselines/make_report.py` |
+| `e0_baseline.md` | The E0 reference result on RSNA, with a permuted-label negative control | Yes — `implementation/99_audit/make_e0_report.py` |
 | `roi_geometry_ablation.md` | Four ROI geometries compared, and which was adopted | Yes — `implementation/05_rsna_rois/make_roi_ablation_report.py` |
 | `component_verification.md` | The Chapter 3 conformance test suite and its outcome | Yes — `implementation/99_audit/make_verification_report.py` |
 | `protocol_decisions.md` | Methodological decisions with the measurement behind each | No — written, updated by hand |
@@ -24,10 +24,18 @@ Three of the four are **generated from result files**, so no number in them can
 be typed in or drift from what was measured. Regenerate all of them with:
 
 ```bash
-python implementation/06_baselines/make_report.py
+python implementation/99_audit/make_e0_report.py
 python implementation/05_rsna_rois/make_roi_ablation_report.py
 python implementation/99_audit/make_verification_report.py
 ```
+
+`e0_baseline.md` is generated from `data/derived/`, the output of
+`amog_train.py` — the same engine the whole ladder runs on, so E0 and every
+later rung are produced by identical code. A separate standalone E0 harness
+exists in `implementation/06_baselines/`; its numbers use a different split and
+are **not** comparable, and it writes outside this folder deliberately. Its
+purpose is to be a second implementation: the disagreement between the two is
+what exposed E0 grading 59.5% of targets from the wrong MRI sequence.
 
 ## How to use these when writing Chapter 4
 

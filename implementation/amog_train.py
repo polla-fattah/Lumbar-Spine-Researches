@@ -280,6 +280,24 @@ def make_datasets(ctx, stage, args):
     print("  split: {} train / {} val / {} test patients  (frozen: {})".format(
         len(tr), len(va), len(te), os.path.relpath(SPLIT_FILE, PROJECT_ROOT)))
 
+    if getattr(args, "shuffle_labels", False):
+        # NEGATIVE CONTROL. Permute labels WITHIN each partition, so the class
+        # distribution is untouched and only the image-to-label correspondence
+        # is destroyed. A pipeline that leaks information -- through the split,
+        # the cache index, or the target table -- still scores well here. A
+        # sound one collapses to QWK ~0. Chapter 3 sec:method-patient-split
+        # motivates this: leakage of exactly this kind is among the commonest
+        # causes of irreproducible results in applied machine learning.
+        rng = np.random.default_rng(args.seed + 9973)
+        tt = tt.copy()
+        for part in (tr, va, te):
+            m = tt.study_id.isin(part).values
+            lab = tt.loc[m, "label"].values.copy()
+            rng.shuffle(lab)
+            tt.loc[m, "label"] = lab
+        print("  *** NEGATIVE CONTROL: labels permuted within each partition ***")
+        print("  *** a sound pipeline must now score QWK ~0.00              ***")
+
     if stage in GRAPH_STAGES:
         sel = lambda s: PatientGraphDataset(tt[tt.study_id.isin(s)], mm_ann, mm_x)
     else:
@@ -443,6 +461,10 @@ def main():
                     help="ImageNet-initialised backbones (default)")
     ap.add_argument("--from_scratch", dest="pretrained", action="store_false",
                     help="random initialisation; a separate experiment, not the ladder")
+    ap.add_argument("--shuffle_labels", action="store_true",
+                    help="NEGATIVE CONTROL: permute labels inside each partition. "
+                         "A sound pipeline collapses to QWK ~0; anything else "
+                         "means information is leaking.")
     ap.add_argument("--shuffled", action="store_true", help="E6 control")
     ap.add_argument("--ungated", action="store_true", help="E6 ablation")
     ap.add_argument("--max_targets", type=int, default=None)
@@ -465,7 +487,9 @@ def main():
     stage = args.stage
     backbone = args.backbone or ("smallcnn" if ctx.is_smoke else "resnet18")
 
-    tag = stage + ("_shuffled" if args.shuffled else "") + ("_ungated" if args.ungated else "")
+    tag = (stage + ("_shuffled" if args.shuffled else "")
+           + ("_ungated" if args.ungated else "")
+           + ("_LABELSHUF" if args.shuffle_labels else ""))
     print("Stage {}  backbone {}  seed {}".format(tag, backbone, args.seed))
     if args.shuffled:
         print("  CONTROL: edges permuted, node and edge counts preserved.")

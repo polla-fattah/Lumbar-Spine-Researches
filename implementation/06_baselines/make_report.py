@@ -146,9 +146,15 @@ def main() -> int:
     L.append("```")
     L.append("")
 
-    out = os.path.abspath(os.path.join(here, "..", "..", "thesis", "chapter4"))
+    # NOT thesis/chapter4/. This is the standalone cross-check harness, not the
+    # ladder engine: it uses its own runtime-drawn split and, historically, the
+    # ROI geometry the ablation rejected. Its numbers are not comparable to
+    # amog_train.py's and must not sit in the Chapter 4 folder beside them.
+    # Its value is as a SECOND implementation -- disagreement between the two is
+    # what exposed E0 reading the wrong sequence for 59.5% of targets.
+    out = os.path.join(here, "reports")
     os.makedirs(out, exist_ok=True)
-    p = os.path.join(out, "e0_baseline.md")
+    p = os.path.join(out, "e0_standalone_harness.md")
     with open(p, "w", encoding="utf-8") as f:
         f.write("\n".join(L) + "\n")
     print(f"wrote {p}")
