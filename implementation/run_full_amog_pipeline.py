@@ -41,7 +41,7 @@ def main():
         ("Phase 4 Geometry Audit & Gate 3", os.path.join(impl_dir, "03_dicom_geometry", "verify_geometry.py"), os.path.join(impl_dir, "03_dicom_geometry")),
         ("Phase 5 Landmark Localization", os.path.join(impl_dir, "04_localization", "verify_localization.py"), os.path.join(impl_dir, "04_localization")),
         ("Phase 6 2.5D ROI Extraction", os.path.join(impl_dir, "05_roi_crops", "verify_roi_crops.py"), os.path.join(impl_dir, "05_roi_crops")),
-        ("Phase 7 Baseline Classifiers Training", os.path.join(impl_dir, "06_baselines", "train_e0_baselines.py"), os.path.join(impl_dir, "06_baselines")),
+        ("Phase 7 Baseline Classifiers Training", os.path.join(impl_dir, "06_baselines", "train_and_evaluate_e0_baselines.py"), os.path.join(impl_dir, "06_baselines")),
         ("Phase 8 E1 Multi-Sequence Gate 4", os.path.join(impl_dir, "07_aligned_e1", "verify_gate4_alignment.py"), os.path.join(impl_dir, "07_aligned_e1")),
         ("Phase 9 E2/E3 Router Gate 5", os.path.join(impl_dir, "08_routing_e2_e3", "verify_gate5_routing.py"), os.path.join(impl_dir, "08_routing_e2_e3")),
         ("Phase 10 E4 ACSSL Pretrainer Gate 6", os.path.join(impl_dir, "09_acssl_e4", "verify_gate6_acssl.py"), os.path.join(impl_dir, "09_acssl_e4")),
