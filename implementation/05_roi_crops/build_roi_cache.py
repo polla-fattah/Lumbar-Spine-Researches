@@ -26,6 +26,7 @@ import sys
 import time
 
 import numpy as np
+import pandas as pd
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 from rsna_data import (  # noqa: E402
@@ -48,6 +49,9 @@ def main():
     ap.add_argument("--max_samples", type=int, default=None)
     ap.add_argument("--no_resume", action="store_true")
     ap.add_argument("--verify", action="store_true", help="inspect an existing cache")
+    ap.add_argument("--from_index", type=str, default=None,
+                    help="build from an existing index CSV instead of re-indexing; "
+                         "used for the geometry-derived cross-sequence crops")
     args = ap.parse_args()
 
     print("=" * 74)
@@ -88,9 +92,18 @@ def main():
         print("[FAIL] RSNA dataset not found. Pass --rsna_dir.")
         return 2
 
-    print("\nIndexing keypoints against labels and series modality...")
     t0 = time.time()
-    index = build_index(rsna_dir, args.max_samples)
+    if args.from_index:
+        # Cross-sequence crops are already located by geometry; re-indexing
+        # would discard the projected coordinates that are the whole point.
+        print("\nLoading prepared index: {}".format(args.from_index))
+        index = pd.read_csv(args.from_index)
+        if args.max_samples and len(index) > args.max_samples:
+            index = index.sample(n=args.max_samples,
+                                 random_state=42).reset_index(drop=True)
+    else:
+        print("\nIndexing keypoints against labels and series modality...")
+        index = build_index(rsna_dir, args.max_samples)
     print("  {} labelled ROIs / {} patients  ({:.1f}s)".format(
         len(index), index.study_id.nunique(), time.time() - t0))
     for k, v in index.label.value_counts().sort_index().items():
