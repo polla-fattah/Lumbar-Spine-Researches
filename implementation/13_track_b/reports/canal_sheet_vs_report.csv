@@ -1,0 +1,196 @@
+case_id,canal_status,canal_severity,level_stated,sheet,sheet_positive,report_positive,agree
+2,absent,,0,none,False,False,True
+3,present,mild;moderate,1,"at L2-3  ,L3-4",True,True,True
+4,absent,,0,none,False,False,True
+5,absent,,0,none,False,False,True
+6,absent,,0,mild at L4-5,True,False,False
+7,absent,,0,none,False,False,True
+8,absent,,0,none,False,False,True
+9,absent,,0,none,False,False,True
+10,absent,,0,none,False,False,True
+11,absent,,0,none,False,False,True
+12,present,moderate,1,"L2-3,L3-4,L4-5,L5-S1",True,True,True
+13,present,mild,1,"L3-4,L4-5,L5-S1",True,True,True
+14,present,,1,"L3-4,L5-S1",True,True,True
+15,absent,,0,none,False,False,True
+16,absent,,0,none,False,False,True
+17,unresolved,,0,L2-3,True,False,False
+18,absent,,0,none,False,False,True
+19,absent,,0,none,False,False,True
+20,present,severe,1,"L3-4,L4-5",True,True,True
+21,absent,,0,none,False,False,True
+22,absent,,0,none,False,False,True
+23,absent,,0,none,False,False,True
+24,absent,,0,none,False,False,True
+25,absent,,0,mild at L1-2,True,False,False
+26,absent,,0,none,False,False,True
+27,present,moderate;severe,1,"severe at L2-3 ,mild at L3-4",True,True,True
+28,absent,,0,none,False,False,True
+29,absent,,0,none,False,False,True
+30,present,,1,severe at L4-5,True,True,True
+31,absent,,0,none,False,False,True
+32,absent,,0,none,False,False,True
+33,absent,,0,none,False,False,True
+34,present,,1,"L2-3,L3-4",True,True,True
+35,absent,,0,none,False,False,True
+36,absent,,0,none,False,False,True
+37,absent,,0,none,False,False,True
+38,absent,,0,none,False,False,True
+39,absent,,0,none,False,False,True
+40,absent,,0,none,False,False,True
+41,absent,,0,none,False,False,True
+42,absent,,0,none,False,False,True
+43,absent,,0,none,False,False,True
+44,absent,,0,none,False,False,True
+45,absent,,0,none,False,False,True
+46,absent,,0,none,False,False,True
+47,absent,,0,none,False,False,True
+48,absent,,0,none,False,False,True
+49,absent,,0,none,False,False,True
+50,absent,,0,none,False,False,True
+51,absent,,0,none,False,False,True
+52,absent,,0,none,False,False,True
+53,absent,,0,L4-5,True,False,False
+54,absent,,0,L4-5,True,False,False
+55,absent,,0,none,False,False,True
+56,absent,,0,none,False,False,True
+57,absent,,0,none,False,False,True
+58,present,severe,1,"L2-3,L3-4,L4-5,",True,True,True
+59,absent,,0,none,False,False,True
+60,present,mild,1,none,False,True,False
+61,present,mild,1,"L3-4,L4-5",True,True,True
+62,present,severe,1,"L3-4,L4-5,L5-S1",True,True,True
+63,present,severe,1,"L3-4,L4-5",True,True,True
+64,present,,1,none,False,True,False
+65,present,mild,1,L2-3,True,True,True
+66,absent,,0,none,False,False,True
+67,present,mild,1,mild at L4-5,True,True,True
+68,absent,,0,none,False,False,True
+69,absent,,0,none,False,False,True
+70,absent,,0,none,False,False,True
+71,absent,,0,none,False,False,True
+72,present,,1,L4-5 severe,True,True,True
+73,absent,,0,none,False,False,True
+74,absent,,0,none,False,False,True
+75,present,moderate,1,L4-5,True,True,True
+76,absent,,0,none,False,False,True
+77,absent,,0,none,False,False,True
+78,absent,,0,none,False,False,True
+79,absent,,0,none,False,False,True
+80,absent,,0,none,False,False,True
+81,absent,,0,none,False,False,True
+82,absent,,0,L4-5,True,False,False
+83,present,mild,1,"L3-4,L4-5",True,True,True
+84,present,mild,1,"L3-4,L4-5 mild",True,True,True
+85,absent,,0,none,False,False,True
+86,present,severe,1,"L3-4, L4-5",True,True,True
+87,present,mild;moderate;severe,1,"L2-3,L3-4,L4-5,L5-S1",True,True,True
+88,present,mild,1,L3-4,True,True,True
+89,absent,,0,none,False,False,True
+90,absent,,0,none,False,False,True
+91,not_stated,,0,none,False,False,True
+92,absent,,0,none,False,False,True
+93,present,moderate,1,"L3-4,L4-5",True,True,True
+94,absent,,0,none,False,False,True
+95,absent,,0,none,False,False,True
+96,absent,,0,none,False,False,True
+97,absent,,0,none,False,False,True
+98,present,mild;severe,1,"L2-3,L3-4,L4-5,",True,True,True
+99,present,mild;moderate,1,"L2-3,L4-5",True,True,True
+100,absent,,0,none,False,False,True
+101,present,,1,L4-5,True,True,True
+102,absent,,0,none,False,False,True
+103,absent,,0,none,False,False,True
+104,present,mild,1,L4-5,True,True,True
+105,absent,,0,none,False,False,True
+106,absent,,0,none,False,False,True
+107,absent,,0,none,False,False,True
+108,absent,,0,none,False,False,True
+109,absent,,0,none,False,False,True
+110,absent,,0,none,False,False,True
+111,present,,1,L4-5,True,True,True
+112,absent,,0,none,False,False,True
+113,absent,,0,none,False,False,True
+114,absent,,0,none,False,False,True
+115,absent,,0,none,False,False,True
+116,present,moderate,1,L4-5,True,True,True
+117,present,mild;moderate,1,"L2-3,L3-4,L4-5",True,True,True
+118,absent,,0,none,False,False,True
+119,absent,,0,none,False,False,True
+120,present,moderate;severe,1,"L3-4,L4-5  mild,L5-S1 severe",True,True,True
+121,absent,,0,none,False,False,True
+122,absent,,0,none,False,False,True
+123,absent,,0,none,False,False,True
+124,absent,,0,none,False,False,True
+125,absent,,0,L3-4 mild,True,False,False
+126,absent,,0,none,False,False,True
+127,present,mild,1,"L1-2,L2-3",True,True,True
+128,present,,1,"L2-3,L3-4",True,True,True
+129,absent,,0,none,False,False,True
+130,absent,,0,none,False,False,True
+131,absent,,0,none,False,False,True
+132,absent,,0,none,False,False,True
+133,present,moderate,0,D12-L1,True,True,True
+134,not_stated,,0,none,False,False,True
+135,absent,,0,none,False,False,True
+136,absent,,0,none,False,False,True
+137,absent,,0,none,False,False,True
+138,present,moderate;severe,0,"L3-4,L4-5",True,True,True
+139,not_stated,,0,none,False,False,True
+140,not_stated,,0,"L3-4,L4-5",True,False,False
+141,absent,,0,none,False,False,True
+142,present,mild,1,"L3-4,L4-5 mild",True,True,True
+143,absent,,0,none,False,False,True
+144,present,mild,1,"L3-4,L4-5",True,True,True
+145,present,,1,"L3-4,L4-5 severe",True,True,True
+146,present,,1,L4-5,True,True,True
+147,absent,,0,none,False,False,True
+148,absent,,0,none,False,False,True
+149,absent,,0,L4-5,True,False,False
+150,present,mild,1,"L3-4,L4-5 mild",True,True,True
+151,absent,,0,none,False,False,True
+152,absent,,0,none,False,False,True
+153,present,mild;severe,1,"L1-2mild,L2-3,L3-4,L4-5 severe",True,True,True
+154,absent,,0,none,False,False,True
+155,absent,,0,none,False,False,True
+156,present,severe,1,"L1-2,L2-3,L3-4,L4-5 severe",True,True,True
+157,absent,,0,L4-5,True,False,False
+158,present,,1,L4-5,True,True,True
+159,absent,,0,none,False,False,True
+160,absent,,0,none,False,False,True
+161,absent,,0,none,False,False,True
+162,absent,,0,L4-5,True,False,False
+163,absent,,0,none,False,False,True
+164,present,,1,"L1-2,L2-3,L3-4",True,True,True
+165,absent,,0,none,False,False,True
+166,unresolved,,1,"L2-3 severe, L4-5",True,False,False
+167,absent,,0,none,False,False,True
+168,absent,,0,none,False,False,True
+169,present,severe,1,"L1-2,L2-3 mild,L3-4 severe",True,True,True
+170,absent,,0,L4-5,True,False,False
+171,present,severe,1,"L2-3,L3-4(severe,L4-5,L5-S1",True,True,True
+172,present,,1,none,False,True,False
+173,absent,,0,none,False,False,True
+174,absent,,0,none,False,False,True
+175,absent,,0,none,False,False,True
+176,absent,,0,none,False,False,True
+177,absent,,0,none,False,False,True
+178,absent,,0,none,False,False,True
+179,present,,0,none,False,True,False
+180,absent,,0,none,False,False,True
+181,present,mild,1,L4-5,True,True,True
+182,present,severe,1,"L2-3 severe,L3-4,L4-5 mild",True,True,True
+183,not_stated,,0,L4-5 mild,True,False,False
+184,present,severe,1,"L3-4,L4-5,L5-S1",True,True,True
+185,absent,,0,none,False,False,True
+186,present,mild,1,"L2-3,L3-4,L4-5,mild",True,True,True
+187,absent,,1,L1-2 mild,True,False,False
+188,absent,,0,none,False,False,True
+189,absent,,0,none,False,False,True
+190,absent,,0,none,False,False,True
+191,absent,,0,none,False,False,True
+192,absent,,0,none,False,False,True
+193,absent,,0,L4-5,True,False,False
+194,present,mild,1,"L3-4,L4-5",True,True,True
+195,absent,,0,"L2-3,L3-4,L4-5 mild",True,False,False
+196,present,,1,"L2-3 mild,L3-4 severe",True,True,True

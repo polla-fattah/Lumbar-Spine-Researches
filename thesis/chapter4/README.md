@@ -19,6 +19,8 @@ open items listed in `protocol_decisions.md` must be closed first.
 | `roi_geometry_ablation.md` | Four ROI geometries compared, and which was adopted | Yes — `implementation/05_rsna_rois/make_roi_ablation_report.py` |
 | `component_verification.md` | The Chapter 3 conformance test suite and its outcome | Yes — `implementation/99_audit/make_verification_report.py` |
 | `rizgary_cohort_reconciliation.md` | Track B step 0: what the local cohort contains, and the four gaps blocking transfer | Yes — `implementation/13_track_b/make_cohort_report.py` |
+| `report_label_audit.md` | Track B: labels traced to their exact report phrase | Yes — `implementation/13_track_b/make_label_report.py` |
+| `implementation_log.md` | Every defect found, what it cost, and the full change history | Yes — `implementation/99_audit/make_implementation_log.py` |
 | `protocol_decisions.md` | Methodological decisions with the measurement behind each | No — written, updated by hand |
 
 Three of the four are **generated from result files**, so no number in them can
@@ -29,6 +31,8 @@ python implementation/99_audit/make_e0_report.py
 python implementation/05_rsna_rois/make_roi_ablation_report.py
 python implementation/99_audit/make_verification_report.py
 python implementation/13_track_b/make_cohort_report.py
+python implementation/13_track_b/make_label_report.py
+python implementation/99_audit/make_implementation_log.py
 ```
 
 `e0_baseline.md` is generated from `data/derived/`, the output of
