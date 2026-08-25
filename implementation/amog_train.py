@@ -63,6 +63,9 @@ from amog_datasets import (  # noqa: E402
     SyntheticMultiSequence, SyntheticPatientGraph, build_target_table,
 )
 from rsna_data import load_cache, patient_split, CACHE_DIR  # noqa: E402
+from amog_perf import (  # noqa: E402
+    configure_backend, suggest_batch, loader_kwargs, Amp, maybe_compile,
+)
 
 if hasattr(sys.stdout, "reconfigure"):
     sys.stdout.reconfigure(encoding="utf-8")
@@ -117,16 +120,24 @@ class AMOGNet(nn.Module):
         self.projector = ACSSLProjector(dim) if stage == "E4" else None
 
     def encode(self, imgs, mask):
-        """imgs (B, M, 3, H, W) -> (B, M, D). Absent sequences are not encoded."""
-        B, M = imgs.shape[:2]
-        feats = imgs.new_zeros(B, M, self.dim)
-        for m in range(M):
-            sel = mask[:, m] > 0
-            if not bool(sel.any()):
-                continue
+        """imgs (B, M, 3, H, W) -> (B, M, D), zeroed where a sequence is absent.
+
+        The batch is encoded densely and masked afterwards. Selecting present
+        rows first looks cheaper but forces a host synchronisation per modality,
+        and 95.3% of targets carry all three sequences anyway, so the skipped
+        work is small next to the stalls it costs.
+        """
+        outs = []
+        for m in range(imgs.shape[1]):
             enc = self.encoders[m if len(self.encoders) > 1 else 0]
-            feats[sel, m] = enc(imgs[sel, m])
-        return feats
+            x = imgs[:, m]
+            if x.is_cuda:
+                # rank 4 here, so channels_last is well defined and lets the
+                # convolutions reach tensor cores
+                x = x.contiguous(memory_format=torch.channels_last)
+            outs.append(enc(x))
+        feats = torch.stack(outs, dim=1)
+        return feats * mask.unsqueeze(-1).to(feats.dtype)
 
     def forward_target(self, imgs, mask, cond_idx, level_idx):
         feats = self.encode(imgs, mask)
@@ -168,13 +179,14 @@ def make_datasets(ctx, stage, args):
         mk = lambda k, s: SyntheticMultiSequence(max(k, 8), crop=crop, seed=s)
         return mk(n, 0), mk(n // 4, 1), mk(n // 4, 2), {"crop": crop}
 
-    mm_ann, valid, ann_idx, meta = load_cache("rsna_roi_v1")
+    ram = {"auto": "auto", "yes": True, "no": False}[getattr(args, "cache_in_ram", "auto")]
+    mm_ann, valid, ann_idx, meta = load_cache("rsna_roi_v1", in_ram=ram)
     ann_idx = ann_idx[valid].reset_index(drop=True)
 
     mm_x, xseq_idx = None, None
     xp = os.path.join(CACHE_DIR, "rsna_xseq_v1.npy")
     if os.path.exists(xp):
-        mm_x, xvalid, xseq_idx, _ = load_cache("rsna_xseq_v1")
+        mm_x, xvalid, xseq_idx, _ = load_cache("rsna_xseq_v1", in_ram=ram)
         xseq_idx = xseq_idx[xvalid].reset_index(drop=True)
     elif stage != "E0":
         print("  NOTE cross-sequence cache absent; targets will carry only their")
@@ -202,6 +214,7 @@ def make_datasets(ctx, stage, args):
 def run_epoch(model, loader, ctx, stage, args, optimizer=None, cost=None):
     """One pass. optimizer=None means evaluation."""
     train = optimizer is not None
+    amp = getattr(args, "_amp", None)
     model.train() if train else model.eval()
     graph = stage in GRAPH_STAGES
 
@@ -215,7 +228,8 @@ def run_epoch(model, loader, ctx, stage, args, optimizer=None, cost=None):
                 B, N, M = mask.shape
                 mask = apply_modality_dropout(
                     mask.reshape(B * N, M), args.p_drop, True).reshape(B, N, M)
-            with torch.set_grad_enabled(train):
+            with torch.set_grad_enabled(train), (
+                    amp.autocast() if amp else torch.autocast("cpu", enabled=False)):
                 logits, g = model.forward_graph(imgs, mask, ev)
                 sel = lmask.reshape(-1) > 0
                 lg = logits.reshape(-1, logits.size(-1))[sel]
@@ -229,7 +243,8 @@ def run_epoch(model, loader, ctx, stage, args, optimizer=None, cost=None):
             imgs, mask, cond, lvl, yy, batch_pid = [b.to(ctx.device) for b in batch]
             if stage in DROPOUT_STAGES and train:
                 mask = apply_modality_dropout(mask, args.p_drop, True)
-            with torch.set_grad_enabled(train):
+            with torch.set_grad_enabled(train), (
+                    amp.autocast() if amp else torch.autocast("cpu", enabled=False)):
                 fused, g = model.forward_target(imgs, mask, cond, lvl)
                 lg = model.head(fused)
                 loss, p = _loss_and_probs(model, lg, yy, cost, args)
@@ -239,13 +254,18 @@ def run_epoch(model, loader, ctx, stage, args, optimizer=None, cost=None):
                 m2 = mask.reshape(-1, N_MODALITIES) if graph else mask
                 loss = loss + args.balance_weight * \
                     DiseaseConditionedRouter.load_balance_loss(g, m2)
-            optimizer.zero_grad()
-            loss.backward()
-            optimizer.step()
+            optimizer.zero_grad(set_to_none=True)
+            if amp is not None:
+                amp.backward(loss)
+                amp.step(optimizer)
+            else:
+                loss.backward()
+                optimizer.step()
 
         bs = yy.size(0)
         tot_loss += float(loss.item()) * bs
         n += bs
+        p = p.float()
         preds.append(p.argmax(1).detach().cpu().numpy())
         targets.append(yy.detach().cpu().numpy())
         probs.append(p.detach().cpu().numpy())
@@ -294,12 +314,22 @@ def main():
     ap.add_argument("--shuffled", action="store_true", help="E6 control")
     ap.add_argument("--ungated", action="store_true", help="E6 ablation")
     ap.add_argument("--max_targets", type=int, default=None)
-    ap.add_argument("--workers", type=int, default=0)
+    ap.add_argument("--workers", type=int, default=None)
+    ap.add_argument("--amp", dest="amp", action="store_true", default=True,
+                    help="bf16 autocast (default on for CUDA)")
+    ap.add_argument("--no_amp", dest="amp", action="store_false")
+    ap.add_argument("--channels_last", action="store_true", default=True)
+    ap.add_argument("--compile", action="store_true",
+                    help="torch.compile the model (slow first step, faster after)")
+    ap.add_argument("--cache_in_ram", choices=["auto", "yes", "no"], default="auto")
+    ap.add_argument("--deterministic", action="store_true",
+                    help="disable TF32/cudnn autotune for a reproducibility check")
     args = ap.parse_args()
 
     torch.manual_seed(args.seed)
     np.random.seed(args.seed)
     ctx = resolve_mode(args)
+    gpu = configure_backend(deterministic=args.deterministic)
     stage = args.stage
     backbone = args.backbone or ("smallcnn" if ctx.is_smoke else "resnet18")
 
@@ -315,13 +345,31 @@ def main():
         print("        {:,} targets over {:,} patients".format(
             meta["targets"], meta["patients"]))
 
-    bs = ctx.batch_size if stage not in GRAPH_STAGES else max(1, ctx.batch_size // 16)
-    dl = lambda d, s: DataLoader(d, batch_size=bs, shuffle=s, num_workers=args.workers)
+    is_graph = stage in GRAPH_STAGES
+    if ctx.is_smoke:
+        bs = max(1, ctx.batch_size // 16) if is_graph else ctx.batch_size
+    else:
+        bs = suggest_batch(is_graph, gpu["vram_gb"], args.batch_size)
+    # Smoke datasets are a handful of in-memory tensors; spawning a dozen
+    # persistent workers for them costs far more than it saves.
+    lkw = loader_kwargs(0 if ctx.is_smoke else args.workers,
+                        cuda=str(ctx.device).startswith("cuda"))
+    print("  batch {}  ({} rung, {:.1f} GB VRAM)  workers {}".format(
+        bs, "graph" if is_graph else "target", gpu["vram_gb"], lkw["num_workers"]))
+    dl = lambda d, s: DataLoader(d, batch_size=bs, shuffle=s, **lkw)
     train_loader, val_loader, test_loader = dl(train_ds, True), dl(val_ds, False), dl(test_ds, False)
 
     model = AMOGNet(stage, backbone, args.dim, args.shuffled, args.ungated, args.seed).to(ctx.device)
+    if args.channels_last and str(ctx.device).startswith("cuda"):
+        model = model.to(memory_format=torch.channels_last)
     n_params = sum(p.numel() for p in model.parameters())
     print("  model: {:.2f}M parameters (counted)".format(n_params / 1e6))
+
+    amp = Amp(args.amp, str(ctx.device))
+    print("  precision: {}".format(amp.label()))
+    model = maybe_compile(model, args.compile)
+    args._amp = amp
+    args._channels_last = args.channels_last
 
     optimizer = torch.optim.AdamW(model.parameters(), lr=ctx.lr)
     cost = clinical_cost_matrix(device=ctx.device) if args.cost_weight > 0 else None

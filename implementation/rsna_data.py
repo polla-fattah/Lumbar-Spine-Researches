@@ -269,8 +269,25 @@ def build_cache(rsna_dir: str, index: pd.DataFrame, name: str = "rsna_roi_v1",
     return meta
 
 
-def load_cache(name: str = "rsna_roi_v1", crop: int = CROP):
-    """Attach to an existing cache. Returns (memmap, valid, index, meta)."""
+def _ram_available_gb():
+    try:
+        import psutil
+        return psutil.virtual_memory().available / (1024 ** 3)
+    except Exception:
+        return None
+
+
+def load_cache(name: str = "rsna_roi_v1", crop: int = CROP, in_ram="auto"):
+    """Attach to an existing cache.
+
+    in_ram : "auto" | True | False
+        Reading the array fully into RAM removes disk from the training loop
+        entirely. Both caches together are 14.4 GB, which is nothing on a host
+        with 100 GB but impossible on a laptop, so "auto" loads only when there
+        is comfortable headroom and otherwise falls back to the memory map.
+
+    Returns (array_or_memmap, valid, index, meta).
+    """
     arr_p, valid_p, idx_p, meta_p = cache_paths(name)
     for p in (arr_p, valid_p, idx_p, meta_p):
         if not os.path.exists(p):
@@ -283,7 +300,18 @@ def load_cache(name: str = "rsna_roi_v1", crop: int = CROP):
     if meta["crop"] != crop:
         raise ValueError("cache '{}' was built at crop {} but {} was requested"
                          .format(name, meta["crop"], crop))
-    mm = np.load(arr_p, mmap_mode="r")
+    want_ram = in_ram
+    size_gb = os.path.getsize(arr_p) / (1024 ** 3)
+    if want_ram == "auto":
+        avail = _ram_available_gb()
+        # keep a 1.6x margin so a second cache and the workers still fit
+        want_ram = bool(avail is not None and avail > size_gb * 1.6 + 4.0)
+
+    if want_ram:
+        print("  [cache] loading {} ({:.2f} GB) into RAM".format(name, size_gb))
+        mm = np.load(arr_p)
+    else:
+        mm = np.load(arr_p, mmap_mode="r")
     valid = np.load(valid_p)
     index = pd.read_csv(idx_p)
     if len(index) != mm.shape[0] or valid.shape[0] != mm.shape[0]:

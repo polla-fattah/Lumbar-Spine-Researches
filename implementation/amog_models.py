@@ -316,6 +316,7 @@ class HomogeneousGNN(nn.Module):
         h = x
         for lin, norm in zip(self.layers, self.norms):
             msg = lin(h)                                   # (B,N,H)
+            # dtype follows the message so this survives autocast
             agg = torch.zeros(B, N, msg.size(-1), device=x.device, dtype=msg.dtype)
             agg.index_add_(1, dst, msg[:, src, :])
             deg = torch.zeros(N, device=x.device, dtype=msg.dtype)
@@ -359,16 +360,26 @@ class HeterogeneousRGCN(nn.Module):
         h = x
         for li in range(len(self.rel)):
             hidden = self.self_lin[li].out_features
-            agg = torch.zeros(B, N, hidden, device=x.device, dtype=h.dtype)
-            deg = torch.zeros(N, device=x.device, dtype=h.dtype)
+            # Allocate the accumulator to match the MESSAGES, not the input.
+            # Under autocast the relation projections return bf16 while h may
+            # still be fp32, and index_add_ requires both to agree.
+            agg = None
+            deg = None
             for r in range(self.n_relations):
                 sel = (edge_type == r)
                 if not bool(sel.any()):
                     continue
                 s, d_ = src[sel], dst[sel]
                 msg = self.rel[li][r](h)                   # (B,N,H)
+                if agg is None:
+                    agg = torch.zeros(B, N, hidden, device=x.device, dtype=msg.dtype)
+                    deg = torch.zeros(N, device=x.device, dtype=msg.dtype)
                 agg.index_add_(1, d_, msg[:, s, :])
-                deg.index_add_(0, d_, torch.ones_like(d_, dtype=h.dtype))
+                deg.index_add_(0, d_, torch.ones_like(d_, dtype=msg.dtype))
+            if agg is None:
+                own = self.self_lin[li](h)
+                h = F.relu(self.norms[li](own))
+                continue
             agg = agg / deg.clamp(min=1).view(1, N, 1)
             own = self.self_lin[li](h)
             if self.gated:
