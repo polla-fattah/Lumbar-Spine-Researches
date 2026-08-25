@@ -1,0 +1,403 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+"""Behavioural tests for the AMOG-Net components, against Chapter 3.
+
+These are not smoke tests. Each one states a property Chapter 3 requires and
+then tries to falsify it on constructed inputs whose correct answer is known
+independently of the implementation.
+
+Run:  python implementation/99_audit/test_components.py
+"""
+from __future__ import annotations
+
+import os
+import sys
+
+import numpy as np
+import torch
+import torch.nn.functional as F
+
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+
+from amog_models import (  # noqa: E402
+    OrdinalCORNHead, clinical_cost_matrix, expected_cost_loss, build_edges,
+    DiseaseConditionedRouter, apply_modality_dropout, info_nce,
+    TemperatureScaler, N_TARGETS, N_LEVELS, N_CONDITIONS, node_id,
+    BILATERAL_PAIRS,
+)
+import rsna_data  # noqa: E402
+
+PASS, FAIL = [], []
+
+
+def check(name, condition, detail=""):
+    (PASS if condition else FAIL).append(name)
+    mark = "PASS" if condition else "FAIL"
+    print(f"  [{mark}] {name}" + (f"\n         {detail}" if detail and not condition else ""))
+    return condition
+
+
+# --------------------------------------------------------------------------- #
+print("\n1. Ordinal head -- Chapter 3 sec:method-ordinal")
+print("-" * 70)
+
+torch.manual_seed(0)
+logits = torch.randn(500, 2)
+probs = OrdinalCORNHead.to_probs(logits)
+
+check("probabilities sum to 1",
+      bool(torch.allclose(probs.sum(1), torch.ones(500), atol=1e-5)),
+      f"max deviation {float((probs.sum(1) - 1).abs().max()):.2e}")
+check("probabilities are non-negative", bool((probs >= 0).all()))
+
+# Ordering: P(y>0) must be >= P(y>1). Feed a violating pair and confirm the
+# cummin repairs it rather than emitting a negative probability.
+bad = torch.tensor([[-3.0, 3.0]])          # sigmoid: 0.047 then 0.953 -- violates
+bad_p = OrdinalCORNHead.to_probs(bad)
+check("ordering violation cannot produce a negative probability",
+      bool((bad_p >= 0).all()),
+      f"got {bad_p.tolist()}")
+
+# Independent re-derivation of the intended mapping.
+p_gt = torch.sigmoid(logits)
+p_gt_mono, _ = torch.cummin(p_gt, dim=-1)
+manual = torch.stack([1 - p_gt_mono[:, 0],
+                      p_gt_mono[:, 0] - p_gt_mono[:, 1],
+                      p_gt_mono[:, 1]], dim=1)
+check("cumulative->categorical matches an independent derivation",
+      bool(torch.allclose(probs, manual.clamp(min=1e-8), atol=1e-6)))
+
+# A confident logit pattern must decode to the right class.
+for y, lg in [(0, [-8.0, -8.0]), (1, [8.0, -8.0]), (2, [8.0, 8.0])]:
+    pred = int(OrdinalCORNHead.to_probs(torch.tensor([lg])).argmax())
+    check(f"logits {lg} decode to grade {y}", pred == y, f"decoded {pred}")
+
+# The loss is CORAL/cumulative-link (independent binary CE), NOT CORN
+# (which chains conditional probabilities). Verify which one is implemented.
+y = torch.tensor([0, 1, 2])
+lg = torch.randn(3, 2)
+t = torch.stack([(y > k).float() for k in range(2)], dim=-1)
+expected_coral = F.binary_cross_entropy_with_logits(lg, t)
+check("loss is the cumulative-link (CORAL-style) objective",
+      bool(torch.allclose(OrdinalCORNHead.loss(lg, y), expected_coral)),
+      "class is named CORN but implements independent binary CE")
+
+# --------------------------------------------------------------------------- #
+print("\n2. Clinical cost matrix -- Chapter 3 sec:method-cost")
+print("-" * 70)
+
+C = clinical_cost_matrix()
+check("under-grading Severe costs more than mis-grading it Moderate (c20 > c21)",
+      float(C[2, 0]) > float(C[2, 1]), f"C[2,0]={C[2,0]} C[2,1]={C[2,1]}")
+check("diagonal is zero", bool((C.diag() == 0).all()))
+check("row index is TRUTH and column index is PREDICTION",
+      float(C[2, 0]) == 4.0 and float(C[0, 2]) == 1.0,
+      f"C[true=2,pred=0]={C[2,0]}, C[true=0,pred=2]={C[0,2]}")
+
+# Expected cost: a distribution concentrated on the true class costs 0; one
+# concentrated on the worst error costs c20.
+p_right = torch.tensor([[0.0, 0.0, 1.0]])
+p_wrong = torch.tensor([[1.0, 0.0, 0.0]])
+yv = torch.tensor([2])
+check("expected cost of a perfect prediction is 0",
+      abs(float(expected_cost_loss(p_right, yv, C))) < 1e-6)
+check("expected cost of the decisive error equals c20",
+      abs(float(expected_cost_loss(p_wrong, yv, C)) - 4.0) < 1e-6,
+      f"got {float(expected_cost_loss(p_wrong, yv, C))}")
+
+# --------------------------------------------------------------------------- #
+print("\n3. Graph topology and the shuffled control -- Chapter 3 sec:method-graph")
+print("-" * 70)
+
+ei, et = build_edges()
+E = ei.size(1)
+check("node count is 5 levels x 5 conditions = 25", N_TARGETS == 25)
+check("node_id is a bijection over (level, condition)",
+      sorted(node_id(l, c) for l in range(N_LEVELS)
+             for c in range(N_CONDITIONS)) == list(range(25)))
+
+real_set = {(int(a), int(b)) for a, b in zip(ei[0], ei[1])}
+check("anatomical graph is symmetric (every edge has its reverse)",
+      all((b, a) in real_set for a, b in real_set))
+check("anatomical graph has no self-loops",
+      not any(a == b for a, b in real_set))
+
+# Uniqueness must be checked on (src, dst, type), not (src, dst). In an R-GCN a
+# node pair may legitimately carry more than one relation: the 20 bilateral
+# edges also appear as same-level cross-condition edges, and the two relations
+# are meant to be learned separately.
+real_trip = {(int(a), int(b), int(t)) for a, b, t in zip(ei[0], ei[1], et)}
+check("anatomical graph has no duplicate (src, dst, type) edges",
+      len(real_trip) == E, f"{E} edges but {len(real_trip)} unique triples")
+
+# Bilateral edges must connect the intended condition pairs.
+bil = {(int(a), int(b)) for a, b, t in zip(ei[0], ei[1], et) if int(t) == 2}
+expect_bil = set()
+for l in range(N_LEVELS):
+    for a, b in BILATERAL_PAIRS:
+        expect_bil.add((node_id(l, a), node_id(l, b)))
+        expect_bil.add((node_id(l, b), node_id(l, a)))
+check("bilateral edge family links exactly the left/right counterparts",
+      bil == expect_bil, f"{len(bil)} vs expected {len(expect_bil)}")
+
+# Adjacent-level edges must never cross conditions.
+adj = [(int(a), int(b)) for a, b, t in zip(ei[0], ei[1], et) if int(t) == 0]
+check("adjacent-level edges keep the condition fixed",
+      all(a % N_CONDITIONS == b % N_CONDITIONS for a, b in adj))
+
+# THE CONTROL. Chapter 3 and run_ladder.py both say E6 vs E6_shuffled is the
+# comparison that decides whether anatomy matters. For that comparison to be
+# fair the shuffled graph must differ from the anatomical one ONLY in which
+# endpoints the edges join -- same edge count, same per-type counts, same
+# symmetry, same degree regularity.
+si, st = build_edges(shuffled=True, seed=0)
+shuf_set = {(int(a), int(b)) for a, b in zip(si[0], si[1])}
+
+check("control preserves the total edge count", si.size(1) == E,
+      f"{si.size(1)} vs {E}")
+check("control preserves per-type edge counts",
+      bool(torch.equal(torch.bincount(st, minlength=3),
+                       torch.bincount(et, minlength=3))))
+sym_ok = all((b, a) in shuf_set for a, b in shuf_set)
+check("control graph is symmetric, as the anatomical graph is", sym_ok,
+      "shuffled edges are drawn independently, so a->b rarely has b->a; the "
+      "control is a DIRECTED graph compared against an UNDIRECTED one")
+shuf_trip = {(int(a), int(b), int(t)) for a, b, t in zip(si[0], si[1], st)}
+check("control graph has no duplicate (src, dst, type) edges",
+      len(shuf_trip) == si.size(1),
+      f"{si.size(1)} edges but {len(shuf_trip)} unique triples -- independent "
+      f"randint draws collide, so the control has fewer distinct edges than the "
+      f"anatomical graph it is compared against")
+
+deg_real = torch.bincount(ei[0], minlength=N_TARGETS)
+deg_shuf = torch.bincount(si[0], minlength=N_TARGETS)
+check("control preserves the degree sequence",
+      bool(torch.equal(deg_real.sort().values, deg_shuf.sort().values)),
+      f"real degrees {deg_real.tolist()}\n         shuffled  {deg_shuf.tolist()}")
+
+# --------------------------------------------------------------------------- #
+print("\n4. Disease-conditioned router -- Chapter 3 sec:method-routing")
+print("-" * 70)
+
+torch.manual_seed(0)
+router = DiseaseConditionedRouter(dim=16, emb=4, hidden=8).eval()
+B, M, D = 8, 3, 16
+feats = torch.randn(B, M, D)
+mask = torch.ones(B, M)
+mask[0, 1] = 0
+mask[1, :2] = 0
+cond = torch.randint(0, N_CONDITIONS, (B,))
+lvl = torch.randint(0, N_LEVELS, (B,))
+
+with torch.no_grad():
+    fused, g = router(feats, mask, cond, lvl)
+
+check("gate weights sum to 1 per row",
+      bool(torch.allclose(g.sum(1), torch.ones(B), atol=1e-5)))
+check("unavailable sequences receive exactly zero weight",
+      float(g[0, 1]) == 0.0 and float(g[1, :2].sum()) == 0.0,
+      f"g[0,1]={float(g[0,1]):.3e}, g[1,:2]={g[1, :2].tolist()}")
+check("a masked sequence cannot influence the fused vector",
+      bool(torch.allclose(fused[0], (feats[0] * g[0].unsqueeze(-1)).sum(0), atol=1e-6)))
+
+# A row with nothing available must not emit NaN.
+mask_empty = torch.zeros(1, M)
+with torch.no_grad():
+    fe, ge = router(feats[:1], mask_empty, cond[:1], lvl[:1])
+check("a fully-unavailable row produces no NaN",
+      bool(torch.isfinite(fe).all() and torch.isfinite(ge).all()))
+
+# Masking must happen BEFORE the softmax: changing a masked sequence's features
+# must not change the gate over the available ones.
+feats_alt = feats.clone()
+feats_alt[0, 1] = torch.randn(D) * 50
+with torch.no_grad():
+    _, g_alt = router(feats_alt, mask, cond, lvl)
+check("a masked sequence's content cannot alter the surviving gate weights",
+      bool(torch.allclose(g[0], g_alt[0], atol=1e-6)),
+      "renormalisation must occur after masking, not before")
+
+# Modality dropout must never empty a study.
+torch.manual_seed(3)
+m_in = torch.ones(2000, 3)
+m_out = apply_modality_dropout(m_in, p_drop=0.9, training=True)
+check("modality dropout never removes the last sequence",
+      bool((m_out.sum(1) > 0).all()),
+      f"{int((m_out.sum(1) == 0).sum())} rows emptied")
+check("modality dropout is a no-op at eval time",
+      bool(torch.equal(apply_modality_dropout(m_in, 0.9, training=False), m_in)))
+
+# --------------------------------------------------------------------------- #
+print("\n5. Cross-sequence InfoNCE -- Chapter 3 sec:method-acssl")
+print("-" * 70)
+
+z = F.normalize(torch.randn(32, 8), dim=1)
+loss_same = float(info_nce(z, z.clone()))
+loss_rand = float(info_nce(z, F.normalize(torch.randn(32, 8), dim=1)))
+check("perfectly aligned views give a lower loss than unrelated ones",
+      loss_same < loss_rand, f"aligned {loss_same:.4f} vs random {loss_rand:.4f}")
+check("InfoNCE is symmetric in its two views",
+      abs(float(info_nce(z, z.roll(1, 0))) - float(info_nce(z.roll(1, 0), z))) < 1e-5)
+
+# --------------------------------------------------------------------------- #
+print("\n6. Temperature scaling -- Chapter 3 sec:method-calibration")
+print("-" * 70)
+
+torch.manual_seed(0)
+true_y = torch.randint(0, 3, (2000,))
+sharp = F.one_hot(true_y, 3).float() * 6.0
+noise_idx = torch.randperm(2000)[:700]
+sharp[noise_idx] = sharp[noise_idx].roll(1, dims=-1)      # make it over-confident
+ts = TemperatureScaler()
+T = ts.fit(sharp, true_y)
+check("fitted temperature is positive and finite",
+      np.isfinite(T) and T > 0, f"T={T}")
+check("an over-confident model is softened (T > 1)", T > 1.0, f"T={T:.3f}")
+nll_before = float(F.cross_entropy(sharp, true_y))
+nll_after = float(F.cross_entropy(sharp / T, true_y))
+check("temperature scaling does not increase validation NLL",
+      nll_after <= nll_before + 1e-6, f"{nll_before:.4f} -> {nll_after:.4f}")
+
+# --------------------------------------------------------------------------- #
+print("\n7. Patient-level splitting -- Chapter 3 sec:method-patient-split")
+print("-" * 70)
+
+import pandas as pd  # noqa: E402
+idx = pd.DataFrame({"study_id": np.repeat(np.arange(200), 25)})
+tr, va, te = rsna_data.patient_split(idx, seed=1)
+check("splits are disjoint at patient level",
+      not (tr & va) and not (tr & te) and not (va & te))
+check("splits cover every patient",
+      len(tr | va | te) == 200, f"covered {len(tr | va | te)} of 200")
+tr2, va2, te2 = rsna_data.patient_split(idx, seed=1)
+check("splitting is deterministic for a fixed seed",
+      (tr, va, te) == (tr2, va2, te2))
+tr3, _, _ = rsna_data.patient_split(idx, seed=2)
+check("a different seed gives a different split (so the seed is load-bearing)",
+      tr != tr3)
+
+# --------------------------------------------------------------------------- #
+print("\n8. ROI geometry -- Chapter 3 sec:method-roi")
+print("-" * 70)
+
+src = open(os.path.join(os.path.dirname(__file__), "..", "rsna_data.py"),
+           encoding="utf-8").read()
+check("ROI crop is defined in physical millimetres, not fixed pixels",
+      "PixelSpacing" in src,
+      "Chapter 3 sec:method-roi: 'Crops are defined in physical dimensions "
+      "where possible... This avoids a fixed 100-pixel crop representing "
+      "different anatomical widths on scanners with different pixel spacing.' "
+      "decode_roi() uses half = crop // 2, a fixed 128-pixel box.")
+check("2.5D stack radius matches the Chapter 3 reference configuration r=2",
+      "(-2, -1, 0, 1, 2)" in src or "range(-2, 3)" in src,
+      "Chapter 3 sec:method-roi names a five-slice stack (r=2) as the initial "
+      "reference; decode_roi() uses (-1, 0, 1), i.e. r=1.")
+check("ROI definition is conditioned on anatomical compartment",
+      "condition_key" in src and "crop_for_condition" in src,
+      "Chapter 3 sec:method-roi requires compartment-specific, side-aware crops "
+      "(canal vs foraminal vs subarticular). decode_roi() applies one uniform "
+      "crop to every condition.")
+
+# --------------------------------------------------------------------------- #
+print("\n9. Metrics -- Chapter 3 sec:method-metrics")
+print("-" * 70)
+
+from amog_modes import compute_metrics  # noqa: E402
+from sklearn.metrics import (  # noqa: E402
+    cohen_kappa_score, f1_score, accuracy_score, balanced_accuracy_score)
+
+rng = np.random.default_rng(0)
+ok_qwk = ok_f1 = ok_acc = True
+for _ in range(5):
+    yt = rng.integers(0, 3, 3000)
+    yp = rng.integers(0, 3, 3000)
+    m = compute_metrics(yt, yp)
+    ok_qwk &= abs(m["qwk"] - cohen_kappa_score(yt, yp, weights="quadratic")) < 1e-9
+    ok_f1 &= abs(m["macro_f1"] - f1_score(yt, yp, average="macro")) < 1e-9
+    ok_acc &= abs(m["accuracy"] - accuracy_score(yt, yp)) < 1e-12
+check("QWK matches sklearn cohen_kappa_score(weights='quadratic')", ok_qwk)
+check("macro F1 matches sklearn f1_score(average='macro')", ok_f1)
+check("accuracy matches sklearn accuracy_score", ok_acc)
+
+yt = rng.integers(0, 3, 1000)
+mc = compute_metrics(yt, np.zeros(1000, dtype=int))
+check("a constant prediction yields QWK exactly 0",
+      abs(mc["qwk"]) < 1e-12, f"got {mc['qwk']}")
+
+yt = rng.integers(0, 3, 3000); yp = rng.integers(0, 3, 3000)
+mb = compute_metrics(yt, yp)
+if "balanced_accuracy" in mb:
+    check("balanced accuracy matches sklearn",
+          abs(mb["balanced_accuracy"] - balanced_accuracy_score(yt, yp)) < 1e-9)
+else:
+    check("balanced accuracy is reported alongside accuracy", False,
+          "Chapter 3 sec:method-macrof1 requires balanced accuracy; the majority "
+          "class is 77.3%, so accuracy alone is not interpretable.")
+
+# --------------------------------------------------------------------------- #
+print("\n10. Statistics -- Chapter 3 sec:method-stats")
+print("-" * 70)
+
+from amog_stats import (  # noqa: E402
+    patient_bootstrap_ci, paired_bootstrap_diff, benjamini_hochberg)
+
+
+def acc_fn(a, b, prob=None):
+    return float((np.asarray(a) == np.asarray(b)).mean())
+
+
+pid = np.repeat(np.arange(150), 10)
+yt = rng.integers(0, 3, 1500)
+yp = yt.copy()
+flip = rng.choice(1500, 300, replace=False)
+yp[flip] = (yp[flip] + 1) % 3
+
+res = patient_bootstrap_ci(pid, yt, yp, acc_fn, n_boot=400, seed=0)
+point, lo, hi = float(res[0]), float(res[1]), float(res[2])
+check("bootstrap CI brackets the point estimate",
+      lo <= point <= hi, f"{lo:.4f} <= {point:.4f} <= {hi:.4f}")
+check("bootstrap point estimate equals the observed metric",
+      abs(point - acc_fn(yt, yp)) < 1e-9, f"{point} vs {acc_fn(yt, yp)}")
+
+dres = paired_bootstrap_diff(pid, yt, yp, yp.copy(), acc_fn, n_boot=400, seed=0)
+d, dlo, dhi = dres["diff"], dres["lo"], dres["hi"]
+check("a model compared against itself has zero difference",
+      abs(d) < 1e-12, f"got {d}")
+check("that difference CI contains 0", dlo <= 0 <= dhi, f"[{dlo}, {dhi}]")
+check("a self-comparison is not declared significant",
+      dres["p_value"] > 0.05, f"p={dres['p_value']}")
+
+# A genuinely better model must produce a positive difference and a CI that
+# excludes zero, or the test has no power and every ablation would read null.
+better = yt.copy()
+worse = yt.copy()
+w = rng.choice(1500, 600, replace=False)
+worse[w] = (worse[w] + 1) % 3
+bres = paired_bootstrap_diff(pid, yt, better, worse, acc_fn, n_boot=400, seed=0)
+check("a clearly better model yields a positive paired difference",
+      bres["diff"] > 0, f"got {bres['diff']}")
+check("and a CI that excludes zero", bres["lo"] > 0,
+      f"[{bres['lo']}, {bres['hi']}]")
+
+pv = np.array([0.001, 0.008, 0.039, 0.041, 0.042, 0.06, 0.074, 0.205])
+rej, adj = benjamini_hochberg(pv, alpha=0.05)
+rej, adj = np.asarray(rej), np.asarray(adj)
+check("BH adjusted p-values never fall below the raw p-values",
+      bool(np.all(adj >= pv - 1e-12)))
+check("BH adjusted p-values are monotone in the sorted p-values",
+      bool(np.all(np.diff(adj[np.argsort(pv)]) >= -1e-12)))
+check("BH rejects the strongest hypothesis at alpha=0.05", bool(rej[0]))
+check("BH does not reject the weakest hypothesis at alpha=0.05", not bool(rej[-1]))
+check("BH rejects nothing when no p-value is small",
+      not bool(np.any(np.asarray(benjamini_hochberg(np.linspace(0.2, 0.99, 20),
+                                                    0.05)[0]))))
+
+# --------------------------------------------------------------------------- #
+print("\n" + "=" * 70)
+print(f"  {len(PASS)} passed, {len(FAIL)} failed")
+print("=" * 70)
+if FAIL:
+    print("\nFailures:")
+    for f in FAIL:
+        print(f"  - {f}")
+sys.exit(1 if FAIL else 0)

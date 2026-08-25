@@ -287,11 +287,25 @@ def build_edges(shuffled: bool = False, seed: int = 0):
     edge_type = torch.tensor(typ, dtype=torch.long)
 
     if shuffled:
+        # Chapter 3 sec:method-graph-baselines: "graph capacity retained while
+        # anatomical edges are permuted."
+        #
+        # The control must differ from the anatomical graph in exactly one
+        # respect -- which anatomical targets the edges join -- and in no other.
+        # Drawing fresh random endpoints does not do that: it yields an
+        # asymmetric graph with colliding edges and a lopsided degree sequence
+        # (one node reached degree 16 while another fell to 1). Comparing E6
+        # against a structurally weaker graph would credit anatomy for an
+        # advantage that came from the control being a worse graph, which is the
+        # precise conclusion this control exists to rule out.
+        #
+        # A node relabelling is the permutation that leaves every structural
+        # property intact -- edge count, per-type counts, symmetry, degree
+        # sequence, uniqueness -- while destroying the correspondence between
+        # the topology and the (level, condition) meaning of each node.
         g = torch.Generator().manual_seed(seed)
-        e = edge_index.size(1)
-        edge_index = torch.randint(0, N_TARGETS, (2, e), generator=g, dtype=torch.long)
-        self_loops = edge_index[0] == edge_index[1]
-        edge_index[1, self_loops] = (edge_index[1, self_loops] + 1) % N_TARGETS
+        perm = torch.randperm(N_TARGETS, generator=g)
+        edge_index = perm[edge_index]
     return edge_index, edge_type
 
 

@@ -241,20 +241,29 @@ def compute_metrics(y_true, y_pred, y_prob=None, n_classes: int = N_CLASSES) -> 
     out["confusion_matrix"] = cm.tolist()
 
     # per-class precision / recall / F1, then macro
-    f1s, per_class = [], {}
+    f1s, recalls, per_class = [], [], {}
     for k in range(n_classes):
         tp = int(cm[k, k])
         fp = int(cm[:, k].sum() - tp)
         fn = int(cm[k, :].sum() - tp)
+        support = int(cm[k, :].sum())
         prec = tp / (tp + fp) if (tp + fp) else 0.0
         rec = tp / (tp + fn) if (tp + fn) else 0.0
         f1 = 2 * prec * rec / (prec + rec) if (prec + rec) else 0.0
         f1s.append(f1)
+        if support:
+            # A class absent from the truth has no recall to average. Counting it
+            # as 0.0 would penalise a split that simply contains no Severe cases.
+            recalls.append(rec)
         per_class[CLASS_NAMES[k] if k < len(CLASS_NAMES) else str(k)] = {
             "precision": round(prec, 4), "recall": round(rec, 4),
-            "f1": round(f1, 4), "support": int(cm[k, :].sum()),
+            "f1": round(f1, 4), "support": support,
         }
     out["macro_f1"] = float(np.mean(f1s))
+    # Chapter 3 eq:balanced-accuracy names macro-F1 AND balanced accuracy as the
+    # primary discrimination metrics. Accuracy alone is not interpretable when
+    # the majority class is 77.3%.
+    out["balanced_accuracy"] = float(np.mean(recalls)) if recalls else 0.0
     out["per_class"] = per_class
 
     # quadratic weighted kappa
