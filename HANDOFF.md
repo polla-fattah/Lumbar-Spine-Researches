@@ -6,6 +6,11 @@ Same account, new hardware (RTX 5090, 32 GB VRAM, ~100 GB RAM).
 If you are Claude and this is a fresh session: read this file before touching
 anything. It carries what the transcript would have told you.
 
+**Then read `PROJECT_BRIEFING.md`** in the same directory. This file is the
+quick start - environment, traps, first command. The briefing is the depth:
+the science, the data, the full command reference, the plans, the decisions
+already made and why, and what not to relitigate.
+
 ---
 
 ## 1. First: restore your memory
