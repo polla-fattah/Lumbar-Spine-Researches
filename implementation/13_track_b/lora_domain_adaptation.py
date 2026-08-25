@@ -1,60 +1,52 @@
-# Phase 17 & Gate 12: LoRA Domain Adaptation Trainer
-# Author: Dr. Polla Fattah / Selar's PhD Research Team
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+"""Phase 17 & Gate 12: Track B LoRA Domain Adaptation Engine."""
 
-import sys
+from __future__ import annotations
+
+import math
 import os
-import json
+import sys
+import torch
+import torch.nn as nn
 
-if hasattr(sys.stdout, 'reconfigure'):
-    sys.stdout.reconfigure(encoding='utf-8')
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+from amog_models import N_CLASSES
 
-def main():
-    print("=" * 65)
-    print("  Phase 17 & Gate 12: LoRA Domain Adaptation Engine")
-    print("=" * 65)
 
-    base_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
-    derived_dir = os.path.join(base_dir, "data", "derived")
-    reports_dir = os.path.join(os.path.dirname(__file__), "reports")
+class LoRALinear(nn.Module):
+    """Parameter-efficient Low-Rank Adaptation (LoRA) Linear Layer."""
 
-    print("Fine-tuning GNN router with LoRA (rank r = 8) on Rizgary Erbil cohort...")
+    def __init__(self, in_features: int, out_features: int, rank: int = 8, alpha: float = 16.0):
+        super().__init__()
+        self.in_features = in_features
+        self.out_features = out_features
+        self.rank = rank
+        self.scaling = alpha / rank
 
-    results = {
-        "model_name": "AMOG_LoRA_Rizgary_Adapted",
-        "lora_rank_r": 8,
-        "trainable_parameters_pct": 1.24,
-        "adapted_accuracy": 0.9020,
-        "adapted_macro_f1": 0.8940,
-        "adapted_qwk_kappa": 0.9380,
-        "adaptation_gain_over_zeroshot_pct": 6.00
-    }
+        self.linear = nn.Linear(in_features, out_features, bias=True)
+        # Freeze base linear layer weights
+        self.linear.weight.requires_grad = False
+        if self.linear.bias is not None:
+            self.linear.bias.requires_grad = False
 
-    out_json = os.path.join(derived_dir, "lora_adaptation_metrics.json")
-    with open(out_json, 'w', encoding='utf-8') as f:
-        json.dump(results, f, indent=2)
+        self.lora_A = nn.Parameter(torch.zeros(rank, in_features))
+        self.lora_B = nn.Parameter(torch.zeros(out_features, rank))
+        nn.init.kaiming_uniform_(self.lora_A, a=math.sqrt(5))
+        nn.init.zeros_(self.lora_B)
 
-    report_md = os.path.join(reports_dir, "gate12_adaptation_audit.md")
-    lines = [
-        "# ⚡ Phase 17 & Gate 12 LoRA Domain Adaptation Audit Report",
-        "",
-        f"* **LoRA Parameter Rank:** `r = 8 (1.24% parameters updated)`",
-        f"* **Adapted Top-1 Accuracy:** `{results['adapted_accuracy'] * 100:.2f}%`",
-        f"* **Adapted Macro F1:** `{results['adapted_macro_f1']:.4f}`",
-        f"* **Adapted QWK Kappa:** `{results['adapted_qwk_kappa']:.4f}`",
-        f"* **Gain over Zero-Shot:** `+{results['adaptation_gain_over_zeroshot_pct']:.2f}%`",
-        "",
-        "## 🔒 Gate 12 LoRA Adaptation Compliance",
-        "* **Adapted Accuracy Threshold (>88.0%):** `PASS (90.20%)`"
-    ]
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        base_out = self.linear(x)
+        lora_out = (x @ self.lora_A.T @ self.lora_B.T) * self.scaling
+        return base_out + lora_out
 
-    with open(report_md, 'w', encoding='utf-8') as f:
-        f.write("\n".join(lines))
 
-    print(f"\n[SUCCESS] LoRA Domain Adaptation Completed:")
-    print(f"   - Adapted Accuracy : {results['adapted_accuracy'] * 100:.2f}%")
-    print(f"   - Metrics JSON     : {out_json}")
-    print(f"   - Audit MD         : {report_md}")
-    print("=" * 65)
+class LoRAAdaptedClassifier(nn.Module):
+    """Classifier head adapted with LoRA for local clinical transfer."""
 
-if __name__ == "__main__":
-    main()
+    def __init__(self, in_dim: int = 256, n_classes: int = N_CLASSES, rank: int = 8):
+        super().__init__()
+        self.adapted_head = LoRALinear(in_dim, n_classes, rank=rank)
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        return self.adapted_head(x)

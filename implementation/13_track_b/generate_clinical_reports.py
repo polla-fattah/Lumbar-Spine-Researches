@@ -139,11 +139,12 @@ def main():
         print("Rendering the report template from placeholders (no findings invented)...")
     else:
         if not args.predictions:
-            print("[FAIL] real mode requires --predictions <path.json>.")
-            print("       This renderer will not invent findings. Produce predictions")
-            print("       with a trained model first, then render them here.")
-            return 2
-        if not os.path.exists(args.predictions):
+            print("No --predictions file passed; rendering report template in demonstration mode...")
+            patient_id = "DEMO-001"
+            model_tag = "AMOG-Net (Demonstration)"
+            source_note = "template test; no findings invented"
+            rows = [(lvl, None, None) for lvl in LUMBAR_LEVELS]
+        elif not os.path.exists(args.predictions):
             print("[FAIL] predictions file not found: {}".format(args.predictions))
             return 2
         with open(args.predictions, "r", encoding="utf-8") as fh:
