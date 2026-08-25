@@ -397,6 +397,7 @@ print("\n11. Ladder integrity -- every rung must implement what it claims")
 print("-" * 70)
 
 import inspect  # noqa: E402
+import json  # noqa: E402
 import amog_train  # noqa: E402
 from amog_train import AMOGNet, N_MODALITIES  # noqa: E402
 
@@ -458,30 +459,60 @@ check("training augmentation exists",
 
 # Chapter 3 sec:method-patient-split: split lists are version-controlled and the
 # loaders consume the fixed lists.
-check("patient splits are loaded from a persisted list, not recomputed",
-      any("read_csv" in ln or "json.load" in ln
-          for ln in inspect.getsource(rsna_data.patient_split).splitlines()),
-      "Chapter 3 sec:method-patient-split: 'The split record is version-controlled "
-      "as a list of pseudonymous IDs. Data loaders consume those fixed lists rather "
-      "than performing a new random split each time the training script is "
-      "executed.' patient_split() reshuffles from a seed on every call and writes "
-      "nothing to disk.")
+check("a frozen split file is committed to the repository",
+      os.path.exists(rsna_data.SPLIT_FILE),
+      f"Chapter 3 sec:method-patient-split requires a version-controlled split "
+      f"record. Expected {rsna_data.SPLIT_FILE}")
 
-# The split seed must not be the training seed. amog_train.py calls
-# patient_split(..., seed=args.seed), so a multi-seed campaign redraws the
-# cohort as well as the initialisation.
-big = pd.DataFrame({"study_id": np.repeat(np.arange(1974), 25)})
-te_by_seed = [rsna_data.patient_split(big, seed=s)[2] for s in (0, 1, 2)]
-shared01 = len(te_by_seed[0] & te_by_seed[1]) / len(te_by_seed[0])
-in_all = len(set.intersection(*te_by_seed)) / len(te_by_seed[0])
-ever_tested = len(set.union(*te_by_seed)) / 1974
-check("the held-out test set is the same across training seeds",
-      shared01 > 0.95,
-      f"seeds 0 and 1 share only {shared01 * 100:.1f}% of their test patients; "
-      f"only {in_all * 100:.1f}% are held out in all three; {ever_tested * 100:.1f}% "
-      f"of the cohort lands in some test set while training on others. Chapter 3 "
-      f"sec:method-stats pairs comparisons on the SAME patients, and a test set "
-      f"that moves per seed conflates seed variance with cohort resampling.")
+check("training loads the frozen split instead of drawing one",
+      "load_frozen_split(" in train_src and "patient_split(" not in train_src,
+      "amog_train.py must consume the committed list, not re-derive it")
+
+check("the split seed is decoupled from the training seed",
+      "seed=args.seed" not in inspect.getsource(amog_train.make_datasets),
+      "make_datasets must not pass the training seed to any partitioning or "
+      "subsampling call, or a multi-seed campaign redraws the cohort")
+
+if os.path.exists(rsna_data.SPLIT_FILE):
+    rec = pd.read_csv(rsna_data.SPLIT_FILE)
+    idx_all = pd.DataFrame({"study_id": rec["study_id"]})
+    loads = [rsna_data.load_frozen_split(idx_all) for _ in range(3)]
+    check("repeated loads return an identical test set",
+          loads[0][2] == loads[1][2] == loads[2][2])
+    tr_, va_, te_ = loads[0]
+    check("the frozen split has no patient in two partitions",
+          not (tr_ & va_) and not (tr_ & te_) and not (va_ & te_))
+    check("the frozen split covers the whole cohort",
+          len(tr_ | va_ | te_) == rec["study_id"].nunique())
+
+    # A subset run must intersect the frozen partitions, never redraw them,
+    # or a --max_targets run and a full run are not comparable.
+    sub = idx_all.head(len(idx_all) // 3)
+    check("a subset run intersects the frozen split rather than redrawing",
+          rsna_data.load_frozen_split(sub)[2] <= te_)
+
+    # A cohort that has grown must fail loudly: silently assigning new patients
+    # would change the partitions every published number was computed on.
+    grown = pd.DataFrame({"study_id": list(rec["study_id"][:5]) + [10 ** 12]})
+    try:
+        rsna_data.load_frozen_split(grown)
+        check("an unknown patient is refused, not silently assigned", False,
+              "load_frozen_split accepted a study absent from the split file")
+    except ValueError:
+        check("an unknown patient is refused, not silently assigned", True)
+
+    meta_p = rsna_data.SPLIT_META
+    if os.path.exists(meta_p):
+        with open(meta_p, encoding="utf-8") as fh:
+            meta = json.load(fh)
+        check("the recorded sha256 matches the split file",
+              rsna_data._split_digest(rec) == meta.get("sha256"),
+              "the split file has been edited since it was written")
+        flipped = rec.copy()
+        flipped.loc[0, "partition"] = (
+            "test" if flipped.loc[0, "partition"] == "train" else "train")
+        check("moving one patient changes the digest",
+              rsna_data._split_digest(flipped) != meta.get("sha256"))
 
 # --------------------------------------------------------------------------- #
 print("\n12. Optimisation protocol -- Chapter 3 sec:method-optimiser")

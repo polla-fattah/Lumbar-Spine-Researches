@@ -62,7 +62,9 @@ from amog_datasets import (  # noqa: E402
     ROIDataset, MultiSequenceDataset, PatientGraphDataset,
     SyntheticMultiSequence, SyntheticPatientGraph, build_target_table,
 )
-from rsna_data import load_cache, patient_split, CACHE_DIR  # noqa: E402
+from rsna_data import (  # noqa: E402
+    load_cache, load_frozen_split, SPLIT_FILE, SPLIT_SEED, CACHE_DIR,
+)
 from amog_perf import (  # noqa: E402
     configure_backend, suggest_batch, loader_kwargs, Amp, maybe_compile,
 )
@@ -195,8 +197,17 @@ def make_datasets(ctx, stage, args):
     xseq_for_stage = None if stage == "E0" else xseq_idx
     tt = build_target_table(ann_idx, xseq_for_stage)
     if args.max_targets:
-        tt = tt.sample(n=min(args.max_targets, len(tt)), random_state=args.seed)
-    tr, va, te = patient_split(tt, seed=args.seed)
+        # Subsample with the SPLIT seed, not the training seed. A partial run
+        # must look at the same subset of the cohort whichever seed is training,
+        # or the seeds are not repeat measurements of one experiment.
+        tt = tt.sample(n=min(args.max_targets, len(tt)), random_state=SPLIT_SEED)
+
+    # Chapter 3 sec:method-patient-split: one frozen, version-controlled split,
+    # consumed as a fixed list. Independent of args.seed by construction, so the
+    # three seeds of a campaign are three trainings on ONE cohort partition.
+    tr, va, te = load_frozen_split(tt)
+    print("  split: {} train / {} val / {} test patients  (frozen: {})".format(
+        len(tr), len(va), len(te), os.path.relpath(SPLIT_FILE, PROJECT_ROOT)))
 
     if stage in GRAPH_STAGES:
         sel = lambda s: PatientGraphDataset(tt[tt.study_id.isin(s)], mm_ann, mm_x)

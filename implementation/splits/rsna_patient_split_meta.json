@@ -1,0 +1,16 @@
+{
+  "created": "2026-08-25T23:09:29",
+  "split_seed": 20260825,
+  "fractions": {
+    "train": 0.7,
+    "val": 0.15,
+    "test": 0.15
+  },
+  "n_patients": 1974,
+  "n_train": 1381,
+  "n_val": 296,
+  "n_test": 297,
+  "sha256": "4763bf66a52bd467adc7d6aedfadff7b38af83ed2feefaeca6c526d948a260e9",
+  "git_commit": "a271d19",
+  "note": "Chapter 3 sec:method-patient-split. Frozen split record. Do not regenerate for a new experiment -- every comparison in the thesis is made on these partitions. Regenerating invalidates every result computed against the previous file."
+}
