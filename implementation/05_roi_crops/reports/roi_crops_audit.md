@@ -1,6 +1,6 @@
 # ✂️ Phase 6 2.5D ROI Extraction Audit Report
-**Generated At:** `2026-08-25 03:00:07`  
-**ROI Manifest Path:** `C:\Users\polla\Drives\PollaFattah\UNi\Research\Students\Selar\Project\data\derived\lumbar_roi_manifest.csv`  
+**Generated At:** `2026-08-25 19:43:22`  
+**ROI Manifest Path:** `C:\Users\USER\Desktop\Polla\Lumbar\Lumbar-Spine-Researches\data\derived\lumbar_roi_manifest.csv`  
 
 ---
 
@@ -16,8 +16,8 @@
 
 | ROI ID | Patient ID | Disc Level | Tensor Shape | View Type |
 | :--- | :--- | :--- | :--- | :--- |
-| `PATIENT_001_L1-L2` | `PATIENT_001` | `L1-L2` | `128x128x3` | `2.5D_MultiPlanar_Sagittal_Axial` |
-| `PATIENT_001_L2-L3` | `PATIENT_001` | `L2-L3` | `128x128x3` | `2.5D_MultiPlanar_Sagittal_Axial` |
-| `PATIENT_001_L3-L4` | `PATIENT_001` | `L3-L4` | `128x128x3` | `2.5D_MultiPlanar_Sagittal_Axial` |
-| `PATIENT_001_L4-L5` | `PATIENT_001` | `L4-L5` | `128x128x3` | `2.5D_MultiPlanar_Sagittal_Axial` |
-| `PATIENT_001_L5-S1` | `PATIENT_001` | `L5-S1` | `128x128x3` | `2.5D_MultiPlanar_Sagittal_Axial` |
+| `ANON_P_0001_L1-L2` | `ANON_P_0001` | `L1-L2` | `128x128x3` | `2.5D_MultiPlanar_Sagittal_Axial` |
+| `ANON_P_0001_L2-L3` | `ANON_P_0001` | `L2-L3` | `128x128x3` | `2.5D_MultiPlanar_Sagittal_Axial` |
+| `ANON_P_0001_L3-L4` | `ANON_P_0001` | `L3-L4` | `128x128x3` | `2.5D_MultiPlanar_Sagittal_Axial` |
+| `ANON_P_0001_L4-L5` | `ANON_P_0001` | `L4-L5` | `128x128x3` | `2.5D_MultiPlanar_Sagittal_Axial` |
+| `ANON_P_0001_L5-S1` | `ANON_P_0001` | `L5-S1` | `128x128x3` | `2.5D_MultiPlanar_Sagittal_Axial` |

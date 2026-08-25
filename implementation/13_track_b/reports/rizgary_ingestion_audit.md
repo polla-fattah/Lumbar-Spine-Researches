@@ -1,6 +1,6 @@
 # 🏥 Phase 15 Rizgary Clinical Cohort Audit Report
-**Generated At:** `2026-08-25 03:53:42`  
-**Rizgary Manifest Path:** `C:\Users\polla\Drives\PollaFattah\UNi\Research\Students\Selar\Project\data\derived\rizgary_manifest.csv`  
+**Generated At:** `2026-08-25 20:20:02`  
+**Rizgary Manifest Path:** `C:\Users\USER\Desktop\Polla\Lumbar\Lumbar-Spine-Researches\data\derived\rizgary_manifest.csv`  
 
 ---
 

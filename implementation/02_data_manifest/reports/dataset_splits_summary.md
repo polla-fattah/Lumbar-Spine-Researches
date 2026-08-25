@@ -1,5 +1,5 @@
 # Patient-Level Dataset Splits Summary (Gate 2)
-**Generated At:** `2026-08-25 03:52:36`  
+**Generated At:** `2026-08-25 20:19:55`  
 **Random Seed:** `42`  
 
 ---
@@ -16,7 +16,7 @@
 
 | Partition Set | Patient Count | Percentage | Output File Path |
 | :--- | :--- | :--- | :--- |
-| **Training** | `70` | `70.0%` | `C:\Users\polla\Drives\PollaFattah\UNi\Research\Students\Selar\Project\data\splits\train_ids.txt` |
-| **Validation** | `15` | `15.0%` | `C:\Users\polla\Drives\PollaFattah\UNi\Research\Students\Selar\Project\data\splits\val_ids.txt` |
-| **Public Test** | `15` | `15.0%` | `C:\Users\polla\Drives\PollaFattah\UNi\Research\Students\Selar\Project\data\splits\public_test_ids.txt` |
-| **Total Cohort** | `100` | `100.0%` | `C:\Users\polla\Drives\PollaFattah\UNi\Research\Students\Selar\Project\data\manifests\lumbarDISC_manifest.csv` |
+| **Training** | `70` | `70.0%` | `C:\Users\USER\Desktop\Polla\Lumbar\Lumbar-Spine-Researches\data\splits\train_ids.txt` |
+| **Validation** | `15` | `15.0%` | `C:\Users\USER\Desktop\Polla\Lumbar\Lumbar-Spine-Researches\data\splits\val_ids.txt` |
+| **Public Test** | `15` | `15.0%` | `C:\Users\USER\Desktop\Polla\Lumbar\Lumbar-Spine-Researches\data\splits\public_test_ids.txt` |
+| **Total Cohort** | `100` | `100.0%` | `C:\Users\USER\Desktop\Polla\Lumbar\Lumbar-Spine-Researches\data\manifests\lumbarDISC_manifest.csv` |

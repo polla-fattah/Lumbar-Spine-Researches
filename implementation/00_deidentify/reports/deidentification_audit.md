@@ -1,6 +1,6 @@
 # 🔒 Phase 0 DICOM De-identification Audit Report
-**Generated At:** `2026-08-25 03:52:31`  
-**Restricted Key Mapping File:** `C:\Users\polla\Drives\PollaFattah\UNi\Research\Students\Selar\Project\data\governance\deidentification_key_mapping.csv`  
+**Generated At:** `2026-08-25 20:19:53`  
+**Restricted Key Mapping File:** `C:\Users\USER\Desktop\Polla\Lumbar\Lumbar-Spine-Researches\data\governance\deidentification_key_mapping.csv`  
 
 ---
 
