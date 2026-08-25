@@ -86,7 +86,7 @@ class AMOGNet(nn.Module):
     """Assembles exactly the components the requested rung calls for."""
 
     def __init__(self, stage: str, backbone="resnet18", dim=256,
-                 shuffled=False, ungated=False, seed=0):
+                 shuffled=False, ungated=False, seed=0, pretrained=True):
         super().__init__()
         self.stage = stage
         self.dim = dim
@@ -97,8 +97,13 @@ class AMOGNet(nn.Module):
         self.use_ordinal = stage == "E7"
 
         n_enc = N_MODALITIES if self.use_multiseq else 1
+        # ImageNet initialisation. Chapter 3 sec:method-backbone-control treats
+        # the backbone as a controlled feature extractor held fixed across the
+        # ladder; training 24M parameters from scratch on 34k crops is a
+        # different experiment, and a much weaker one.
         self.encoders = nn.ModuleList(
-            [SequenceEncoder(backbone, dim) for _ in range(n_enc)])
+            [SequenceEncoder(backbone, dim, pretrained=pretrained)
+             for _ in range(n_enc)])
 
         if self.use_multiseq and not self.use_router:
             self.fusion = FixedFusion(dim, mode="mean")
@@ -194,14 +199,23 @@ class AMOGNet(nn.Module):
         feats = torch.stack(outs, dim=1)
         return feats * mask.unsqueeze(-1).to(feats.dtype)
 
-    def forward_target(self, imgs, mask, cond_idx, level_idx):
+    def forward_target(self, imgs, mask, cond_idx, level_idx, ann_slot=None):
         feats = self.encode(imgs, mask)
         if self.use_router:
             fused, g = self.router(feats, mask, cond_idx, level_idx)
         elif self.use_multiseq:
             fused, g = self.fusion(feats, mask)
         else:
-            fused, g = feats[:, 0], None
+            # E0 grades a target from ITS annotated ROI. Chapter 3 sec:method-e0:
+            # "Each target is graded from its anatomically localised input."
+            # Taking slot 0 unconditionally fed 59.5% of targets a sagittal T1
+            # crop when the radiologist had marked sagittal T2 or axial T2.
+            if ann_slot is None:
+                fused = feats[:, 0]
+            else:
+                fused = feats[torch.arange(feats.size(0), device=feats.device),
+                              ann_slot.long()]
+            g = None
         return fused, g
 
     def forward_graph(self, imgs, mask, evidence):
@@ -304,12 +318,13 @@ def run_epoch(model, loader, ctx, stage, args, optimizer=None, cost=None):
                 # one patient contributes many nodes; keep them attributable
                 batch_pid = pid.unsqueeze(1).expand(-1, logits.size(1)).reshape(-1)[sel]
         else:
-            imgs, mask, cond, lvl, yy, batch_pid = [b.to(ctx.device) for b in batch]
+            imgs, mask, cond, lvl, yy, batch_pid, ann_slot = [
+                b.to(ctx.device) for b in batch]
             if stage in DROPOUT_STAGES and train:
                 mask = apply_modality_dropout(mask, args.p_drop, True)
             with torch.set_grad_enabled(train), (
                     amp.autocast() if amp else torch.autocast("cpu", enabled=False)):
-                fused, g = model.forward_target(imgs, mask, cond, lvl)
+                fused, g = model.forward_target(imgs, mask, cond, lvl, ann_slot)
                 lg = model.head(fused)
                 loss, p = _loss_and_probs(model, lg, yy, cost, args)
 
@@ -424,6 +439,10 @@ def main():
                     help="run E4 WITHOUT the ACSSL weights. Not a valid E4: the "
                          "result is E3 under a different name and must not be "
                          "reported as anatomical self-supervision.")
+    ap.add_argument("--pretrained", dest="pretrained", action="store_true", default=True,
+                    help="ImageNet-initialised backbones (default)")
+    ap.add_argument("--from_scratch", dest="pretrained", action="store_false",
+                    help="random initialisation; a separate experiment, not the ladder")
     ap.add_argument("--shuffled", action="store_true", help="E6 control")
     ap.add_argument("--ungated", action="store_true", help="E6 ablation")
     ap.add_argument("--max_targets", type=int, default=None)
@@ -472,7 +491,8 @@ def main():
     dl = lambda d, s: DataLoader(d, batch_size=bs, shuffle=s, **lkw)
     train_loader, val_loader, test_loader = dl(train_ds, True), dl(val_ds, False), dl(test_ds, False)
 
-    model = AMOGNet(stage, backbone, args.dim, args.shuffled, args.ungated, args.seed).to(ctx.device)
+    model = AMOGNet(stage, backbone, args.dim, args.shuffled, args.ungated,
+                    args.seed, pretrained=args.pretrained).to(ctx.device)
     if args.channels_last and str(ctx.device).startswith("cuda"):
         model = model.to(memory_format=torch.channels_last)
     n_params = sum(p.numel() for p in model.parameters())

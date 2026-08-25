@@ -115,7 +115,8 @@ class MultiSequenceDataset(Dataset):
                 torch.tensor(int(r.condition_idx)),
                 torch.tensor(int(r.level_idx)),
                 torch.tensor(int(r.label)),
-                torch.tensor(int(r.study_id)))
+                torch.tensor(int(r.study_id)),
+                torch.tensor(int(r.get("ann_slot", 0))))
 
 
 # --------------------------------------------------------------------------- #
@@ -193,12 +194,16 @@ class SyntheticMultiSequence(Dataset):
         self.y = torch.randint(0, N_CLASSES, (n,), generator=g)
         # synthetic patients, so paired comparisons work in smoke mode too
         self.p = torch.arange(n) // 4
+        # the annotated slot must be a sequence this sample actually has, or the
+        # smoke path would exercise a branch the real path never takes
+        self.a = self.m.float().argmax(dim=1)
 
     def __len__(self):
         return len(self.y)
 
     def __getitem__(self, i):
-        return self.x[i], self.m[i], self.c[i], self.l[i], self.y[i], self.p[i]
+        return (self.x[i], self.m[i], self.c[i], self.l[i], self.y[i],
+                self.p[i], self.a[i])
 
 
 class SyntheticPatientGraph(Dataset):
@@ -268,6 +273,21 @@ def build_target_table(ann_index: pd.DataFrame,
     for m in MODALITIES:
         avail += ((base["ann_{}".format(m)] >= 0) | (base["xseq_{}".format(m)] >= 0)).astype(int)
     base["n_sequences"] = avail
+
+    # Which modality slot holds the ANNOTATED ROI for this target.
+    #
+    # Chapter 3 sec:method-e0 grades each target "from its anatomically
+    # localised input". RSNA annotates one sequence per condition: canal on
+    # sagittal T2, foraminal on sagittal T1, subarticular on axial T2. E0 read
+    # slot 0 unconditionally, so 59.5% of targets were graded from a
+    # geometry-projected sagittal T1 crop instead of the sequence a radiologist
+    # actually marked. Recorded per row rather than derived from the condition,
+    # because a handful of targets deviate from the usual mapping.
+    ann_slot = np.full(len(base), -1, dtype=int)
+    for i, m in enumerate(MODALITIES):
+        col = base["ann_{}".format(m)].values
+        ann_slot = np.where((ann_slot < 0) & (col >= 0), i, ann_slot)
+    base["ann_slot"] = np.where(ann_slot < 0, 0, ann_slot)
     return base
 
 
