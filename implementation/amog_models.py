@@ -501,6 +501,28 @@ class TemperatureScaler(nn.Module):
     def forward(self, logits):
         return logits / self.log_t.exp().clamp(min=1e-2)
 
+    def fit_probs(self, logits, labels, to_probs, steps: int = 200, lr: float = 0.01):
+        """Fit T by minimising the NLL of the head's CLASS probabilities.
+
+        The categorical `fit` below assumes logits with one column per class.
+        E7's ordinal head emits K-1 cumulative logits instead, so feeding them
+        to cross_entropy raises "Target 2 is out of bounds". Calibrating through
+        `to_probs` keeps one scalar with the same meaning for every rung: the
+        temperature divides the logits, and the head turns them into class
+        probabilities however it normally does.
+        """
+        opt = torch.optim.LBFGS([self.log_t], lr=lr, max_iter=steps)
+
+        def closure():
+            opt.zero_grad()
+            p = to_probs(logits / self.log_t.exp().clamp(min=1e-2))
+            loss = F.nll_loss(p.clamp(min=1e-12).log(), labels)
+            loss.backward()
+            return loss
+
+        opt.step(closure)
+        return float(self.log_t.exp().item())
+
     def fit(self, logits, labels, steps: int = 200, lr: float = 0.01):
         opt = torch.optim.LBFGS([self.log_t], lr=lr, max_iter=steps)
 

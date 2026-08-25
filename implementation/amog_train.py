@@ -282,6 +282,7 @@ def run_epoch(model, loader, ctx, stage, args, optimizer=None, cost=None):
 
     tot_loss, n = 0.0, 0
     preds, targets, probs, entropies, pids = [], [], [], [], []
+    logits_all = []
 
     for batch in loader:
         if graph:
@@ -331,6 +332,7 @@ def run_epoch(model, loader, ctx, stage, args, optimizer=None, cost=None):
         preds.append(p.argmax(1).detach().cpu().numpy())
         targets.append(yy.detach().cpu().numpy())
         probs.append(p.detach().cpu().numpy())
+        logits_all.append(lg.detach().float().cpu().numpy())
         pids.append(batch_pid.detach().cpu().numpy())
         if g is not None:
             m2 = mask.reshape(-1, N_MODALITIES) if graph else mask
@@ -344,8 +346,21 @@ def run_epoch(model, loader, ctx, stage, args, optimizer=None, cost=None):
     m["loss"] = tot_loss / n
     m["gate_entropy"] = float(np.mean(entropies)) if entropies else None
     m["_predictions"] = dict(patient_id=np.concatenate(pids),
-                             y_true=yt, y_pred=yp, y_prob=pr)
+                             y_true=yt, y_pred=yp, y_prob=pr,
+                             logits=np.concatenate(logits_all))
     return m
+
+
+def probs_from_logits(model, logits, temperature: float = 1.0):
+    """Class probabilities under a calibration temperature.
+
+    Applied to the LOGITS, before the ordinal head's cumulative transform, so a
+    single scalar has the same meaning for E7 as for the categorical rungs.
+    """
+    z = logits / max(temperature, 1e-6)
+    if model.use_ordinal:
+        return OrdinalCORNHead.to_probs(z)
+    return torch.softmax(z, dim=1)
 
 
 def _loss_and_probs(model, logits, y, cost, args):
@@ -397,6 +412,10 @@ def main():
                     help="epochs without val macro-F1 improvement before "
                          "ReduceLROnPlateau lowers the LR. This decays the "
                          "learning rate; it never stops training.")
+    ap.add_argument("--calibrate", dest="calibrate", action="store_true", default=True,
+                    help="fit temperature scaling on the validation split after "
+                         "model selection (Chapter 3 phase 4)")
+    ap.add_argument("--no_calibrate", dest="calibrate", action="store_false")
     ap.add_argument("--acssl_ckpt", type=str, default=None,
                     help="ACSSL-pretrained encoders for E4 (default: the run "
                          "mode's checkpoint dir). Produced by amog_acssl.py.")
@@ -589,8 +608,54 @@ def main():
     print("  restored epoch {} (val macro-F1 {:.4f}) for the held-out test".format(
         rl["epoch"], rl["val_macro_f1"]))
 
+    # Chapter 3 sec:method-training-phases phase 4 and sec:method-calibration:
+    # "Temperature/uncertainty parameters are fitted on validation data AFTER
+    # model selection." Fitted here, on the restored checkpoint, using the
+    # validation split only -- fitting on test would be selecting on test.
+    calib = None
+    if args.calibrate:
+        vres = run_epoch(model, val_loader, ctx, stage, args, None, cost)
+        vlog = torch.from_numpy(vres["_predictions"]["logits"])
+        vy = torch.from_numpy(vres["_predictions"]["y_true"]).long()
+        scaler = TemperatureScaler()
+        # head-aware: E7 emits cumulative logits, the other rungs emit class
+        # logits, and one scalar must mean the same thing for both
+        temperature = scaler.fit_probs(
+            vlog, vy, lambda z: OrdinalCORNHead.to_probs(z) if model.use_ordinal
+            else torch.softmax(z, dim=1))
+        v_before = compute_metrics(
+            vy.numpy(),
+            probs_from_logits(model, vlog).argmax(1).numpy(),
+            probs_from_logits(model, vlog).numpy())["ece"]
+        v_after = compute_metrics(
+            vy.numpy(),
+            probs_from_logits(model, vlog, temperature).argmax(1).numpy(),
+            probs_from_logits(model, vlog, temperature).numpy())["ece"]
+        calib = {"temperature": float(temperature),
+                 "val_ece_before": float(v_before),
+                 "val_ece_after": float(v_after),
+                 "fitted_on": "validation"}
+        print("  calibration: T = {:.4f}   val ECE {:.4f} -> {:.4f}".format(
+            temperature, v_before, v_after))
+        if v_after > v_before + 1e-6:
+            print("               [!] calibration did not improve validation ECE")
+
     print("\n[STAGE 2] held-out test")
     tmet = run_epoch(model, test_loader, ctx, stage, args, None, cost)
+
+    if calib is not None:
+        # Report uncalibrated AND calibrated on the test set. Only the
+        # temperature came from validation; the test numbers are still measured.
+        tl = torch.from_numpy(tmet["_predictions"]["logits"])
+        ty = tmet["_predictions"]["y_true"]
+        pc = probs_from_logits(model, tl, calib["temperature"]).numpy()
+        cm = compute_metrics(ty, pc.argmax(1), pc)
+        tmet["ece_uncalibrated"] = tmet["ece"]
+        tmet["calibrated"] = {k: cm[k] for k in
+                              ("accuracy", "macro_f1", "qwk", "ece", "brier")
+                              if k in cm}
+        print("  test ECE {:.4f} uncalibrated -> {:.4f} calibrated (T = {:.4f})".format(
+            tmet["ece"], cm["ece"], calib["temperature"]))
     tmet.update({"stage": stage, "tag": tag, "backbone": backbone,
                  "n_parameters": int(n_params), "seed": args.seed,
                  "shuffled_control": bool(args.shuffled), "ungated": bool(args.ungated),
@@ -599,6 +664,7 @@ def main():
                  # though it always equals epochs_configured, so that a future
                  # run which does stop early cannot be mistaken for one that did
                  # not.
+                 "calibration": calib,
                  "acssl": acssl_info,
                  "acssl_pretrained": acssl_info is not None,
                  "scheduler": args.scheduler,

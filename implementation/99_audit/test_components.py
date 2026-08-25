@@ -537,6 +537,37 @@ check("temperature scaling is applied during training/selection",
       "TemperatureScaler is imported and never used. ECE is reported but never "
       "corrected, so E7's calibration claim has no implementation.")
 
+check("the temperature is fitted on validation, never on test",
+      "run_epoch(model, val_loader" in train_src.split("[STAGE 2]")[0].split(
+          "calibrate")[-1] or '"fitted_on": "validation"' in train_src,
+      "Chapter 3 sec:method-training-phases phase 4: calibration is fitted on "
+      "validation data after model selection")
+
+check("both uncalibrated and calibrated test ECE are reported",
+      "ece_uncalibrated" in train_src,
+      "reporting only the calibrated figure would hide a calibration that made "
+      "the held-out set worse")
+
+# The ordinal head emits K-1 cumulative logits, so a categorical cross-entropy
+# fit raises "Target 2 is out of bounds". Calibration must be head-aware.
+_z = torch.randn(400, 2) * 3.0
+_p0 = OrdinalCORNHead.to_probs(_z)
+_y = torch.multinomial(_p0, 1).squeeze(1)
+_ts = TemperatureScaler()
+try:
+    _T = _ts.fit_probs(_z, _y, OrdinalCORNHead.to_probs)
+    check("temperature scaling works on the ordinal head's cumulative logits",
+          np.isfinite(_T) and _T > 0, f"T={_T}")
+except Exception as _e:
+    check("temperature scaling works on the ordinal head's cumulative logits",
+          False, f"{type(_e).__name__}: {_e}")
+
+# Fitting must not make validation NLL worse -- T=1 is always available.
+_nll = lambda T: float(F.nll_loss(
+    OrdinalCORNHead.to_probs(_z / T).clamp(min=1e-12).log(), _y))
+check("the fitted temperature does not increase validation NLL",
+      _nll(_T) <= _nll(1.0) + 1e-4, f"{_nll(1.0):.4f} -> {_nll(_T):.4f}")
+
 # Chapter 3 sec:method-augmentation specifies an augmentation programme.
 aug_terms = ("flip", "gamma", "bias_field", "elastic", "augment")
 check("training augmentation exists",
