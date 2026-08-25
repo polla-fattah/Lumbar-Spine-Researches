@@ -311,6 +311,18 @@ def main():
     ap.add_argument("--p_drop", type=float, default=0.2)
     ap.add_argument("--balance_weight", type=float, default=0.01)
     ap.add_argument("--cost_weight", type=float, default=0.0)
+    # Chapter 3 sec:method-optimiser: warm-up + cosine decay (or a plateau
+    # scheduler), and early stopping on a prevalence-robust metric. The chapter
+    # also requires the thesis to REPORT the schedule and the patience, so both
+    # are explicit flags and both are written into the run's result JSON.
+    ap.add_argument("--scheduler", choices=["cosine", "plateau", "none"],
+                    default="cosine",
+                    help="LR schedule; 'none' only for a deliberate control")
+    ap.add_argument("--warmup_frac", type=float, default=0.05,
+                    help="fraction of total epochs spent warming up from lr/100")
+    ap.add_argument("--patience", type=int, default=10,
+                    help="early-stopping patience in epochs on val macro-F1; "
+                         "0 disables early stopping")
     ap.add_argument("--shuffled", action="store_true", help="E6 control")
     ap.add_argument("--ungated", action="store_true", help="E6 ablation")
     ap.add_argument("--max_targets", type=int, default=None)
@@ -374,6 +386,34 @@ def main():
     optimizer = torch.optim.AdamW(model.parameters(), lr=ctx.lr)
     cost = clinical_cost_matrix(device=ctx.device) if args.cost_weight > 0 else None
 
+    # Chapter 3 sec:method-optimiser. Stepped once per epoch, so the schedule is
+    # independent of dataset size and identical across every rung of the ladder
+    # -- a schedule that varied with the loader length would make E5-E7 (graph
+    # rungs, far fewer batches) decay on a different curve from E0-E4 and
+    # confound the comparison with an optimisation difference.
+    warmup_epochs = max(0, int(round(args.warmup_frac * ctx.epochs)))
+    if args.scheduler == "cosine":
+        cosine = torch.optim.lr_scheduler.CosineAnnealingLR(
+            optimizer, T_max=max(1, ctx.epochs - warmup_epochs))
+        if warmup_epochs:
+            scheduler = torch.optim.lr_scheduler.SequentialLR(
+                optimizer,
+                schedulers=[torch.optim.lr_scheduler.LinearLR(
+                    optimizer, start_factor=0.01, total_iters=warmup_epochs), cosine],
+                milestones=[warmup_epochs])
+        else:
+            scheduler = cosine
+    elif args.scheduler == "plateau":
+        scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
+            optimizer, mode="max", factor=0.5, patience=max(1, args.patience // 3))
+    else:
+        scheduler = None
+    print("  schedule: {}{}  patience {}".format(
+        args.scheduler,
+        " (warmup {} ep)".format(warmup_epochs) if warmup_epochs and
+        args.scheduler == "cosine" else "",
+        args.patience if args.patience > 0 else "off"))
+
     hist = os.path.join(ctx.log_dir, "{}_{}_seed{}_history.csv".format(tag, ctx.mode, args.seed))
     best, best_path = -1.0, os.path.join(
         ctx.checkpoint_dir, "{}_{}_seed{}_best.pt".format(tag, ctx.mode, args.seed))
@@ -381,17 +421,22 @@ def main():
     print("\n[STAGE 1] training")
     with open(hist, "w", newline="", encoding="utf-8") as fh:
         w = csv.writer(fh)
-        w.writerow(["mode", "stage", "seed", "epoch", "train_loss", "val_loss",
+        w.writerow(["mode", "stage", "seed", "epoch", "lr", "train_loss", "val_loss",
                     "val_acc", "val_macro_f1", "val_qwk", "val_ece",
                     "gate_entropy", "seconds"])
+        epochs_since_best = 0
+        stopped_early = None
+        best_epoch = 0
         for ep in range(1, ctx.epochs + 1):
             t0 = time.time()
+            lr_now = optimizer.param_groups[0]["lr"]
             tm = run_epoch(model, train_loader, ctx, stage, args, optimizer, cost)
             tm.pop("_predictions", None)
             vm = run_epoch(model, val_loader, ctx, stage, args, None, cost)
             vm.pop("_predictions", None)
             secs = time.time() - t0
-            w.writerow([ctx.mode, stage, args.seed, ep, round(tm["loss"], 6),
+            w.writerow([ctx.mode, stage, args.seed, ep, "{:.3e}".format(lr_now),
+                        round(tm["loss"], 6),
                         round(vm["loss"], 6), round(vm["accuracy"], 6),
                         round(vm["macro_f1"], 6), round(vm["qwk"], 6),
                         round(vm["ece"], 6),
@@ -405,19 +450,53 @@ def main():
                       vm["macro_f1"], vm["qwk"], ge, secs))
             if vm["macro_f1"] > best:
                 best = vm["macro_f1"]
+                best_epoch = ep
+                epochs_since_best = 0
                 torch.save({"model_state_dict": model.state_dict(),
                             "optimizer_state_dict": optimizer.state_dict(),
                             "epoch": ep, "val_macro_f1": best, "stage": stage,
                             "backbone": backbone, "provenance": ctx.stamp()}, best_path)
+            else:
+                epochs_since_best += 1
 
+            if scheduler is not None:
+                # ReduceLROnPlateau is driven by the metric; the others are not.
+                if args.scheduler == "plateau":
+                    scheduler.step(vm["macro_f1"])
+                else:
+                    scheduler.step()
+
+            if args.patience > 0 and epochs_since_best >= args.patience:
+                stopped_early = ep
+                print("  early stop: {} epochs without a val macro-F1 improvement "
+                      "over {:.4f} (epoch {})".format(args.patience, best, best_epoch))
+                break
+
+    # Restore the selected weights. Chapter 3 sec:method-model-selection makes
+    # validation the basis of selection, so the held-out test must run on the
+    # checkpoint that selection chose -- not on whatever the last epoch left in
+    # memory. Loading the file and asserting it is non-empty is not restoring it.
     rl = torch.load(best_path, map_location="cpu", weights_only=False)
     assert rl["model_state_dict"], "checkpoint did not round-trip"
+    model.load_state_dict(rl["model_state_dict"])
+    print("  restored epoch {} (val macro-F1 {:.4f}) for the held-out test".format(
+        rl["epoch"], rl["val_macro_f1"]))
 
     print("\n[STAGE 2] held-out test")
     tmet = run_epoch(model, test_loader, ctx, stage, args, None, cost)
     tmet.update({"stage": stage, "tag": tag, "backbone": backbone,
                  "n_parameters": int(n_params), "seed": args.seed,
-                 "shuffled_control": bool(args.shuffled), "ungated": bool(args.ungated)})
+                 "shuffled_control": bool(args.shuffled), "ungated": bool(args.ungated),
+                 # Chapter 3 sec:method-optimiser requires the schedule, the
+                 # patience and the selection point to be reported.
+                 "scheduler": args.scheduler,
+                 "warmup_epochs": warmup_epochs,
+                 "patience": args.patience,
+                 "epochs_configured": ctx.epochs,
+                 "epochs_run": stopped_early or ctx.epochs,
+                 "stopped_early": stopped_early is not None,
+                 "selected_epoch": int(rl["epoch"]),
+                 "selected_val_macro_f1": float(rl["val_macro_f1"])})
     print("  loss {:.4f}  acc {:.4f}  macro-F1 {:.4f}  QWK {:.4f}  ECE {:.4f}".format(
         tmet["loss"], tmet["accuracy"], tmet["macro_f1"], tmet["qwk"], tmet["ece"]))
     print("  grade distance  d0 {:.3f}  d1 {:.3f}  d>=2 {:.3f}".format(
