@@ -23,3 +23,9 @@ $RECYCLE.BIN/
 # ---------------------------------------------------------------------------
 data/
 Data_deidentified/
+
+# Derived caches -- large, regenerable from the scripts in implementation/
+implementation/05_rsna_rois/*.npy
+implementation/05_rsna_rois/*.csv
+implementation/04_rsna_targets/*.csv
+implementation/06_baselines/results/*.pt
