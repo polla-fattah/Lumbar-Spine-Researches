@@ -320,13 +320,13 @@ def _expected_calibration_error(y_true, y_prob, n_bins: int = 15) -> float:
     pred = y_prob.argmax(axis=1)
     correct = (pred == y_true).astype(np.float64)
     edges = np.linspace(0.0, 1.0, n_bins + 1)
-    ece = 0.0
+    total_ece = 0.0
     n = len(y_true)
     for lo, hi in zip(edges[:-1], edges[1:]):
         m = (conf > lo) & (conf <= hi)
         if m.sum():
-            ece += (m.sum() / n) * abs(correct[m].mean() - conf[m].mean())
-    return ece
+            total_ece += (m.sum() / n) * abs(correct[m].mean() - conf[m].mean())
+    return float(total_ece)
 
 
 def _brier(y_true, y_prob, k: int) -> float:

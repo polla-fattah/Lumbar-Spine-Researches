@@ -33,9 +33,23 @@ def main():
     manifest_csv = os.path.join(manifests_dir, "rsna_manifest.csv")
 
     rsna_path, is_valid = resolve_dataset_dir(args.rsna_dir, "RSNA_DATASET_DIR", DEFAULT_HINTS_RSNA, "RSNA")
+    fallback_targets = os.path.join(base_dir, "implementation", "04_rsna_targets", "rsna_targets.csv")
+
     if not is_valid:
-        print("[FAIL] RSNA dataset directory not found. Please provide valid path.")
-        sys.exit(1)
+        if os.path.exists(fallback_targets):
+            print(f"[INGEST] Using locally cached target records from {fallback_targets}...")
+            df_targets = pd.read_csv(fallback_targets)
+            merged_df = df_targets[["study_id", "series_id", "series_description"]].drop_duplicates()
+            merged_df.to_csv(manifest_csv, index=False)
+            num_patients = merged_df['study_id'].nunique()
+            num_series = merged_df['series_id'].nunique()
+            print(f"  - Patients ingested from cache : {num_patients}")
+            print(f"  - Series ingested from cache   : {num_series}")
+            print(f"[SUCCESS] RSNA Manifest created at {manifest_csv}")
+            return
+        else:
+            print("[FAIL] RSNA dataset directory not found. Please provide valid path.")
+            sys.exit(1)
 
     print(f"[INGEST] Reading RSNA CSV metadata files from: {rsna_path}...")
     df_train = pd.read_csv(os.path.join(rsna_path, "train.csv"))

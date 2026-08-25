@@ -60,15 +60,15 @@ def expected_calibration_error(probs, y_true, n_bins=15):
     pred = probs.argmax(axis=1)
     correct = (pred == y_true).astype(np.float64)
     edges = np.linspace(0.0, 1.0, n_bins + 1)
-    ece = 0.0
+    total_ece = 0.0
     n = len(y_true)
     for b in range(n_bins):
         lo, hi = edges[b], edges[b + 1]
         mask = (conf > lo) & (conf <= hi) if b else (conf >= lo) & (conf <= hi)
         if not mask.any():
             continue
-        ece += mask.sum() / n * abs(correct[mask].mean() - conf[mask].mean())
-    return float(ece)
+        total_ece += mask.sum() / n * abs(correct[mask].mean() - conf[mask].mean())
+    return float(total_ece)
 
 
 def balanced_accuracy(y_true, y_pred, k):

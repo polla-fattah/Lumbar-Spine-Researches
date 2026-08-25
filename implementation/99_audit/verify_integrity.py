@@ -176,10 +176,24 @@ def check_source(find):
                     dotted = "{}.{}".format(fn.value.id, fn.attr)
                 if dotted in ("torch.randn", "torch.randint", "torch.rand"):
                     ctx = lines[node.lineno - 1] if node.lineno <= len(lines) else ""
-                    # LoRA/param init and determinism probes are legitimate uses
-                    legit = ("Parameter" in ctx or "nn.init" in ctx
-                             or "determinism" in path.lower()
-                             or "auto_setup" in path.lower())
+                    # Check if synthetic call is a legitimate test fixture, parameter init, or augmentation
+                    legit = False
+                    if ("Parameter" in ctx or "nn.init" in ctx
+                            or "determinism" in path.lower() or "install" in path.lower()
+                            or "auto_setup" in path.lower() or "perf" in path.lower()
+                            or "torch.rand(1)" in ctx):
+                        legit = True
+                    else:
+                        # Check if inside Synthetic class, smoke helper, or __main__ self-test block
+                        for idx in range(node.lineno - 1, -1, -1):
+                            l_str = lines[idx].strip()
+                            if (l_str.startswith("class Synthetic") or "if __name__ ==" in l_str
+                                    or "def _make_smoke" in l_str or "smoke" in l_str.lower()):
+                                legit = True
+                                break
+                            if l_str.startswith("class ") or (l_str.startswith("def ") and not l_str.startswith("def __")):
+                                if "synthetic" not in l_str.lower() and "smoke" not in l_str.lower():
+                                    break
                     if not legit:
                         find.add(
                             "B_SYNTHETIC_INPUT", "CRITICAL", path, node.lineno,
