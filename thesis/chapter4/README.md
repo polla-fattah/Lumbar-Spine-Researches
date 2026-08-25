@@ -18,6 +18,7 @@ open items listed in `protocol_decisions.md` must be closed first.
 | `e0_baseline.md` | The E0 reference result on RSNA, with a permuted-label negative control | Yes — `implementation/99_audit/make_e0_report.py` |
 | `roi_geometry_ablation.md` | Four ROI geometries compared, and which was adopted | Yes — `implementation/05_rsna_rois/make_roi_ablation_report.py` |
 | `component_verification.md` | The Chapter 3 conformance test suite and its outcome | Yes — `implementation/99_audit/make_verification_report.py` |
+| `rizgary_cohort_reconciliation.md` | Track B step 0: what the local cohort contains, and the four gaps blocking transfer | Yes — `implementation/13_track_b/make_cohort_report.py` |
 | `protocol_decisions.md` | Methodological decisions with the measurement behind each | No — written, updated by hand |
 
 Three of the four are **generated from result files**, so no number in them can
@@ -27,6 +28,7 @@ be typed in or drift from what was measured. Regenerate all of them with:
 python implementation/99_audit/make_e0_report.py
 python implementation/05_rsna_rois/make_roi_ablation_report.py
 python implementation/99_audit/make_verification_report.py
+python implementation/13_track_b/make_cohort_report.py
 ```
 
 `e0_baseline.md` is generated from `data/derived/`, the output of
@@ -65,6 +67,16 @@ scaling made E7's held-out ECE worse while improving E0's and E6's.
 class is 77.3% of the corpus. A model predicting Normal/Mild for every target
 scores that accuracy with QWK exactly 0.0000, and accuracy alone cannot
 distinguish it from a working model.
+
+## A note on patient data
+
+`rizgary_cohort_reconciliation.md` and the case-flow CSV behind it contain **no
+patient identifier**: names and IDs are reduced to salted hashes used only to
+count, dates to years, ages to decades. The unpacked DICOMs they were derived
+from still carry unredacted `PatientName`, `PatientBirthDate`, `PatientSex` and
+`StudyDate`, live under `data/` (gitignored), and must not leave it until
+de-identification is fixed — the current tool keys on `PatientID`, which is not
+unique in this cohort.
 
 ## What is missing before Chapter 4 can be written
 
