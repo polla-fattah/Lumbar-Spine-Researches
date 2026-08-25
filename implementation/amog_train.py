@@ -192,13 +192,8 @@ def make_datasets(ctx, stage, args):
         print("  NOTE cross-sequence cache absent; targets will carry only their")
         print("       annotated sequence, so fusion and routing have little to do.")
 
-    if stage == "E0":
-        tr, va, te = patient_split(ann_idx, seed=args.seed)
-        ann_idx = ann_idx.assign(cache_idx=np.arange(len(ann_idx)))
-        sel = lambda s: ROIDataset(mm_ann, ann_idx[ann_idx.study_id.isin(s)])
-        return sel(tr), sel(va), sel(te), meta
-
-    tt = build_target_table(ann_idx, xseq_idx)
+    xseq_for_stage = None if stage == "E0" else xseq_idx
+    tt = build_target_table(ann_idx, xseq_for_stage)
     if args.max_targets:
         tt = tt.sample(n=min(args.max_targets, len(tt)), random_state=args.seed)
     tr, va, te = patient_split(tt, seed=args.seed)

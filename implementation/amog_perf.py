@@ -127,6 +127,9 @@ def suggest_batch(stage_is_graph: bool, vram_gb: float, requested: int | None = 
 
 def loader_kwargs(workers: int | None = None, cuda: bool = True):
     """DataLoader settings that keep the GPU fed."""
+    # On Windows, PyTorch multiprocessing spawn cannot pickle numpy.memmap file descriptors
+    if os.name == "nt":
+        return dict(num_workers=0, pin_memory=bool(cuda))
     if workers is None:
         cpu = os.cpu_count() or 8
         workers = min(16, max(2, cpu // 2))
