@@ -53,7 +53,7 @@ Two of the defects — the shuffled-graph control and the evidence leak — bias
 
 ## Change history
 
-91 commits touching `implementation/` or `thesis/`.
+92 commits touching `implementation/` or `thesis/`.
 
 ### Audit and verification
 
@@ -118,6 +118,7 @@ Two of the defects — the shuffled-graph control and the evidence leak — bias
 
 | Commit | Date | Change |
 | :--- | :--- | :--- |
+| `5112c5c` | 2026-08-26 | feat(track_b): source-text audit of the reports, and an implementation log |
 | `b098fcc` | 2026-08-26 | feat(track_b): cohort reconciliation -- the imaging is sound, the labels are not |
 
 ### Chapter 4 evidence
