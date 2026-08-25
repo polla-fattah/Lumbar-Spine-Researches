@@ -29,3 +29,7 @@ implementation/05_rsna_rois/*.npy
 implementation/05_rsna_rois/*.csv
 implementation/04_rsna_targets/*.csv
 implementation/06_baselines/results/*.pt
+
+# Python bytecode
+__pycache__/
+*.pyc
