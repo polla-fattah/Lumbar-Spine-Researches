@@ -709,8 +709,8 @@ before model comparison. At minimum there will be:
 
 \begin{itemize}
   \item a development/training partition;
-  \item a validation partition for hyperparameter choice, early stopping and
-        calibration;
+  \item a validation partition for hyperparameter choice, checkpoint
+        selection and calibration;
   \item a held-out public evaluation partition not used for model selection.
 \end{itemize}
 
@@ -2232,9 +2232,32 @@ be tuned without confounding the effective learning rate---a distinction that
 matters when one schedule must serve encoder, router and graph modules of
 different scales. Learning rate is selected on the validation set within a
 pre-specified range, with warm-up and cosine decay \cite{loshchilov2017sgdr} or
-a plateau scheduler used consistently across the main ablation. Early stopping is
-based on a prevalence-robust validation metric such as macro-F1 or weighted
-$\kappa$, not raw accuracy.
+a plateau scheduler used consistently across the main ablation.
+
+Every rung of the ladder is trained for the same fixed epoch budget, and early
+stopping is deliberately not used. This is a departure from common practice and
+is made for comparability. If training halted on a validation criterion, the
+budget would become data-dependent: one configuration might run the full
+schedule while another halted at a third of it, and the difference between two
+rungs would then confound architecture with training length---the very
+confound the ladder in Section~\ref{sec:method-ablation} exists to remove. A
+truncated run also never completes its cosine annealing, so rungs would receive
+different amounts of learning-rate decay and would not be compared at an
+equivalent point on their schedules.
+
+Fixing the budget does not mean testing whatever the final epoch produced.
+Model selection is retained and is separate from stopping: validation macro-F1
+is evaluated after every epoch, the best-scoring checkpoint is retained, and
+that checkpoint---not the final one---is restored before any held-out
+evaluation, as required by Section~\ref{sec:method-model-selection}. The
+selection criterion is prevalence-robust by construction; raw accuracy is not
+used, because a model predicting the majority grade for every target would
+score highly on it while ordering no severity at all.
+
+The cost of a fixed budget is compute, since a configuration that converges
+early continues to train. That cost is accepted. The epoch budget is chosen on
+the development and validation partitions before the confirmatory comparison is
+run, and is held constant across the ladder thereafter.
 
 The final report records:
 
@@ -2242,7 +2265,7 @@ The final report records:
   \item optimiser and version;
   \item initial learning rate and scheduler;
   \item batch size / effective batch size;
-  \item number of epochs and early-stopping patience;
+  \item fixed epoch budget, and the epoch selected by validation macro-F1;
   \item weight decay and dropout;
   \item input resolution and slice-stack radius;
   \item precision mode (FP32/BF16/FP16);
@@ -2280,7 +2303,7 @@ experiment.
 \label{sec:method-model-selection}
 
 Only validation data are used to choose architecture depth, routing
-hyperparameters, loss weights, early stopping and calibration. The held-out
+hyperparameters, loss weights, the retained checkpoint and calibration. The held-out
 public test and fixed Rizgary test sets are not inspected for iterative model
 selection. If many exploratory experiments are performed, only the pre-specified
 final comparison is used for confirmatory statistical claims; exploratory
@@ -2940,7 +2963,7 @@ Each run is configured from a machine-readable file containing:
   \item loss coefficients;
   \item optimiser and scheduler;
   \item seed;
-  \item checkpoint and early-stopping rule.
+  \item epoch budget and checkpoint-selection rule.
 \end{itemize}
 
 The configuration is copied into the run directory with metrics and model
