@@ -11,7 +11,15 @@
 #  file can see what exists and why none of it belongs in version control.
 # ---------------------------------------------------------------------------
 data/
+Data/
 Data_deidentified/
+
+# Archives of the same. `data/` matches the DIRECTORY only, so a zip sitting at
+# the repo root is NOT covered by it -- Data.zip (2.98 GB of Data/cases/) was
+# untracked but unignored, one `git add -A` away from writing unanonymised
+# patient DICOM permanently into history. Any archive is treated as suspect.
+Data*.zip
+*.zip
 
 # Derived, rebuildable, and large. Regenerating all of it takes ~25 min.
 #   data/cache/rsna_roi_v1.npy    4.78 GB   48,657 annotated ROI crops
