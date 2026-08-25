@@ -53,7 +53,7 @@ Two of the defects — the shuffled-graph control and the evidence leak — bias
 
 ## Change history
 
-92 commits touching `implementation/` or `thesis/`.
+93 commits touching `implementation/` or `thesis/`.
 
 ### Audit and verification
 
@@ -125,6 +125,7 @@ Two of the defects — the shuffled-graph control and the evidence leak — bias
 
 | Commit | Date | Change |
 | :--- | :--- | :--- |
+| `b187ecd` | 2026-08-26 | docs(chapter4): label audit document, completing the Track B evidence |
 | `a813431` | 2026-08-26 | docs(chapter4): E0 negative control passes -- QWK -0.0104 against 0.7203 |
 | `0b2abe2` | 2026-08-26 | docs(chapter4): E0 baseline generated from the pipeline, plus a label-permutation control |
 | `118270d` | 2026-08-26 | docs(chapter4): evidence folder, and the ROI geometry ablation that fills it |

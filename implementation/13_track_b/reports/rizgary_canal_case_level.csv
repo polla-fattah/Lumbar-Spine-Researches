@@ -55,7 +55,7 @@ case_id,canal_status,canal_severity,level_stated
 55,absent,,0
 56,absent,,0
 57,absent,,0
-58,present,severe,1
+58,unresolved,,1
 59,absent,,0
 60,present,mild,1
 61,present,mild,1
@@ -184,7 +184,7 @@ case_id,canal_status,canal_severity,level_stated
 184,present,severe,1
 185,absent,,0
 186,present,mild,1
-187,absent,,1
+187,unresolved,,1
 188,absent,,0
 189,absent,,0
 190,absent,,0

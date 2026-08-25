@@ -739,7 +739,7 @@ case_id,level,finding,status,severity,level_stated,source_phrase
 186,L1-L2,theca_indentation,present,,1,"L1-2,L4-5,L5-S1 disc circumferential disc bulge , indenting ventral theca , with pressure effect on corresponding exit foramina"
 186,L4-L5,theca_indentation,present,,1,"L1-2,L4-5,L5-S1 disc circumferential disc bulge , indenting ventral theca , with pressure effect on corresponding exit foramina"
 186,L5-S1,theca_indentation,present,,1,"L1-2,L4-5,L5-S1 disc circumferential disc bulge , indenting ventral theca , with pressure effect on corresponding exit foramina"
-187,L1-L2,canal_stenosis,absent,,1,"L1-2 shows central disc extrusion on background of  circumferential disc bulge , indenting ventral theca , with no pressure effect on corresponding exit foramina with mils spinal canal stenosis"
+187,L1-L2,canal_stenosis,unresolved,,1,"L1-2 shows central disc extrusion on background of  circumferential disc bulge , indenting ventral theca , with no pressure effect on corresponding exit foramina with mils spinal canal stenosis"
 187,L1-L2,disc_bulge,present,,1,"L1-2 shows central disc extrusion on background of  circumferential disc bulge , indenting ventral theca , with no pressure effect on corresponding exit foramina with mils spinal canal stenosis"
 187,L1-L2,disc_extrusion,present,,1,"L1-2 shows central disc extrusion on background of  circumferential disc bulge , indenting ventral theca , with no pressure effect on corresponding exit foramina with mils spinal canal stenosis"
 187,L1-L2,nerve_root_pressure,absent,,1,"L1-2 shows central disc extrusion on background of  circumferential disc bulge , indenting ventral theca , with no pressure effect on corresponding exit foramina with mils spinal canal stenosis"
@@ -1086,7 +1086,7 @@ case_id,level,finding,status,severity,level_stated,source_phrase
 57,L5-S1,theca_indentation,present,mild,1,"L4-5&L5-S1 disc space show mild degenerative disc dehydration, circumferential disc bulge, indenting ventral theca with pressure effect on corresponding exit foramina at both level along with modic type 2 change at L5 ,S1 vertebral body end plates."
 57,(unspecified),disc_bulge,absent,,0,No other significant disc bulge or herniation
 57,(unspecified),canal_stenosis,absent,,0,No spinal canal stenosis
-58,L2-L3,canal_stenosis,present,,1,"L2-3 Disc space shows   circumferential disc bulge indenting ventral theca with no pressure effect on corresponding exit foramina,causing spinal canal stenosis."
+58,L2-L3,canal_stenosis,unresolved,,1,"L2-3 Disc space shows   circumferential disc bulge indenting ventral theca with no pressure effect on corresponding exit foramina,causing spinal canal stenosis."
 58,L2-L3,disc_bulge,present,,1,"L2-3 Disc space shows   circumferential disc bulge indenting ventral theca with no pressure effect on corresponding exit foramina,causing spinal canal stenosis."
 58,L2-L3,nerve_root_pressure,absent,,1,"L2-3 Disc space shows   circumferential disc bulge indenting ventral theca with no pressure effect on corresponding exit foramina,causing spinal canal stenosis."
 58,L2-L3,theca_indentation,present,,1,"L2-3 Disc space shows   circumferential disc bulge indenting ventral theca with no pressure effect on corresponding exit foramina,causing spinal canal stenosis."

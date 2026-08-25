@@ -129,12 +129,40 @@ def severity_of(phrase: str):
     return None
 
 
-def is_negated(phrase: str, finding_span) -> bool:
-    """Negation within the phrase and before the finding, not report-wide."""
+# Anatomy a negation may be attached to INSTEAD of the finding being tested.
+# "no pressure effect on corresponding exit foramina with mild spinal canal
+# stenosis" negates the pressure effect, not the stenosis.
+_OTHER_SUBJECT = (r"pressure|foramin\w*|theca|nerve\s*roots?|n\.?\s*roots?|"
+                  r"migration|s\.?o\.?l|lesion|signal|fracture|listhesis")
+
+
+def is_negated(phrase: str, finding_span):
+    """Does a negation in this phrase bind to THIS finding?
+
+    Returns True (negated), False (asserted) or None (cannot tell).
+
+    Scoped to the clause before the finding, split on 'with' as well as commas,
+    because these reports chain independent observations with 'with'. If another
+    anatomical subject sits between the negation and the finding, the negation
+    probably attaches to that subject instead, and the phrase is reported as
+    undecidable rather than guessed. Chapter 3 sec:method-report-verification:
+    "Ambiguous phrases are coded as unresolved rather than forced into a class."
+    """
     before = phrase[:finding_span[0]]
-    # only the clause immediately preceding the finding
-    clause = re.split(r"[,;]", before)[-1]
-    return bool(re.search(NEGATION, clause, re.I))
+    # The word boundaries matter: a bare 'with' also matches inside
+    # 'without', which is itself a negation term, so splitting on it would
+    # delete the very negation being tested for.
+    clause = re.split(r"[,;]|\bwith\b|\bbut\b", before, flags=re.I)[-1]
+    if re.search(NEGATION, clause, re.I):
+        return True
+    # negation earlier in the phrase, with another subject in between
+    m = list(re.finditer(NEGATION, before, re.I))
+    if m:
+        between = before[m[-1].end():]
+        if re.search(_OTHER_SUBJECT, between, re.I):
+            return None          # binds elsewhere -> undecidable here
+        return True
+    return False
 
 
 def audit_report(cid: int, text: str) -> list:
@@ -149,10 +177,13 @@ def audit_report(cid: int, text: str) -> list:
                 continue
             neg = is_negated(ph, m.span())
             sev = severity_of(ph)
-            status = "absent" if neg else "present"
-            # a graded phrase that also reads negated is contradictory, not a class
-            if neg and sev:
+            if neg is None:
                 status = "unresolved"
+            elif neg:
+                # a graded phrase that also reads negated is contradictory
+                status = "unresolved" if sev else "absent"
+            else:
+                status = "present"
             targets = levels or ["(unspecified)"]
             for lv in targets:
                 rows.append({

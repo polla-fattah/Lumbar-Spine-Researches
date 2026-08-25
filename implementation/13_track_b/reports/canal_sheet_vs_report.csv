@@ -55,7 +55,7 @@ case_id,canal_status,canal_severity,level_stated,sheet,sheet_positive,report_pos
 55,absent,,0,none,False,False,True
 56,absent,,0,none,False,False,True
 57,absent,,0,none,False,False,True
-58,present,severe,1,"L2-3,L3-4,L4-5,",True,True,True
+58,unresolved,,1,"L2-3,L3-4,L4-5,",True,False,False
 59,absent,,0,none,False,False,True
 60,present,mild,1,none,False,True,False
 61,present,mild,1,"L3-4,L4-5",True,True,True
@@ -184,7 +184,7 @@ case_id,canal_status,canal_severity,level_stated,sheet,sheet_positive,report_pos
 184,present,severe,1,"L3-4,L4-5,L5-S1",True,True,True
 185,absent,,0,none,False,False,True
 186,present,mild,1,"L2-3,L3-4,L4-5,mild",True,True,True
-187,absent,,1,L1-2 mild,True,False,False
+187,unresolved,,1,L1-2 mild,True,False,False
 188,absent,,0,none,False,False,True
 189,absent,,0,none,False,False,True
 190,absent,,0,none,False,False,True

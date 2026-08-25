@@ -280,7 +280,7 @@ case_id,level,canal_status,canal_severity,source_phrase
 57,L4-L5,not_stated,,
 57,L5-S1,not_stated,,
 58,L1-L2,not_stated,,
-58,L2-L3,present,,"L2-3 Disc space shows   circumferential disc bulge indenting ventral theca with no pressure effect on corresponding exit foramina,causing spinal canal stenosis."
+58,L2-L3,unresolved,,"L2-3 Disc space shows   circumferential disc bulge indenting ventral theca with no pressure effect on corresponding exit foramina,causing spinal canal stenosis."
 58,L3-L4,present,severe,"L3-4 disc space shows circumferential disc bulge along with ligamentum flavum hypertrophy indenting theca, causing pressure effect on corresponding exit foramina and severe spinal canal stenosis."
 58,L4-L5,present,,L4-5 side space shows right para central disc protrusion on background of circumferential disc bulge indenting ventral theca causing pressure effect on both foramina and spinal canal stenosis.
 58,L5-S1,not_stated,,
@@ -924,7 +924,7 @@ case_id,level,canal_status,canal_severity,source_phrase
 186,L3-L4,present,mild,"L2-3,L3-4 discs show central disc extrusion on background of  circumferential disc bulge , indenting ventral theca , with pressure effect on corresponding exit foramina with mild spinal canal stenosis at L2-3 level."
 186,L4-L5,not_stated,,
 186,L5-S1,not_stated,,
-187,L1-L2,absent,,"L1-2 shows central disc extrusion on background of  circumferential disc bulge , indenting ventral theca , with no pressure effect on corresponding exit foramina with mils spinal canal stenosis"
+187,L1-L2,unresolved,,"L1-2 shows central disc extrusion on background of  circumferential disc bulge , indenting ventral theca , with no pressure effect on corresponding exit foramina with mils spinal canal stenosis"
 187,L2-L3,not_stated,,
 187,L3-L4,not_stated,,
 187,L4-L5,not_stated,,
