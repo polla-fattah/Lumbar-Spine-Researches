@@ -63,7 +63,7 @@ if hasattr(sys.stdout, "reconfigure"):
 
 CACHE = os.path.join(PROJECT_ROOT, "data", "cache")
 GEOM_CSV = os.path.join(CACHE, "series_geometry.csv")
-ROI_INDEX = os.path.join(CACHE, "rsna_roi_v1_index.csv")
+ROI_INDEX = os.path.join(CACHE, "rsna_roi_v2_index.csv")
 OUT_CSV = os.path.join(CACHE, "crosssequence_index.csv")
 OUT_JSON = os.path.join(CACHE, "crosssequence_stats.json")
 

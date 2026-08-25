@@ -15,8 +15,8 @@ lifted into patient space through the real DICOM affine and projected into the
 other series (build_crosssequence_index.py). Those projected crops live in their
 own cache because they sit at different pixel coordinates than the annotations.
 
-    rsna_roi_v1        annotated ROIs      (source modality)
-    rsna_xseq_v1       geometry-derived    (the other modalities)
+    rsna_roi_v2        annotated ROIs      (source modality)
+    rsna_xseq_v2       geometry-derived    (the other modalities)
 
 A target keeps its annotated sequence always, and gains derived sequences only
 where the projection was accepted. Availability is therefore genuinely variable
@@ -284,7 +284,7 @@ if __name__ == "__main__":
     print("synthetic graph     : nodes {}, labelled {}, with evidence {}".format(
         xi.shape[0], int(lmi.sum()), int(evi.sum())))
 
-    ann_p = os.path.join(CACHE_DIR, "rsna_roi_v1_index.csv")
+    ann_p = os.path.join(CACHE_DIR, ANN_CACHE + "_index.csv")
     if os.path.exists(ann_p):
         ann = pd.read_csv(ann_p)
         xseq_p = os.path.join(CACHE_DIR, "crosssequence_index.csv")

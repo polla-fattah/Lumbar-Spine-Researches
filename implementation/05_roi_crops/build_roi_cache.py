@@ -48,6 +48,17 @@ def main():
     ap.add_argument("--chunk", type=int, default=64)
     ap.add_argument("--max_samples", type=int, default=None)
     ap.add_argument("--no_resume", action="store_true")
+    # ROI geometry. Defaults are the configuration selected by
+    # thesis/chapter4/roi_geometry_ablation.md: a 60 mm physical field of view
+    # with a three-slice stack. Chapter 3 sec:method-roi requires a physical
+    # rather than pixel crop; the ablation measured r=1 against r=2 and against
+    # a per-compartment field of view.
+    ap.add_argument("--fov_mm", type=float, default=60.0,
+                    help="physical crop size in mm; 0 = the old fixed pixel box")
+    ap.add_argument("--radius", type=int, default=1,
+                    help="2.5D stack radius; 1 -> 3 slices, 2 -> 5")
+    ap.add_argument("--per_condition", action="store_true",
+                    help="compartment-specific FOV (not adopted; see the ablation)")
     ap.add_argument("--verify", action="store_true", help="inspect an existing cache")
     ap.add_argument("--from_index", type=str, default=None,
                     help="build from an existing index CSV instead of re-indexing; "
@@ -112,13 +123,16 @@ def main():
     for k, v in index.modality.value_counts().items():
         print("    {:<12} {:>7}".format(k, int(v)))
 
-    gb = len(index) * 3 * args.crop * args.crop * 2 / 1e9
+    gb = len(index) * (2 * args.radius + 1) * args.crop * args.crop * 2 / 1e9
     print("\n  cache will occupy about {:.2f} GB".format(gb))
 
     t0 = time.time()
     meta = build_cache(rsna_dir, index, name=args.name, crop=args.crop,
                        workers=args.workers, chunk=args.chunk,
-                       resume=not args.no_resume)
+                       resume=not args.no_resume,
+                       radius=args.radius,
+                       fov_mm=(None if args.fov_mm <= 0 else args.fov_mm),
+                       per_condition=args.per_condition)
     elapsed = time.time() - t0
 
     arr_p = cache_paths(args.name)[0]

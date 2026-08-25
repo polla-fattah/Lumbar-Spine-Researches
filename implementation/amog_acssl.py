@@ -59,6 +59,7 @@ from amog_models import (  # noqa: E402
 from amog_datasets import build_target_table  # noqa: E402
 from rsna_data import (  # noqa: E402
     load_cache, load_frozen_split, SPLIT_FILE, SPLIT_SEED, CACHE_DIR, _split_digest,
+    ANN_CACHE, XSEQ_CACHE,
 )
 from amog_perf import configure_backend, loader_kwargs, Amp  # noqa: E402
 
@@ -183,13 +184,13 @@ def build_datasets(ctx, args):
         return SyntheticPairs(n, 64, 0), SyntheticPairs(max(n // 4, 8), 64, 1), {}
 
     ram = {"auto": "auto", "yes": True, "no": False}[args.cache_in_ram]
-    mm_ann, valid, ann_idx, _ = load_cache("rsna_roi_v1", in_ram=ram)
+    mm_ann, valid, ann_idx, _ = load_cache(ANN_CACHE, in_ram=ram)
     ann_idx = ann_idx[valid].reset_index(drop=True)
 
     mm_x, xseq_idx = None, None
-    xp = os.path.join(CACHE_DIR, "rsna_xseq_v1.npy")
+    xp = os.path.join(CACHE_DIR, XSEQ_CACHE + ".npy")
     if os.path.exists(xp):
-        mm_x, xvalid, xseq_idx, _ = load_cache("rsna_xseq_v1", in_ram=ram)
+        mm_x, xvalid, xseq_idx, _ = load_cache(XSEQ_CACHE, in_ram=ram)
         xseq_idx = xseq_idx[xvalid].reset_index(drop=True)
 
     tt = build_target_table(ann_idx, xseq_idx)

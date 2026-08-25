@@ -51,6 +51,16 @@ CROP = 128
 SEVERITY_TO_INDEX = {"Normal/Mild": 0, "Moderate": 1, "Severe": 2}
 CACHE_DIR = os.path.join(PROJECT_ROOT, "data", "cache")
 
+# The caches the pipeline reads. Named in one place so a geometry change is a
+# one-line edit rather than a search across six files -- and so the version in
+# the name always corresponds to a recorded crop definition.
+#
+#   v1  fixed 128-pixel box        superseded
+#   v2  60 mm physical FOV, r=1    selected by
+#                                  thesis/chapter4/roi_geometry_ablation.md
+ANN_CACHE = "rsna_roi_v2"
+XSEQ_CACHE = "rsna_xseq_v2"
+
 # RSNA series_description -> canonical modality key
 MODALITY_MAP = {
     "Sagittal T1": "sag_t1",
@@ -438,6 +448,17 @@ def build_cache(rsna_dir: str, index: pd.DataFrame, name: str = "rsna_roi_v1",
     meta = {
         "name": name, "n_rows": int(n), "n_valid": int(valid.sum()),
         "crop": crop, "dtype": "float16", "shape": list(shape),
+        # Geometry is recorded so a cache built under one crop definition can
+        # never be mistaken for another. thesis/chapter4/roi_geometry_ablation.md
+        # is the experiment that selected these values.
+        "radius": int(radius),
+        "n_channels": int(2 * radius + 1),
+        "fov_mm": fov_mm,
+        "per_condition_fov": bool(per_condition),
+        "condition_fov_mm": CONDITION_FOV_MM if per_condition else None,
+        "geometry": ("fixed pixel box" if fov_mm is None else
+                     "{} mm physical FOV{}".format(
+                         fov_mm, ", per-compartment" if per_condition else "")),
         "rsna_dir": rsna_dir,
         "class_names": CLASS_NAMES,
         "bytes_on_disk": int(os.path.getsize(arr_p)) if os.path.exists(arr_p) else 0,

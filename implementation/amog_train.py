@@ -64,6 +64,7 @@ from amog_datasets import (  # noqa: E402
 )
 from rsna_data import (  # noqa: E402
     load_cache, load_frozen_split, SPLIT_FILE, SPLIT_SEED, CACHE_DIR,
+    ANN_CACHE, XSEQ_CACHE,
 )
 from amog_acssl import ACSSL_CKPT_NAME  # noqa: E402
 from amog_perf import (  # noqa: E402
@@ -238,13 +239,13 @@ def make_datasets(ctx, stage, args):
         return mk(n, 0), mk(n // 4, 1), mk(n // 4, 2), {"crop": crop}
 
     ram = {"auto": "auto", "yes": True, "no": False}[getattr(args, "cache_in_ram", "auto")]
-    mm_ann, valid, ann_idx, meta = load_cache("rsna_roi_v1", in_ram=ram)
+    mm_ann, valid, ann_idx, meta = load_cache(ANN_CACHE, in_ram=ram)
     ann_idx = ann_idx[valid].reset_index(drop=True)
 
     mm_x, xseq_idx = None, None
-    xp = os.path.join(CACHE_DIR, "rsna_xseq_v1.npy")
+    xp = os.path.join(CACHE_DIR, XSEQ_CACHE + ".npy")
     if os.path.exists(xp):
-        mm_x, xvalid, xseq_idx, _ = load_cache("rsna_xseq_v1", in_ram=ram)
+        mm_x, xvalid, xseq_idx, _ = load_cache(XSEQ_CACHE, in_ram=ram)
         xseq_idx = xseq_idx[xvalid].reset_index(drop=True)
     elif stage != "E0":
         print("  NOTE cross-sequence cache absent; targets will carry only their")
