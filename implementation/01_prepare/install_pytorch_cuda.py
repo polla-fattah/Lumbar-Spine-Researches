@@ -44,6 +44,7 @@ if hasattr(sys.stdout, "reconfigure"):
 # A driver reports the HIGHEST CUDA it supports; wheels built for lower CUDA
 # versions run fine on it, so we try newest-first and fall back.
 WHEEL_PREFERENCE = [
+    (13.0, "cu130"),
     (12.8, "cu128"),
     (12.6, "cu126"),
     (12.4, "cu124"),
@@ -174,10 +175,16 @@ def main():
 
     tag = args.wheel or choose_wheel(driver_cuda)
     index = INDEX.format(tag)
-    cmd = [sys.executable, "-m", "pip", "install", "--upgrade",
+    # --force-reinstall, not --upgrade. pip compares versions and ignores the
+    # local build tag, so it considers 2.13.0+cpu to already satisfy a request
+    # for 2.13.0+cu130 and does nothing. --no-deps avoids rebuilding the whole
+    # dependency tree, which is already satisfied.
+    cmd = [sys.executable, "-m", "pip", "install", "--force-reinstall", "--no-deps",
            "--index-url", index, "torch", "torchvision"]
 
     print("\n  Chosen wheel       : {}  (for driver CUDA {})".format(tag, driver_cuda))
+    print("  Note               : replacing a same-version +cpu build, so this")
+    print("                       uses --force-reinstall rather than --upgrade.")
     print("  Target interpreter : {}".format(sys.executable))
     print("\n  Command:")
     print("    " + " ".join(cmd))
