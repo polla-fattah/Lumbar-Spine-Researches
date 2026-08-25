@@ -120,6 +120,10 @@ def main() -> int:
     ap.add_argument("--class_weighted", action="store_true",
                     help="inverse-frequency class weights in the loss")
     ap.add_argument("--seed", type=int, default=42)
+    ap.add_argument("--shuffle_labels", action="store_true",
+                    help="NEGATIVE CONTROL: permute labels within each split. A "
+                         "sound pipeline must collapse to QWK ~0 here. Anything "
+                         "else means information is leaking through the split.")
     ap.add_argument("--out_dir", default="implementation/06_baselines/results")
     args = ap.parse_args()
 
@@ -144,6 +148,19 @@ def main() -> int:
         "study_id leaked across splits"
     print(f"studies            : train {len(s_tr)}  val {len(s_va)}  test {len(s_te)}")
     print(f"crops              : train {m_tr.sum():,}  val {m_va.sum():,}  test {m_te.sum():,}")
+
+    if args.shuffle_labels:
+        # Permute within each split, so the class distribution is untouched and
+        # only the image->label correspondence is destroyed.
+        rng = np.random.default_rng(args.seed + 1)
+        labels = labels.copy()
+        for m in (m_tr, m_va, m_te):
+            sub = labels[m].copy()
+            rng.shuffle(sub)
+            labels[m] = sub
+        print("")
+        print("*** NEGATIVE CONTROL: labels permuted within each split ***")
+        print("*** a sound pipeline must now score QWK ~0.00          ***")
 
     maj = np.bincount(labels[m_te], minlength=3).max() / m_te.sum()
     print("")
@@ -237,10 +254,13 @@ def main() -> int:
     if abs(te["qwk"]) < 1e-6:
         print("  [!] QWK is 0.0000 -- the model is not ordering severity at all.")
 
-    tag = f"{args.backbone}{'_cw' if args.class_weighted else ''}"
+    tag = (f"{args.backbone}"
+           f"{'_cw' if args.class_weighted else ''}"
+           f"{'_SHUFFLED' if args.shuffle_labels else ''}")
     out = {
         "backbone": args.backbone,
         "class_weighted": args.class_weighted,
+        "shuffled_labels_control": args.shuffle_labels,
         "generated_at": datetime.now().isoformat(timespec="seconds"),
         "parameters": int(n_par),
         "epochs": args.epochs,
