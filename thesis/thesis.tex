@@ -4,7 +4,16 @@
 %  Automated Classification of Lumbar Degenerative Disease from MRI
 %  PhD candidature, Rizgary Teaching Hospital lumbar spine research programme
 %
-%  Build:   pdflatex thesis ; biber thesis ; pdflatex thesis ; pdflatex thesis
+%  Build:   pdflatex thesis
+%           biber --output-safechars thesis
+%           pdflatex thesis ; pdflatex thesis
+%
+%  The --output-safechars flag is REQUIRED, not cosmetic. Biber decodes LaTeX
+%  accent macros from the .bib into Unicode, and does so in DECOMPOSED form:
+%  Ancu{\c{t}}i becomes 't' followed by a standalone combining cedilla
+%  (U+0327), which inputenc cannot typeset. The flag converts non-ASCII back
+%  into LaTeX macros, giving a pure-ASCII .bbl. Without it the build fails on
+%  any cited author with an accented name.
 %
 %  ---------------------------------------------------------------------------
 %  WHY THIS FILE EXISTS
@@ -45,6 +54,7 @@
 \usepackage[T1]{fontenc}
 \usepackage[utf8]{inputenc}
 \usepackage[english]{babel}
+\usepackage{csquotes}      % loaded by chapter1; also recommended by biblatex
 \usepackage{microtype}
 \usepackage[margin=2.5cm]{geometry}
 \usepackage{setspace}
@@ -92,6 +102,7 @@
 % executed protocol rather than filled in from intention.
 \newcommand{\toconfirm}[1]{\textbf{[TO CONFIRM: #1]}}
 \newcommand{\torecord}[1]{\textbf{[TO RECORD AFTER IMPLEMENTATION: #1]}}
+\newcommand{\laterinsert}[1]{\textbf{[LATER INTEGRATION: #1]}}
 
 % --- machinery for folding standalone chapters in ---------------------------
 \usepackage{docmute}          % \input skips each child's preamble
