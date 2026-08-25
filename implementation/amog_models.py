@@ -309,6 +309,25 @@ def build_edges(shuffled: bool = False, seed: int = 0):
     return edge_index, edge_type
 
 
+def mask_evidence(h, evidence):
+    """Re-zero nodes that carry no image evidence.
+
+    Chapter 3 sec:method-graph requires h_i = 0 when e_{p,i} = 0. Masking the
+    INPUT once is not sufficient: every layer ends in a LayerNorm, and
+    LayerNorm(0) = beta, not 0. A node with no image therefore re-acquires a
+    non-zero state after the first layer and passes it to its neighbours as if
+    it were evidence. Measured before this fix, a masked node left a two-layer
+    RGCN with an activation norm of 2.68.
+
+    Applied identically in the homogeneous and heterogeneous graphs, because E5
+    is the control for E6: masking one and not the other would put a difference
+    between them that has nothing to do with edge typing.
+    """
+    if evidence is None:
+        return h
+    return h * evidence.unsqueeze(-1).to(h.dtype)
+
+
 class HomogeneousGNN(nn.Module):
     """E5 control: real message passing, one undifferentiated edge type."""
 
@@ -323,8 +342,8 @@ class HomogeneousGNN(nn.Module):
             d = hidden
         self.out_dim = d
 
-    def forward(self, x, edge_index, edge_type=None):
-        """x (B, N, D)."""
+    def forward(self, x, edge_index, edge_type=None, evidence=None):
+        """x (B, N, D); evidence (B, N) with 0 where a node has no image."""
         B, N, _ = x.shape
         src, dst = edge_index[0], edge_index[1]
         h = x
@@ -337,6 +356,7 @@ class HomogeneousGNN(nn.Module):
             deg.index_add_(0, dst, torch.ones_like(dst, dtype=msg.dtype))
             agg = agg / deg.clamp(min=1).view(1, N, 1)
             h = norm(F.relu(agg + msg))
+            h = mask_evidence(h, evidence)
         return h
 
 
@@ -357,18 +377,23 @@ class HeterogeneousRGCN(nn.Module):
         self.n_relations = n_relations
         self.rel = nn.ModuleList()
         self.self_lin = nn.ModuleList()
-        self.gates = nn.ModuleList()
+        # Only allocate the gate when it is used. The ungated variant is the
+        # ablation that isolates the gate's contribution, so it must not carry
+        # the gate's parameters: reporting it with 1,056 dead tensors would
+        # overstate the capacity of the control it is supposed to be.
+        self.gates = nn.ModuleList() if gated else None
         self.norms = nn.ModuleList()
         d = dim
         for _ in range(layers):
             self.rel.append(nn.ModuleList([nn.Linear(d, hidden) for _ in range(n_relations)]))
             self.self_lin.append(nn.Linear(d, hidden))
-            self.gates.append(nn.Linear(d + hidden, hidden))
+            if gated:
+                self.gates.append(nn.Linear(d + hidden, hidden))
             self.norms.append(nn.LayerNorm(hidden))
             d = hidden
         self.out_dim = d
 
-    def forward(self, x, edge_index, edge_type):
+    def forward(self, x, edge_index, edge_type, evidence=None):
         B, N, _ = x.shape
         src, dst = edge_index[0], edge_index[1]
         h = x
@@ -392,7 +417,7 @@ class HeterogeneousRGCN(nn.Module):
                 deg.index_add_(0, d_, torch.ones_like(d_, dtype=msg.dtype))
             if agg is None:
                 own = self.self_lin[li](h)
-                h = F.relu(self.norms[li](own))
+                h = mask_evidence(F.relu(self.norms[li](own)), evidence)
                 continue
             agg = agg / deg.clamp(min=1).view(1, N, 1)
             own = self.self_lin[li](h)
@@ -401,7 +426,7 @@ class HeterogeneousRGCN(nn.Module):
                 h = self.norms[li](own + gamma * agg)
             else:
                 h = self.norms[li](own + agg)
-            h = F.relu(h)
+            h = mask_evidence(F.relu(h), evidence)
         return h
 
 

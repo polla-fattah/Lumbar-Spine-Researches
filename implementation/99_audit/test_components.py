@@ -10,6 +10,7 @@ Run:  python implementation/99_audit/test_components.py
 """
 from __future__ import annotations
 
+import inspect
 import os
 import sys
 
@@ -174,6 +175,43 @@ deg_shuf = torch.bincount(si[0], minlength=N_TARGETS)
 check("control preserves the degree sequence",
       bool(torch.equal(deg_real.sort().values, deg_shuf.sort().values)),
       f"real degrees {deg_real.tolist()}\n         shuffled  {deg_shuf.tolist()}")
+
+
+# Chapter 3 sec:method-graph: h_i = 0 where e_{p,i} = 0. Masking the input once
+# is not enough, because every layer ends in a LayerNorm and LayerNorm(0) != 0.
+from amog_models import HeterogeneousRGCN, HomogeneousGNN  # noqa: E402
+
+torch.manual_seed(0)
+_x = torch.randn(1, N_TARGETS, 16)
+_masked = node_id(1, 2)
+_ev = torch.ones(1, N_TARGETS)
+_ev[0, _masked] = 0
+_xm = _x * _ev.unsqueeze(-1)
+
+for _name, _g in [("heterogeneous (E6)", HeterogeneousRGCN(16, 16, layers=2, gated=True)),
+                  ("heterogeneous ungated", HeterogeneousRGCN(16, 16, layers=2, gated=False)),
+                  ("homogeneous (E5 control)", HomogeneousGNN(16, 16, layers=2))]:
+    _g.eval()
+    with torch.no_grad():
+        _h = _g(_xm, ei, et, evidence=_ev)
+    check(f"evidence-free node stays exactly zero through {_name}",
+          float(_h[0, _masked].abs().max()) < 1e-8,
+          f"max |h| = {float(_h[0, _masked].abs().max()):.4e}; LayerNorm(0) = beta, "
+          f"so a node with no image re-acquires a state and broadcasts it")
+
+# The mask must be applied identically in E5 and E6, or the control differs from
+# the treatment for a reason unrelated to edge typing.
+check("E5 and E6 both accept and honour the evidence mask",
+      "evidence" in inspect.signature(HomogeneousGNN.forward).parameters
+      and "evidence" in inspect.signature(HeterogeneousRGCN.forward).parameters)
+
+# The ungated ablation must not carry the gate's parameters, or it overstates
+# the capacity of the control that isolates the gate's contribution.
+_gp = lambda gated: sum(p.numel() for n, p in HeterogeneousRGCN(
+    16, 16, layers=2, gated=gated).named_parameters() if "gates" in n)
+check("the ungated control allocates no gate parameters",
+      _gp(False) == 0 and _gp(True) > 0,
+      f"ungated carries {_gp(False)} gate parameters")
 
 # --------------------------------------------------------------------------- #
 print("\n4. Disease-conditioned router -- Chapter 3 sec:method-routing")

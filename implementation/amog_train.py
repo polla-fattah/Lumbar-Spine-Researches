@@ -162,10 +162,14 @@ class AMOGNet(nn.Module):
         fused, g = self.forward_target(flat_i, flat_m, cond, lvl)
         nodes = fused.reshape(B, N, -1)
 
-        # nodes without usable image evidence are zeroed so they cannot inject
-        # unsupported "ghost" representations into their neighbours
+        # Nodes without usable image evidence are zeroed so they cannot inject
+        # unsupported "ghost" representations into their neighbours. The mask is
+        # also passed INTO the GNN and re-applied after every layer: each layer
+        # ends in a LayerNorm, and LayerNorm(0) = beta, so masking only here
+        # would let an evidence-free node re-acquire a state at layer 1 and
+        # broadcast it thereafter.
         nodes = nodes * evidence.unsqueeze(-1)
-        h = self.gnn(nodes, self.edge_index, self.edge_type)
+        h = self.gnn(nodes, self.edge_index, self.edge_type, evidence=evidence)
         return self.head(h), g
 
 
