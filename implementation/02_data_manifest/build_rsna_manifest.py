@@ -1,19 +1,25 @@
 # Phase 2 (Track A): RSNA 2024 Lumbar Spine Master Manifest Builder
 # Author: Dr. Polla Fattah / Selar's PhD Research Team
-# Dataset: RSNA 2024 Lumbar Spine Degenerative Classification (1,975 Patients, 6,294 Series)
+# Dataset: RSNA 2024 Lumbar Spine Degenerative Classification
 
 import sys
 import os
+import argparse
 import json
 import pandas as pd
 from datetime import datetime
 
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+from dataset_config import resolve_dataset_dir, DEFAULT_HINTS_RSNA
+
 if hasattr(sys.stdout, 'reconfigure'):
     sys.stdout.reconfigure(encoding='utf-8')
 
-RSNA_DIR = r'C:\Users\polla\Drives\Locals\Data\lumbar-spine-degenerative-classification'
-
 def main():
+    parser = argparse.ArgumentParser(description="Phase 2 RSNA Master Manifest Builder")
+    parser.add_argument("--rsna_dir", type=str, default=None, help="Path to RSNA dataset directory")
+    args = parser.parse_args()
+
     print("=" * 65)
     print("  Phase 2 (Track A): RSNA 2024 Lumbar Spine Master Manifest Builder")
     print("=" * 65)
@@ -26,14 +32,15 @@ def main():
 
     manifest_csv = os.path.join(manifests_dir, "rsna_manifest.csv")
 
-    if not os.path.exists(RSNA_DIR):
-        print(f"[FAIL] RSNA directory not found at {RSNA_DIR}.")
+    rsna_path, is_valid = resolve_dataset_dir(args.rsna_dir, "RSNA_DATASET_DIR", DEFAULT_HINTS_RSNA, "RSNA")
+    if not is_valid:
+        print("[FAIL] RSNA dataset directory not found. Please provide valid path.")
         sys.exit(1)
 
-    print(f"[INGEST] Reading RSNA CSV metadata files from: {RSNA_DIR}...")
-    df_train = pd.read_csv(os.path.join(RSNA_DIR, "train.csv"))
-    df_series = pd.read_csv(os.path.join(RSNA_DIR, "train_series_descriptions.csv"))
-    df_coords = pd.read_csv(os.path.join(RSNA_DIR, "train_label_coordinates.csv"))
+    print(f"[INGEST] Reading RSNA CSV metadata files from: {rsna_path}...")
+    df_train = pd.read_csv(os.path.join(rsna_path, "train.csv"))
+    df_series = pd.read_csv(os.path.join(rsna_path, "train_series_descriptions.csv"))
+    df_coords = pd.read_csv(os.path.join(rsna_path, "train_label_coordinates.csv"))
 
     print(f"  - Patients in train.csv               : {len(df_train)}")
     print(f"  - Series in train_series_descriptions: {len(df_series)}")
@@ -44,13 +51,12 @@ def main():
 
     num_patients = merged_df['study_id'].nunique()
     num_series = merged_df['series_id'].nunique()
-    total_records = len(merged_df)
 
     report_md = os.path.join(reports_dir, "rsna_manifest_audit.md")
     lines = [
         "# 📋 Track A RSNA 2024 Lumbar Spine Master Manifest Audit Report",
         f"**Generated At:** `{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}`  ",
-        f"**Source RSNA Path:** `{RSNA_DIR}`  ",
+        f"**Source RSNA Path:** `{rsna_path}`  ",
         f"**Master Manifest CSV:** `{manifest_csv}`  ",
         "",
         "---",
