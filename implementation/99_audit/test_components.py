@@ -449,37 +449,87 @@ def used_outside_import(src, name):
                for ln in src.splitlines())
 
 
-# E4 is Core Contribution I. run_ladder.py declares the comparison
-# ("E4", "E3", "anatomical cross-sequence SSL (CC I)"), so E4 must differ from
-# E3 by more than an unused parameter block or that comparison measures nothing.
-sig3 = {n: tuple(p.shape) for n, p in AMOGNet("E3", "resnet18", 64).named_parameters()
-        if not n.startswith("projector")}
-sig4 = {n: tuple(p.shape) for n, p in AMOGNet("E4", "resnet18", 64).named_parameters()
-        if not n.startswith("projector")}
-check("E4 is not structurally identical to E3",
-      sig3 != sig4,
-      "E4 and E3 build the same modules. The only difference is an ACSSLProjector "
-      "that no forward path uses, so run_ladder's 'E4 vs E3 = CC I' comparison "
-      "would report seed noise as the effect of anatomical SSL.")
+# E4 is Core Contribution I. Chapter 3 defines it as E3 PLUS anatomical
+# pretraining, so E4 and E3 are meant to share an architecture -- the difference
+# is the encoder initialisation, not the module list. The earlier version of
+# this test asserted the opposite and was checking the wrong property; what was
+# actually broken was that nothing transferred and a dead projector sat in the
+# model pretending otherwise.
+sig3 = {n: tuple(p.shape) for n, p in AMOGNet("E3", "smallcnn", 64).named_parameters()}
+sig4 = {n: tuple(p.shape) for n, p in AMOGNet("E4", "smallcnn", 64).named_parameters()}
+check("E4 carries no dead parameters relative to E3",
+      sig3 == sig4,
+      "E4 holds parameters E3 does not; a block that no forward path uses "
+      "inflates the reported capacity of the rung")
 
+check("no unused ACSSL projector remains in the supervised model",
+      not any(n.startswith("projector") for n, _ in AMOGNet("E4", "smallcnn", 64)
+              .named_parameters()),
+      "Chapter 3 sec:method-ssl-projection: the projection head is discarded "
+      "after pretraining")
+
+import amog_acssl  # noqa: E402
 check("the ACSSL contrastive objective is actually called",
-      used_outside_import(train_src, "info_nce("),
-      "info_nce is imported by amog_train.py and never invoked; there is no "
-      "self-supervised pretraining loop anywhere in the pipeline.")
+      used_outside_import(inspect.getsource(amog_acssl), "info_nce("),
+      "no self-supervised pretraining loop invokes info_nce anywhere")
 
-torch.manual_seed(0)
-m4 = AMOGNet("E4", "resnet18", 64)
-fused, _ = m4.forward_target(torch.randn(2, N_MODALITIES, 3, 64, 64),
-                             torch.ones(2, N_MODALITIES),
-                             torch.zeros(2, dtype=torch.long),
-                             torch.zeros(2, dtype=torch.long))
-m4.head(fused).sum().backward()
-proj_grads = [p.grad for n, p in m4.named_parameters() if n.startswith("projector")]
-check("the ACSSL projector receives gradient",
-      bool(proj_grads) and all(gr is not None for gr in proj_grads),
-      f"{sum(1 for gr in proj_grads if gr is None)} of {len(proj_grads)} projector "
-      f"tensors get no gradient -- the block is dead weight that still inflates "
-      f"the reported parameter count")
+check("E4 refuses to run without pretrained encoders",
+      "allow_untrained_e4" in train_src and "return 2" in train_src,
+      "E4 minus the pretraining is E3; running it silently would produce a CC I "
+      "number that measures nothing")
+
+# The transfer must be verified to CHANGE weights, not merely to execute.
+_m4 = AMOGNet("E4", "smallcnn", 64)
+_before = {k: v.clone() for k, v in _m4.encoders.state_dict().items()}
+
+def _perturb(v):
+    """Change every tensor, including BatchNorm's integer num_batches_tracked."""
+    return torch.randn_like(v) if v.is_floating_point() else v + 1
+
+
+_fake = {k: _perturb(v) for k, v in _before.items()}
+import tempfile  # noqa: E402
+with tempfile.TemporaryDirectory() as _td:
+    _p = os.path.join(_td, "acssl.pt")
+    torch.save({"encoders_state_dict": _fake, "backbone": "smallcnn", "dim": 64,
+                "best_val_infonce": 1.0, "chance_infonce": 2.0, "mode": "smoke"}, _p)
+    _info = _m4.load_acssl(_p)
+    _changed = sum(1 for k in _before
+                   if not torch.equal(_before[k], _m4.encoders.state_dict()[k]))
+    check("load_acssl actually replaces the encoder weights",
+          _changed == len(_before) and _info["tensors_changed"] == _changed,
+          f"only {_changed} of {len(_before)} tensors changed")
+
+    # A no-op load must raise rather than leave E4 silently equal to E3.
+    _m5 = AMOGNet("E4", "smallcnn", 64)
+    torch.save({"encoders_state_dict": _m5.encoders.state_dict(),
+                "backbone": "smallcnn", "dim": 64}, _p)
+    try:
+        _m5.load_acssl(_p)
+        check("a no-op ACSSL load is rejected", False,
+              "loading identical weights was accepted, so E4 could silently be E3")
+    except RuntimeError:
+        check("a no-op ACSSL load is rejected", True)
+
+    # A backbone mismatch must be named, not surface as a size-mismatch trace.
+    _m6 = AMOGNet("E4", "smallcnn", 64)
+    torch.save({"encoders_state_dict": _fake, "backbone": "resnet18", "dim": 64}, _p)
+    try:
+        _m6.load_acssl(_p)
+        check("a backbone mismatch is refused", False)
+    except RuntimeError as _e:
+        check("a backbone mismatch is refused", "backbone" in str(_e))
+
+check("pretraining uses the development partition only",
+      "load_frozen_split" in inspect.getsource(amog_acssl)
+      and "held_out" in inspect.getsource(amog_acssl),
+      "Chapter 3 sec:method-ssl-leakage: a model pretrained on held-out patients "
+      "has already seen their anatomy")
+
+check("modality dropout is not applied during pretraining",
+      "apply_modality_dropout" not in inspect.getsource(amog_acssl),
+      "Chapter 3 sec:method-training-phases phase 2 disables it, because "
+      "dropping a sequence would delete the positive pair the loss is defined on")
 
 # E7 claims "ordinal/cost-sensitive/CALIBRATED heads" in the Chapter 3 ladder.
 check("temperature scaling is applied during training/selection",

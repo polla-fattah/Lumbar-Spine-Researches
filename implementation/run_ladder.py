@@ -281,6 +281,32 @@ def main():
 
     if not args.analyse_only:
         t0 = time.time()
+
+        # E4 is the ACSSL transfer, so the encoders must exist before it runs.
+        # Pretrain ONCE and let every seed reuse it: pretraining per seed would
+        # make the three seeds three different representations, and the
+        # E4-vs-E3 comparison would then confound the representation with the
+        # seed it was drawn from.
+        if any(t == "E4" for _s, _f, t in runs):
+            ck_dir = os.path.join(PROJECT_ROOT, "data",
+                                  "smoke" if prof["mode"] == "smoke" else "",
+                                  "checkpoints").replace(os.sep + os.sep, os.sep)
+            ck = os.path.join(ck_dir, "acssl_encoders.pt")
+            if os.path.exists(ck) and not args.force:
+                print("  ACSSL encoders already present, reusing {}".format(
+                    os.path.relpath(ck, PROJECT_ROOT)))
+            else:
+                print("  pretraining ACSSL encoders (once, shared by all seeds)")
+                cmd = [sys.executable,
+                       os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                                    "amog_acssl.py"),
+                       "--mode", prof["mode"], "--epochs", str(prof["epochs"])]
+                rc = subprocess.run(cmd, cwd=PROJECT_ROOT).returncode
+                if rc != 0:
+                    print("  [FAIL] ACSSL pretraining failed; E4 will be skipped "
+                          "rather than run as an unlabelled E3")
+                    runs = [r for r in runs if r[2] != "E4"]
+
         done = failed = 0
         for stage, flags, tag in runs:
             for seed in prof["seeds"]:

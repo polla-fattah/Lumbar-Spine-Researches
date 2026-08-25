@@ -65,6 +65,7 @@ from amog_datasets import (  # noqa: E402
 from rsna_data import (  # noqa: E402
     load_cache, load_frozen_split, SPLIT_FILE, SPLIT_SEED, CACHE_DIR,
 )
+from amog_acssl import ACSSL_CKPT_NAME  # noqa: E402
 from amog_perf import (  # noqa: E402
     configure_backend, suggest_batch, loader_kwargs, Amp, maybe_compile,
 )
@@ -88,6 +89,7 @@ class AMOGNet(nn.Module):
         super().__init__()
         self.stage = stage
         self.dim = dim
+        self._backbone_name = backbone
         self.use_multiseq = stage in MULTISEQ_STAGES
         self.use_router = stage in ROUTER_STAGES
         self.use_graph = stage in GRAPH_STAGES
@@ -119,7 +121,57 @@ class AMOGNet(nn.Module):
         else:
             self.head = nn.Linear(head_in, N_CLASSES)
 
-        self.projector = ACSSLProjector(dim) if stage == "E4" else None
+        # No projector here. Chapter 3 sec:method-ssl-projection: "The projection
+        # head is discarded or decoupled after the pretraining stage." It lived
+        # in this model until now, received no gradient, and inflated the
+        # reported parameter count of E4 while contributing nothing -- which is
+        # what made E4 indistinguishable from E3.
+        self.acssl_loaded_from = None
+
+    def load_acssl(self, path: str) -> dict:
+        """Transfer ACSSL-pretrained sequence encoders into this model.
+
+        This is what makes E4 differ from E3. Chapter 3 sec:method-training-phases
+        phase 3: encoders are fine-tuned from the anatomical pretraining, so the
+        weights must actually arrive before supervised training starts.
+        """
+        ck = torch.load(path, map_location="cpu", weights_only=False)
+
+        # A backbone or width mismatch would surface as a raw size-mismatch
+        # stack trace from load_state_dict, or -- worse, with strict=False --
+        # as a partial load that silently leaves most of the encoder random.
+        # Both are checked here so the message names the actual problem.
+        want_bb, want_dim = ck.get("backbone"), ck.get("dim")
+        have_bb = getattr(self, "_backbone_name", None)
+        if want_bb is not None and have_bb is not None and want_bb != have_bb:
+            raise RuntimeError(
+                "ACSSL checkpoint was pretrained with backbone '{}' but this run "
+                "uses '{}'. Pretrain with --backbone {}, or train with "
+                "--backbone {}.".format(want_bb, have_bb, have_bb, want_bb))
+        if want_dim is not None and want_dim != self.dim:
+            raise RuntimeError(
+                "ACSSL checkpoint has feature dim {} but this run uses {}."
+                .format(want_dim, self.dim))
+
+        sd = ck["encoders_state_dict"]
+        before = {k: v.detach().clone() for k, v in self.encoders.state_dict().items()}
+        missing, unexpected = self.encoders.load_state_dict(sd, strict=False)
+        after = self.encoders.state_dict()
+
+        changed = sum(1 for k in before if not torch.equal(before[k], after[k]))
+        if changed == 0:
+            raise RuntimeError(
+                "loading {} changed no encoder weight. E4 would be identical to "
+                "E3 and the ACSSL comparison would measure nothing."
+                .format(os.path.basename(path)))
+        self.acssl_loaded_from = path
+        return {"tensors_changed": changed,
+                "tensors_total": len(before),
+                "missing_keys": len(missing),
+                "unexpected_keys": len(unexpected),
+                "pretrain_val_infonce": ck.get("best_val_infonce"),
+                "pretrain_chance_infonce": ck.get("chance_infonce"),
+                "pretrain_mode": ck.get("mode")}
 
     def encode(self, imgs, mask):
         """imgs (B, M, 3, H, W) -> (B, M, D), zeroed where a sequence is absent.
@@ -345,6 +397,13 @@ def main():
                     help="epochs without val macro-F1 improvement before "
                          "ReduceLROnPlateau lowers the LR. This decays the "
                          "learning rate; it never stops training.")
+    ap.add_argument("--acssl_ckpt", type=str, default=None,
+                    help="ACSSL-pretrained encoders for E4 (default: the run "
+                         "mode's checkpoint dir). Produced by amog_acssl.py.")
+    ap.add_argument("--allow_untrained_e4", action="store_true",
+                    help="run E4 WITHOUT the ACSSL weights. Not a valid E4: the "
+                         "result is E3 under a different name and must not be "
+                         "reported as anatomical self-supervision.")
     ap.add_argument("--shuffled", action="store_true", help="E6 control")
     ap.add_argument("--ungated", action="store_true", help="E6 ablation")
     ap.add_argument("--max_targets", type=int, default=None)
@@ -398,6 +457,41 @@ def main():
         model = model.to(memory_format=torch.channels_last)
     n_params = sum(p.numel() for p in model.parameters())
     print("  model: {:.2f}M parameters (counted)".format(n_params / 1e6))
+
+    # E4 IS the ACSSL transfer. Without the pretrained encoders it is E3 with a
+    # different label, which is precisely the defect this wiring exists to fix,
+    # so refuse rather than run something that will be reported as CC I.
+    acssl_info = None
+    if stage == "E4":
+        ck = args.acssl_ckpt or os.path.join(ctx.checkpoint_dir, ACSSL_CKPT_NAME)
+        if os.path.exists(ck):
+            acssl_info = model.load_acssl(ck)
+            print("  ACSSL: loaded {} of {} encoder tensors from {}".format(
+                acssl_info["tensors_changed"], acssl_info["tensors_total"],
+                os.path.relpath(ck, PROJECT_ROOT)))
+            vi = acssl_info.get("pretrain_val_infonce")
+            ci = acssl_info.get("pretrain_chance_infonce")
+            if vi is not None and ci is not None:
+                print("         pretrain val InfoNCE {:.4f} vs chance {:.4f}{}".format(
+                    vi, ci, "  [!] AT OR ABOVE CHANCE" if vi >= ci else ""))
+            if acssl_info.get("pretrain_mode") != ctx.mode:
+                print("         [!] pretrained in '{}' mode but training in '{}'"
+                      .format(acssl_info.get("pretrain_mode"), ctx.mode))
+        elif args.allow_untrained_e4:
+            print("  ACSSL: [!] NO pretrained encoders. This run is E3 wearing "
+                  "E4's name and must not be reported as CC I.")
+        else:
+            print("")
+            print("[FAIL] E4 needs ACSSL-pretrained encoders and none were found at")
+            print("       {}".format(ck))
+            print("")
+            print("       E4 minus the pretraining is exactly E3, so running it")
+            print("       would produce a CC I number that measures nothing.")
+            print("       Pretrain first:")
+            print("         python implementation/amog_acssl.py --mode {}".format(ctx.mode))
+            print("       or pass --allow_untrained_e4 to run it as a labelled "
+                  "control.")
+            return 2
 
     amp = Amp(args.amp, str(ctx.device))
     print("  precision: {}".format(amp.label()))
@@ -505,6 +599,8 @@ def main():
                  # though it always equals epochs_configured, so that a future
                  # run which does stop early cannot be mistaken for one that did
                  # not.
+                 "acssl": acssl_info,
+                 "acssl_pretrained": acssl_info is not None,
                  "scheduler": args.scheduler,
                  "warmup_epochs": warmup_epochs,
                  "early_stopping": False,
