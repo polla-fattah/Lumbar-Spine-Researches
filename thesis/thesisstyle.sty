@@ -1,0 +1,106 @@
+% ===========================================================================
+%  thesisstyle.sty -- shared figure styling for the whole thesis
+%
+%  WHY THIS FILE EXISTS
+%
+%  Each chapter is a standalone document AND is folded into thesis.tex by
+%  docmute, which discards the child preamble. Anything declared only in a
+%  chapter preamble therefore works when that chapter is compiled alone and
+%  fails when the thesis is built. That has already happened twice, with
+%  csquotes and with \laterinsert.
+%
+%  Putting the figure machinery in one package that all four documents load
+%  removes the possibility of drift: there is exactly one definition, and
+%  adding a style here makes it available everywhere at once.
+%
+%  Usage:  \usepackage{thesisstyle}   in every chapter preamble and in thesis.tex
+%
+%  DESIGN NOTE -- greyscale safety
+%
+%  Examiners print. The fills below are chosen so their LIGHTNESS differs, not
+%  just their hue, so every figure stays readable in black and white. Category
+%  is additionally carried by border weight and dash pattern, so colour is never
+%  the only channel distinguishing two things. Do not add a new fill without
+%  checking it converts to a distinguishable grey.
+% ===========================================================================
+\NeedsTeXFormat{LaTeX2e}
+\ProvidesPackage{thesisstyle}[2026/08/25 Shared figure styles for the lumbar spine thesis]
+
+\RequirePackage{tikz}
+\RequirePackage{xcolor}
+\usetikzlibrary{
+  positioning,
+  arrows.meta,
+  calc,
+  fit,
+  shapes.geometric,
+  shapes.misc,
+  backgrounds,
+  decorations.pathreplacing,
+  matrix,
+  chains
+}
+
+% --- palette ---------------------------------------------------------------
+% Ordered light -> dark so greyscale conversion keeps them apart.
+\definecolor{fgData}{HTML}{DCE6F1}   % cohorts, inputs, raw data
+\definecolor{fgDataE}{HTML}{4A6D9B}
+\definecolor{fgProc}{HTML}{EDEDED}   % ordinary processing, existing methods
+\definecolor{fgProcE}{HTML}{6E6E6E}
+\definecolor{fgNovel}{HTML}{D6EAD6}  % the three core contributions
+\definecolor{fgNovelE}{HTML}{3F7A3F}
+\definecolor{fgEval}{HTML}{FBEBD2}   % evaluation, metrics, outputs
+\definecolor{fgEvalE}{HTML}{B07A2A}
+\definecolor{fgAlert}{HTML}{F7DAD9}  % gaps, risks, anticipated failure modes
+\definecolor{fgAlertE}{HTML}{A33C38}
+\definecolor{fgLine}{HTML}{404040}
+\definecolor{fgMuted}{HTML}{767676}
+
+% --- node styles -----------------------------------------------------------
+\tikzset{
+  fgfont/.style     = {font=\scriptsize},
+  fgbox/.style      = {draw=fgLine, rounded corners=2pt, align=center,
+                       font=\scriptsize, inner sep=4pt, line width=0.5pt},
+  fgdata/.style     = {fgbox, fill=fgData,  draw=fgDataE},
+  fgproc/.style     = {fgbox, fill=fgProc,  draw=fgProcE},
+  fgnovel/.style    = {fgbox, fill=fgNovel, draw=fgNovelE, line width=1pt},
+  fgeval/.style     = {fgbox, fill=fgEval,  draw=fgEvalE},
+  fgalert/.style    = {fgbox, fill=fgAlert, draw=fgAlertE},
+  fgplain/.style    = {fgbox, fill=white},
+  % a contribution that is explicitly supporting rather than novel
+  fgsupport/.style  = {fgbox, fill=white, draw=fgNovelE, dashed},
+  fgarrow/.style    = {->, >={Stealth[length=1.6mm,width=1.2mm]},
+                       draw=fgLine, line width=0.5pt},
+  fgarrowdash/.style= {fgarrow, dashed, draw=fgMuted},
+  fgbiarrow/.style  = {<->, >={Stealth[length=1.6mm,width=1.2mm]},
+                       draw=fgLine, line width=0.5pt},
+  fglabel/.style    = {font=\tiny\itshape, text=fgMuted, inner sep=1.5pt,
+                       fill=white, align=center},
+  fgnote/.style     = {font=\tiny, text=fgMuted, align=left},
+  fgtitle/.style    = {font=\scriptsize\bfseries, align=center},
+  % dotted container used to group a stage of a pipeline
+  fggroup/.style    = {draw=fgMuted, dotted, rounded corners=3pt,
+                       line width=0.6pt, inner sep=6pt},
+}
+
+% Caption helper: a short bold lead-in, then the explanatory sentence. Keeps
+% every figure caption in the same shape, which is what makes a figure list
+% readable on its own.
+\newcommand{\figlead}[1]{\textbf{#1}}
+
+% Figure environment. Use this instead of tikzpicture in every thesis figure.
+%
+% Node text in a fixed-width box hyphenates aggressively at \scriptsize, which
+% produced "Core Con-tribution" and "predic-tive" in early drafts. Broken words
+% inside a diagram box read as errors rather than as typesetting, so hyphenation
+% is switched off for the whole picture; a word that will not fit is a signal to
+% widen the box or shorten the label, not to break the word.
+\newenvironment{fgpicture}[1][]{%
+  \hyphenpenalty=10000\relax
+  \exhyphenpenalty=10000\relax
+  \begin{tikzpicture}[#1]%
+}{%
+  \end{tikzpicture}%
+}
+
+\endinput
