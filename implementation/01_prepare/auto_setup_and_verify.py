@@ -126,10 +126,42 @@ def check_gpu_cuda():
             print(f"  [OK] GPU Accelerator Detected: {gpu_name} ({vram} GB VRAM, CUDA {torch.version.cuda})", flush=True)
             return True, f"{gpu_name} ({vram} GB VRAM)"
         else:
-            print("  [WARN] PyTorch is running in CPU-only mode.", flush=True)
-            print("         If an NVIDIA GPU is installed on this machine, upgrade to CUDA-enabled PyTorch:", flush=True)
-            print("         pip install torch torchvision --index-url https://download.pytorch.org/whl/cu118", flush=True)
-            return False, "CPU Mode (No CUDA)"
+            # A CPU-only wheel is the default resolution of "torch>=2.0.0" on
+            # Windows, so this branch is the normal outcome of requirements.txt,
+            # not an unusual one. Detect whether a GPU is actually present and
+            # say what to run; do not print a fixed cu118 hint, which predates
+            # the Ada architecture used by RTX 40-series cards.
+            import subprocess as _sp
+            import re as _re
+            gpu_name, driver_cuda = None, None
+            try:
+                _out = _sp.check_output(["nvidia-smi"], stderr=_sp.STDOUT,
+                                        timeout=30).decode("utf-8", "replace")
+                _m = _re.search(r"CUDA Version:\s*([0-9]+\.[0-9]+)", _out)
+                if _m:
+                    driver_cuda = float(_m.group(1))
+                _m = _re.search(r"\|\s+\d+\s+(NVIDIA[^|]*?)\s{2,}", _out)
+                if _m:
+                    gpu_name = _m.group(1).strip()
+            except Exception:
+                pass
+
+            print("  [WARN] PyTorch is running in CPU-only mode "
+                  f"(installed: {getattr(torch, '__version__', 'unknown')}).", flush=True)
+
+            if gpu_name:
+                print(f"         An NVIDIA GPU IS present: {gpu_name} "
+                      f"(driver supports CUDA {driver_cuda}).", flush=True)
+                print("         This is a wheel problem, not a hardware one. CUDA builds are", flush=True)
+                print("         not on PyPI and must be requested from a separate index.", flush=True)
+                print("         Fix it with:", flush=True)
+                print("           python implementation/01_prepare/install_pytorch_cuda.py --yes", flush=True)
+                return False, f"CPU Mode (CUDA wheel missing; {gpu_name} idle)"
+
+            print("         No NVIDIA GPU was detected, so CPU mode is expected here.", flush=True)
+            print("         Training the full cohort on CPU is not practical; plan to run", flush=True)
+            print("         the real pass on a GPU machine.", flush=True)
+            return False, "CPU Mode (no GPU present)"
     except Exception as e:
         print(f"  [WARN] PyTorch check error: {e}", flush=True)
         return False, "PyTorch Error"
