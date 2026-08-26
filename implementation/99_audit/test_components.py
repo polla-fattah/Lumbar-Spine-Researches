@@ -586,6 +586,7 @@ check("the fitted temperature does not increase validation NLL",
 
 # Chapter 3 sec:method-augmentation specifies an augmentation programme.
 import amog_augment  # noqa: E402
+import amog_datasets  # noqa: E402
 from amog_augment import MRIAugment, mirror_node_ids, CONDITION_MIRROR  # noqa: E402
 from amog_modes import CONDITIONS  # noqa: E402
 
@@ -594,9 +595,18 @@ check("training augmentation exists",
       "Chapter 3 sec:method-augmentation specifies intensity scaling, gamma, "
       "bias-field, noise and small rotation/translation")
 
+# Augmentation now runs on the batch inside run_epoch, on device, so the guard
+# is the `train` flag rather than which dataset object received an augmenter.
 check("augmentation is applied to the TRAIN split only",
-      "sel(tr, aug)" in train_src and "sel(va)" in train_src,
-      "Chapter 3: 'Augmentation is disabled for validation and test data'")
+      'if train and getattr(args, "_augment", None) is not None' in train_src,
+      "Chapter 3: 'Augmentation is disabled for validation and test data'. "
+      "run_epoch is called with optimizer=None for val/test, which sets "
+      "train=False, so the augment call must be gated on it.")
+
+check("augmentation runs on the batch, not per sample in the dataset",
+      "self.augment" not in inspect.getsource(amog_datasets),
+      "keeping it in __getitem__ put affine_grid/grid_sample on one CPU core: "
+      "87% of the data cost and ~90% of epoch time, while the GPU idled at 3%")
 
 torch.manual_seed(0)
 _x = torch.rand(3, 3, 64, 64)
