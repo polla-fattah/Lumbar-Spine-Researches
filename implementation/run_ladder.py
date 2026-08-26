@@ -340,10 +340,16 @@ def main():
     ap.add_argument("--analyse_only", action="store_true",
                     help="skip training, just rebuild the tables from existing runs")
     ap.add_argument("--n_boot", type=int, default=1000)
+    ap.add_argument("--seeds", type=str, default=None,
+                    help="comma-separated seeds, overriding the profile's. "
+                         "Completed runs are skipped, so extending 42,43,44 to "
+                         "42,43,44,45,46,47,48 only trains the new ones.")
     args = ap.parse_args()
 
     prof = dict(PROFILES[args.profile])
     prof["_name"] = args.profile
+    if args.seeds:
+        prof["seeds"] = [int(x) for x in args.seeds.split(",")]
     reports = os.path.join(PROJECT_ROOT, "data",
                            "smoke" if prof["mode"] == "smoke" else "", "reports")
     reports = reports.replace(os.sep + os.sep, os.sep)
