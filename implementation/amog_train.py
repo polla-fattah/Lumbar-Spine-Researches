@@ -309,14 +309,16 @@ def make_datasets(ctx, stage, args):
     # Chapter 3 sec:method-augmentation: train only. Validation and test see the
     # images unmodified, or model selection and the held-out score would be
     # measured on a distribution the deployed model never encounters.
+    # built here for the provenance record; applied in run_epoch on device
     aug = None if getattr(args, "no_augment", False) else MRIAugment(
         intensity=args.aug_intensity, gamma=args.aug_gamma, noise=args.aug_noise,
         bias=args.aug_bias, translate=args.aug_translate,
         rotate_deg=args.aug_rotate, p=args.aug_prob)
 
+    args._augment = aug
     Cls = PatientGraphDataset if stage in GRAPH_STAGES else MultiSequenceDataset
-    sel = lambda s, a=None: Cls(tt[tt.study_id.isin(s)], mm_ann, mm_x, augment=a)
-    return (sel(tr, aug), sel(va), sel(te),
+    sel = lambda s: Cls(tt[tt.study_id.isin(s)], mm_ann, mm_x)
+    return (sel(tr), sel(va), sel(te),
             {"targets": len(tt), "patients": tt.study_id.nunique(),
              "augmentation": describe(aug) if aug else None})
 
@@ -341,6 +343,8 @@ def run_epoch(model, loader, ctx, stage, args, optimizer=None, cost=None):
     for batch in loader:
         if graph:
             imgs, mask, y, lmask, ev, pid = [b.to(ctx.device) for b in batch]
+            if train and getattr(args, "_augment", None) is not None:
+                imgs = args._augment(imgs)
             if stage in DROPOUT_STAGES and train:
                 B, N, M = mask.shape
                 mask = apply_modality_dropout(
@@ -359,6 +363,12 @@ def run_epoch(model, loader, ctx, stage, args, optimizer=None, cost=None):
         else:
             imgs, mask, cond, lvl, yy, batch_pid, ann_slot = [
                 b.to(ctx.device) for b in batch]
+            # Augment on device, on the batch. Per-sample parameters, so batch
+            # diversity is unchanged -- but affine_grid/grid_sample now runs on
+            # the GPU instead of serially on one CPU core, where it was 87% of
+            # the data cost and ~90% of epoch time.
+            if train and getattr(args, "_augment", None) is not None:
+                imgs = args._augment(imgs)
             if stage in DROPOUT_STAGES and train:
                 mask = apply_modality_dropout(mask, args.p_drop, True)
             with torch.set_grad_enabled(train), (

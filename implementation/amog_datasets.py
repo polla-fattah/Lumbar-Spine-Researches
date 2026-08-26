@@ -116,8 +116,6 @@ class MultiSequenceDataset(Dataset):
                     imgs[m_i] = _to_tensor(self.mm_xseq, int(xs))
                     mask[m_i] = 1.0
 
-        if self.augment is not None:
-            imgs = self.augment(imgs)
         return (imgs, mask,
                 torch.tensor(int(r.condition_idx)),
                 torch.tensor(int(r.level_idx)),
@@ -185,8 +183,6 @@ class PatientGraphDataset(Dataset):
                 labels[n] = int(r.label)
                 label_mask[n] = 1.0
 
-        if self.augment is not None:
-            imgs = self.augment(imgs)
         return imgs, mask, labels, label_mask, evidence, torch.tensor(int(pid))
 
 
