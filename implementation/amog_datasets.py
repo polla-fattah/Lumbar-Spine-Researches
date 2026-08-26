@@ -143,10 +143,13 @@ class PatientGraphDataset(Dataset):
 
     is_synthetic = False
 
-    def __init__(self, targets: pd.DataFrame, mm_ann, mm_xseq=None, crop: int = 128):
+    def __init__(self, targets: pd.DataFrame, mm_ann, mm_xseq=None, crop: int = 128,
+                 augment=None):
         self.mm_ann = mm_ann
         self.mm_xseq = mm_xseq
         self.crop = crop
+        # Chapter 3 sec:method-augmentation: train split only.
+        self.augment = augment
         self.patients = sorted(targets.study_id.unique())
         self.by_patient = {p: g for p, g in targets.groupby("study_id")}
 
