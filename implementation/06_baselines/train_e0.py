@@ -90,8 +90,13 @@ class ROIDataset(Dataset):
         x = np.array(self.arr[self.indices[i]], dtype=np.float32) / 255.0
         x = torch.from_numpy(x)
         if self.train:
-            if torch.rand(1).item() < 0.5:                 # horizontal flip
-                x = torch.flip(x, dims=[2])
+            # No horizontal flip. This harness pools all five conditions, and
+            # most crops are SAGITTAL, where the in-plane axes are
+            # anterior-posterior and superior-inferior -- left-right is through
+            # plane. A horizontal flip there mirrors anterior against posterior,
+            # putting the vertebral body behind the canal, which is anatomically
+            # impossible rather than merely a label swap. The earlier version of
+            # this line flipped every crop regardless of plane.
             if torch.rand(1).item() < 0.5:                 # mild intensity jitter
                 x = torch.clamp(x * (0.9 + 0.2 * torch.rand(1)), 0, 1)
         x = (x - self.mean) / self.std

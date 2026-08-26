@@ -40,6 +40,7 @@ import torch
 from torch.utils.data import Dataset
 
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+from amog_augment import MRIAugment  # noqa: E402
 from amog_modes import LUMBAR_LEVELS, CONDITIONS, N_CLASSES  # noqa: E402
 from amog_models import MODALITIES, N_MODALITIES, N_TARGETS, node_id  # noqa: E402
 from rsna_data import load_cache  # noqa: E402
@@ -85,11 +86,15 @@ class MultiSequenceDataset(Dataset):
 
     is_synthetic = False
 
-    def __init__(self, targets: pd.DataFrame, mm_ann, mm_xseq=None, crop: int = 128):
+    def __init__(self, targets: pd.DataFrame, mm_ann, mm_xseq=None, crop: int = 128,
+                 augment=None):
         self.t = targets.reset_index(drop=True)
         self.mm_ann = mm_ann
         self.mm_xseq = mm_xseq
         self.crop = crop
+        # Chapter 3 sec:method-augmentation: "Augmentation is disabled for
+        # validation and test data", so this is passed only for the train split.
+        self.augment = augment
 
     def __len__(self):
         return len(self.t)
@@ -111,6 +116,8 @@ class MultiSequenceDataset(Dataset):
                     imgs[m_i] = _to_tensor(self.mm_xseq, int(xs))
                     mask[m_i] = 1.0
 
+        if self.augment is not None:
+            imgs = self.augment(imgs)
         return (imgs, mask,
                 torch.tensor(int(r.condition_idx)),
                 torch.tensor(int(r.level_idx)),
@@ -175,6 +182,8 @@ class PatientGraphDataset(Dataset):
                 labels[n] = int(r.label)
                 label_mask[n] = 1.0
 
+        if self.augment is not None:
+            imgs = self.augment(imgs)
         return imgs, mask, labels, label_mask, evidence, torch.tensor(int(pid))
 
 

@@ -11,6 +11,7 @@ Run:  python implementation/99_audit/test_components.py
 from __future__ import annotations
 
 import inspect
+import json
 import os
 import sys
 
@@ -326,15 +327,30 @@ check("ROI crop is defined in physical millimetres, not fixed pixels",
       "where possible... This avoids a fixed 100-pixel crop representing "
       "different anatomical widths on scanners with different pixel spacing.' "
       "decode_roi() uses half = crop // 2, a fixed 128-pixel box.")
-check("2.5D stack radius matches the Chapter 3 reference configuration r=2",
-      "(-2, -1, 0, 1, 2)" in src or "range(-2, 3)" in src,
-      "Chapter 3 sec:method-roi names a five-slice stack (r=2) as the initial "
-      "reference; decode_roi() uses (-1, 0, 1), i.e. r=1.")
-check("ROI definition is conditioned on anatomical compartment",
-      "condition_key" in src and "crop_for_condition" in src,
-      "Chapter 3 sec:method-roi requires compartment-specific, side-aware crops "
-      "(canal vs foraminal vs subarticular). decode_roi() applies one uniform "
-      "crop to every condition.")
+# r and the per-compartment FOV are no longer asserted against Chapter 3's
+# stated defaults, because both were MEASURED and the defaults were not adopted.
+# thesis/chapter4/roi_geometry_ablation.md holds the paired three-seed result.
+# What is asserted instead is that the code can still express both, so the
+# decision stays revisitable, and that the cache records which one produced it.
+check("the extractor can still build r=2 and per-compartment crops",
+      "radius" in src and "per_condition" in src and "CONDITION_FOV_MM" in src,
+      "the rejected configurations must remain buildable, or the ablation "
+      "cannot be repeated when more data arrives")
+
+_meta = os.path.join(os.path.dirname(rsna_data.CACHE_DIR), "cache",
+                     rsna_data.ANN_CACHE + "_meta.json")
+if os.path.exists(_meta):
+    with open(_meta, encoding="utf-8") as _fh:
+        _cm = json.load(_fh)
+    check("the production cache records its own ROI geometry",
+          _cm.get("fov_mm") is not None and "radius" in _cm,
+          "a cache whose geometry is not recorded cannot be told apart from one "
+          "built under a different crop definition")
+    check("the production cache uses the geometry the ablation selected",
+          _cm.get("fov_mm") == 60.0 and _cm.get("radius") == 1
+          and not _cm.get("per_condition_fov"),
+          "cache geometry {} disagrees with the selected 60 mm, r=1, uniform"
+          .format(_cm.get("geometry")))
 
 # --------------------------------------------------------------------------- #
 print("\n9. Metrics -- Chapter 3 sec:method-metrics")
@@ -569,12 +585,61 @@ check("the fitted temperature does not increase validation NLL",
       _nll(_T) <= _nll(1.0) + 1e-4, f"{_nll(1.0):.4f} -> {_nll(_T):.4f}")
 
 # Chapter 3 sec:method-augmentation specifies an augmentation programme.
-aug_terms = ("flip", "gamma", "bias_field", "elastic", "augment")
+import amog_augment  # noqa: E402
+from amog_augment import MRIAugment, mirror_node_ids, CONDITION_MIRROR  # noqa: E402
+from amog_modes import CONDITIONS  # noqa: E402
+
 check("training augmentation exists",
-      any(used_outside_import(train_src, t) for t in aug_terms),
+      used_outside_import(train_src, "MRIAugment("),
       "Chapter 3 sec:method-augmentation specifies intensity scaling, gamma, "
-      "bias-field, noise, small rotation/translation and LATERALITY-AWARE flips "
-      "that swap left/right labels and graph node identity. None is implemented.")
+      "bias-field, noise and small rotation/translation")
+
+check("augmentation is applied to the TRAIN split only",
+      "sel(tr, aug)" in train_src and "sel(va)" in train_src,
+      "Chapter 3: 'Augmentation is disabled for validation and test data'")
+
+torch.manual_seed(0)
+_x = torch.rand(3, 3, 64, 64)
+_y = MRIAugment(p=1.0)(_x)
+check("augmentation changes the image but preserves shape and range",
+      _y.shape == _x.shape and not torch.allclose(_x, _y)
+      and float(_y.min()) >= 0 and float(_y.max()) <= 1)
+check("p=0 is a true no-op",
+      bool(torch.equal(_x, MRIAugment(p=0.0)(_x))))
+
+# The geometric and intensity transforms must draw ONE parameter per call, or
+# neighbouring 2.5D slices get independently rotated and the stack acquires
+# through-plane structure the scanner never produced.
+_same = torch.rand(1, 64, 64).repeat(3, 1, 1).unsqueeze(0)
+_geo = MRIAugment(p=1.0, noise=0.0)(_same)[0]
+check("2.5D slices are transformed together, not independently",
+      bool(torch.allclose(_geo[0], _geo[1]) and torch.allclose(_geo[1], _geo[2])),
+      "a per-slice parameter would manufacture through-plane variation")
+# noise is the deliberate exception: MRI thermal noise IS per voxel
+_nz = MRIAugment(p=1.0, intensity=0, gamma=0, bias=0, translate=0,
+                 rotate_deg=0, noise=0.05)(_same)[0]
+check("noise alone is sampled per voxel, as MRI noise physically is",
+      not bool(torch.allclose(_nz[0], _nz[1])))
+
+# The laterality mirror is unused by any current transform but is kept, so it
+# is tested: a silently wrong mirror would swap left and right targets.
+check("condition mirror maps each side to its contralateral twin",
+      all(CONDITIONS[CONDITION_MIRROR[i]].replace("right", "X").replace("left", "X")
+          == CONDITIONS[i].replace("right", "X").replace("left", "X")
+          for i in range(len(CONDITIONS))))
+check("central_canal is its own mirror",
+      CONDITIONS[CONDITION_MIRROR[CONDITIONS.index("central_canal")]] == "central_canal")
+_m = mirror_node_ids()
+check("graph node mirror is an involution over all 25 nodes",
+      bool(torch.equal(_m[_m], torch.arange(N_TARGETS)))
+      and sorted(_m.tolist()) == list(range(N_TARGETS)))
+
+check("no horizontal flip is applied, and the reason is recorded",
+      amog_augment.describe(MRIAugment())["horizontal_flip"] is False
+      and "sagittal" in amog_augment.describe(MRIAugment())["flip_excluded_because"],
+      "a target carries sagittal and axial channels together: a horizontal flip "
+      "mirrors anterior-posterior in one and left-right in the other, so no "
+      "single flip is valid across a target's own channels")
 
 # Chapter 3 sec:method-patient-split: split lists are version-controlled and the
 # loaders consume the fixed lists.

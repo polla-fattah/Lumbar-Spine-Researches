@@ -67,6 +67,7 @@ from rsna_data import (  # noqa: E402
     ANN_CACHE, XSEQ_CACHE,
 )
 from amog_acssl import ACSSL_CKPT_NAME  # noqa: E402
+from amog_augment import MRIAugment, describe  # noqa: E402
 from amog_perf import (  # noqa: E402
     configure_backend, suggest_batch, loader_kwargs, Amp, maybe_compile,
 )
@@ -298,11 +299,19 @@ def make_datasets(ctx, stage, args):
         print("  *** NEGATIVE CONTROL: labels permuted within each partition ***")
         print("  *** a sound pipeline must now score QWK ~0.00              ***")
 
-    if stage in GRAPH_STAGES:
-        sel = lambda s: PatientGraphDataset(tt[tt.study_id.isin(s)], mm_ann, mm_x)
-    else:
-        sel = lambda s: MultiSequenceDataset(tt[tt.study_id.isin(s)], mm_ann, mm_x)
-    return sel(tr), sel(va), sel(te), {"targets": len(tt), "patients": tt.study_id.nunique()}
+    # Chapter 3 sec:method-augmentation: train only. Validation and test see the
+    # images unmodified, or model selection and the held-out score would be
+    # measured on a distribution the deployed model never encounters.
+    aug = None if getattr(args, "no_augment", False) else MRIAugment(
+        intensity=args.aug_intensity, gamma=args.aug_gamma, noise=args.aug_noise,
+        bias=args.aug_bias, translate=args.aug_translate,
+        rotate_deg=args.aug_rotate, p=args.aug_prob)
+
+    Cls = PatientGraphDataset if stage in GRAPH_STAGES else MultiSequenceDataset
+    sel = lambda s, a=None: Cls(tt[tt.study_id.isin(s)], mm_ann, mm_x, augment=a)
+    return (sel(tr, aug), sel(va), sel(te),
+            {"targets": len(tt), "patients": tt.study_id.nunique(),
+             "augmentation": describe(aug) if aug else None})
 
 
 # --------------------------------------------------------------------------- #
@@ -461,6 +470,16 @@ def main():
                     help="ImageNet-initialised backbones (default)")
     ap.add_argument("--from_scratch", dest="pretrained", action="store_false",
                     help="random initialisation; a separate experiment, not the ladder")
+    ap.add_argument("--no_augment", action="store_true",
+                    help="disable training augmentation; a deliberate control, "
+                         "not the default")
+    ap.add_argument("--aug_intensity", type=float, default=0.15)
+    ap.add_argument("--aug_gamma", type=float, default=0.20)
+    ap.add_argument("--aug_noise", type=float, default=0.02)
+    ap.add_argument("--aug_bias", type=float, default=0.15)
+    ap.add_argument("--aug_translate", type=float, default=0.05)
+    ap.add_argument("--aug_rotate", type=float, default=7.0)
+    ap.add_argument("--aug_prob", type=float, default=0.8)
     ap.add_argument("--shuffle_labels", action="store_true",
                     help="NEGATIVE CONTROL: permute labels inside each partition. "
                          "A sound pipeline collapses to QWK ~0; anything else "
@@ -709,6 +728,7 @@ def main():
                  # though it always equals epochs_configured, so that a future
                  # run which does stop early cannot be mistaken for one that did
                  # not.
+                 "augmentation": meta.get("augmentation"),
                  "calibration": calib,
                  "acssl": acssl_info,
                  "acssl_pretrained": acssl_info is not None,
