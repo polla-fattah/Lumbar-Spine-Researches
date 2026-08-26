@@ -91,10 +91,16 @@ $(42, 43, 44)$, fifty epochs each, thirty runs in total, completed in
 $669.4$~minutes on a single RTX~5090. No run failed. A seven-seed extension is
 in progress at the time of writing.
 
-The ten configurations comprise the eight ladder rungs E0--E7 and two controls
-attached to E6: \texttt{E6\_shuffled}, in which edge endpoints are permuted while
+The ten configurations comprise the eight internal ladder rungs E0--E7 and
+two controls attached to E6: \texttt{E6\_shuffled}, in which edge endpoints are permuted while
 node and edge counts are preserved, and \texttt{E6\_ungated}, in which the gated
 residual is replaced by an ungated one.
+
+The ladder specified in Section~\ref{sec:method-ablation} runs to E8, the
+selected complete system under external transfer. \textbf{E8 was not executed.}
+It is the operational form of RQ4 and is blocked by the two obstacles reported in
+Section~\ref{sec:results-rq4}; every result in this chapter is therefore internal
+to LumbarDISC, and no rung of the executed ladder speaks to institutional shift.
 
 \subsection{Data and Partitioning}
 

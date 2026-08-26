@@ -894,8 +894,7 @@ measurable.
 \subsection{Demonstrated Contributions}
 \label{sec:intro-contrib-demonstrated}
 
-The experiments reported in Chapter~
-ef{ch:results} support three
+The experiments reported in Chapter~\ref{ch:results} support three
 contributions. They are not the three proposed above, and the difference is
 itself part of what the thesis contributes.
 
@@ -911,8 +910,7 @@ claimed mechanism is tested against a control matched in capacity rather than
 against its own absence: a degree-preserving edge shuffle for graph topology, a
 router-free fixed-fusion arm for sequence routing, an architecture-matched
 untrained network as an attribution floor, and a label-shuffled model as a
-pipeline-level negative control. Section~
-ef{sec:results-threats} documents
+pipeline-level negative control. Section~\ref{sec:results-threats} documents
 three analyses that produced incorrect positive conclusions before the
 corresponding control was introduced, in each case in the direction of the
 hypothesis under test.
@@ -950,8 +948,7 @@ claim is narrower than proposed and more specific than the original: relational
 typing carries information, anatomical adjacency does not.
 
 Contribution~4 (cross-institutional transfer evaluation) was not executed. Cohort
-preparation is complete and is reported in Section~
-ef{sec:results-rq4};
+preparation is complete and is reported in Section~\ref{sec:results-rq4};
 adjudication of conflicting reference labels and a correct de-identification
 procedure remain outstanding. It is retained here as unexecuted rather than
 withdrawn.
@@ -1165,29 +1162,29 @@ questions}. This is preferable to rewriting the original proposal so that only
 successful components appear to have been planned.
 
 % Written after Chapter 4. High-level answers only; metrics live in Chapter 4.
-egin{description}
-  \item[RQ1 --- Relational disease modelling.] 	extbf{Partly supported.} A typed
+\begin{description}
+  \item[RQ1 --- Relational disease modelling.] \textbf{Partly supported.} A typed
   heterogeneous graph improves grading over independent heads and over a
   homogeneous graph, on every seed. The anatomical identity of the relations does
   not contribute: an anatomically correct topology does not outperform a
   degree-preserving random shuffle.
 
-  \item[RQ2 --- Anatomically aligned self-supervision.] 	extbf{Not supported.}
+  \item[RQ2 --- Anatomically aligned self-supervision.] \textbf{Not supported.}
   The pretext task is learnable and was learned, but the resulting representation
   yields no detectable improvement in grading, in robustness to withheld
   sequences, or in where the model attends.
 
-  \item[RQ3 --- Disease-conditioned modality routing.] 	extbf{Mechanism
+  \item[RQ3 --- Disease-conditioned modality routing.] \textbf{Mechanism
   supported, benefit not.} The router reliably learns the clinically expected
   sequence weights, but a router-free model shows the same sequence dependence
   under intervention, and routing improves neither accuracy nor missing-sequence
   robustness.
 
-  \item[RQ4 --- Cross-institutional transfer.] 	extbf{Not executed.} Cohort
+  \item[RQ4 --- Cross-institutional transfer.] \textbf{Not executed.} Cohort
   preparation is complete; reference-label adjudication and de-identification
   remain outstanding.
 
-  \item[RQ5 --- Clinically asymmetric error and uncertainty.] 	extbf{Supported
+  \item[RQ5 --- Clinically asymmetric error and uncertainty.] \textbf{Supported
   for error asymmetry.} Ordinal and cost-sensitive objectives improve both
   aggregate agreement and recall on Severe targets, on every seed, and form the
   most reliable single contributor to final performance. Selective prediction
@@ -1228,8 +1225,7 @@ sequence dependence by intervention rather than by learned allocation, and a
 Grad-CAM attribution analysis against an architecture-matched untrained floor.
 The cross-institutional transfer group was prepared but not executed and is
 reported as such. The research questions are unchanged from those fixed in
-Section~
-ef{sec:intro-rqs}.
+Section~\ref{sec:intro-rqs}.
 
 \textbf{Chapter 5 --- Discussion and Conclusions} will interpret the findings
 against the literature, distinguish demonstrated contributions from negative
