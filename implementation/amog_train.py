@@ -728,6 +728,21 @@ def main():
                  # though it always equals epochs_configured, so that a future
                  # run which does stop early cannot be mistaken for one that did
                  # not.
+                 # Fingerprint of everything that changes what a number MEANS.
+                 # run_ladder compares this before reusing a completed run, so a
+                 # result produced under a different configuration can never be
+                 # silently mixed into a campaign.
+                 "run_config": {
+                     "stage": stage, "backbone": backbone, "dim": args.dim,
+                     "epochs": ctx.epochs, "mode": ctx.mode,
+                     "augmented": bool(meta.get("augmentation")),
+                     "pretrained_backbone": bool(args.pretrained),
+                     "cache": ANN_CACHE,
+                     "shuffled": bool(args.shuffled),
+                     "ungated": bool(args.ungated),
+                     "cost_weight": args.cost_weight,
+                     "acssl": bool(acssl_info),
+                 },
                  "augmentation": meta.get("augmentation"),
                  "calibration": calib,
                  "acssl": acssl_info,

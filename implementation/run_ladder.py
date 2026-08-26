@@ -100,8 +100,33 @@ def out_paths(tag, mode, seed):
 def run_one(stage, flags, tag, prof, seed, log, force=False):
     js, npz = out_paths(tag, prof["mode"], seed)
     if os.path.exists(js) and os.path.exists(npz) and not force:
-        print("  [skip] {} seed {} already complete".format(tag, seed))
-        return True, 0.0
+        # Existence is not enough. A result written under different epochs, a
+        # different backbone, or before augmentation existed is not the run this
+        # campaign is asking for, and reusing it would confound every comparison
+        # against it with whatever else changed.
+        stale = None
+        try:
+            with open(js, "r", encoding="utf-8") as fh:
+                got = (json.load(fh).get("run_config") or {})
+            want = {"stage": stage, "epochs": prof["epochs"], "mode": prof["mode"],
+                    "shuffled": "--shuffled" in flags,
+                    "ungated": "--ungated" in flags}
+            if prof.get("backbone"):
+                want["backbone"] = prof["backbone"]
+            if not got:
+                stale = "no run_config recorded (predates fingerprinting)"
+            else:
+                diff = {k: (got.get(k), v) for k, v in want.items() if got.get(k) != v}
+                if diff:
+                    stale = ", ".join("{} {}->{}".format(k, a, b)
+                                      for k, (a, b) in diff.items())
+        except Exception as e:
+            stale = "unreadable ({})".format(e)
+
+        if stale is None:
+            print("  [skip] {} seed {} already complete".format(tag, seed))
+            return True, 0.0
+        print("  [stale] {} seed {} will be re-run: {}".format(tag, seed, stale))
 
     cmd = [sys.executable, TRAINER, "--stage", stage, "--mode", prof["mode"],
            "--epochs", str(prof["epochs"]), "--seed", str(seed)] + flags + prof["extra"]
