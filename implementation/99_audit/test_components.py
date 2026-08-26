@@ -755,6 +755,64 @@ check("the best checkpoint is restored into the model before testing",
       "written, selection is computed, saved, and discarded.")
 
 # --------------------------------------------------------------------------- #
+# Across-seed inference. The per-seed bootstrap holds the trained model fixed,
+# so its interval excludes training stochasticity -- on the full campaign that
+# made E4 vs E3 come out +0.0270 (p=0.000) on one seed and -0.0234 (p=0.000) on
+# another, opposite signs both "significant". paired_bootstrap_diff_seeds must
+# average the seeds INSIDE each replicate, on one shared patient resample.
+print("")
+print("--- across-seed pooled bootstrap ---")
+from amog_stats import paired_bootstrap_diff_seeds  # noqa: E402
+
+_rng = np.random.default_rng(7)
+_pat = np.repeat(np.arange(60), 5)
+_y = _rng.integers(0, 3, size=_pat.size)
+
+def _noisy(base, rate):
+    q = base.copy()
+    m = _rng.random(q.size) < rate
+    q[m] = (q[m] + 1) % 3
+    return q
+
+# three "seeds" that disagree: two arms better than B, one clearly worse
+_a = [_noisy(_y, r) for r in (0.02, 0.02, 0.10)]
+_b = [_noisy(_y, 0.06) for _ in range(3)]
+
+_r = paired_bootstrap_diff_seeds(_pat, _y, _a, _b, acc_fn, n_boot=200, seed=0)
+_per = [acc_fn(_y, _a[i]) - acc_fn(_y, _b[i]) for i in range(3)]
+
+check("the pooled point estimate is the mean over seeds",
+      abs(_r["diff"] - float(np.mean(_per))) < 1e-9,
+      f"pooled {_r['diff']:.6f} vs mean-of-seeds {np.mean(_per):.6f}")
+
+check("the pooled result reports between-seed spread separately",
+      abs(_r["sd_between_seeds"] - float(np.std(_per, ddof=1))) < 1e-9)
+
+check("seed_wins counts the seeds that actually favour A",
+      _r["seed_wins"] == sum(1 for d in _per if d > 0) and _r["n_seeds"] == 3,
+      f"reported {_r['seed_wins']}/{_r['n_seeds']}")
+
+check("the pooled interval brackets the pooled estimate",
+      _r["lo"] <= _r["diff"] <= _r["hi"],
+      f"[{_r['lo']:.4f}, {_r['hi']:.4f}] excludes {_r['diff']:.4f}")
+
+# The resample must be SHARED across the two arms, not redrawn. Feed identical
+# arms: every replicate must then be exactly zero. A non-zero interval here is
+# the signature of a broken pairing.
+_z = paired_bootstrap_diff_seeds(_pat, _y, _a, _a, acc_fn, n_boot=100, seed=0)
+check("identical arms give an exactly zero difference and a degenerate interval",
+      abs(_z["diff"]) < 1e-12 and abs(_z["lo"]) < 1e-12 and abs(_z["hi"]) < 1e-12,
+      f"diff {_z['diff']:.2e} CI [{_z['lo']:.2e}, {_z['hi']:.2e}] -- non-zero "
+      "means the patient resample is not shared across the arms")
+
+_refused = False
+try:
+    paired_bootstrap_diff_seeds(_pat, _y, _a, _b[:2], acc_fn, n_boot=10)
+except ValueError:
+    _refused = True
+check("a mismatched number of arms is refused, not silently truncated", _refused)
+
+# --------------------------------------------------------------------------- #
 print("\n" + "=" * 70)
 print(f"  {len(PASS)} passed, {len(FAIL)} failed")
 print("=" * 70)

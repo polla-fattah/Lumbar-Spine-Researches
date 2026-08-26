@@ -44,7 +44,8 @@ import pandas as pd
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 from amog_modes import PROJECT_ROOT, compute_metrics  # noqa: E402
 from amog_stats import (  # noqa: E402
-    patient_bootstrap_ci, paired_bootstrap_diff, benjamini_hochberg, aggregate_seeds,
+    patient_bootstrap_ci, paired_bootstrap_diff, paired_bootstrap_diff_seeds,
+    benjamini_hochberg, aggregate_seeds,
 )
 
 if hasattr(sys.stdout, "reconfigure"):
@@ -70,6 +71,7 @@ RUNS = [
 # Chapter 3 declares a limited set of primary comparisons; everything else is
 # exploratory. (A, B, what it tests)
 PRIMARY = [
+    ("E7", "E0", "full system vs single-sequence baseline"),
     ("E6", "E6_shuffled", "anatomical topology vs arbitrary topology (CC III)"),
     ("E6", "E5", "typed heterogeneous vs homogeneous graph"),
     ("E6", "E6_ungated", "gated residual vs ungated"),
@@ -175,12 +177,21 @@ def load_preds(path):
 
 
 def compare(prof, df, n_boot):
-    """Paired bootstrap on the primary comparisons, then FDR."""
+    """Primary comparisons: one pooled test per comparison x metric, then FDR.
+
+    A row with seed="pooled" is the inferential row -- the difference averaged
+    over training seeds, with the patient resample shared across seeds (see
+    amog_stats.paired_bootstrap_diff_seeds for why the per-seed interval is not
+    the right one to test). The per-seed rows are retained for transparency but
+    are NOT part of the FDR family: they are three views of one comparison, not
+    three independent tests, and on this campaign they disagree in sign.
+    """
     f1 = lambda t, p: compute_metrics(t, p)["macro_f1"]
     qwk = lambda t, p: compute_metrics(t, p)["qwk"]
     out = []
 
     for a_tag, b_tag, what in PRIMARY:
+        pool_a, pool_b, pool_pat, pool_y = [], [], None, None
         for seed in prof["seeds"]:
             _, npz_a = out_paths(a_tag, prof["mode"], seed)
             _, npz_b = out_paths(b_tag, prof["mode"], seed)
@@ -194,20 +205,46 @@ def compare(prof, df, n_boot):
                                 diff=np.nan, lo=np.nan, hi=np.nan, p_value=np.nan,
                                 note="test sets differ; not directly pairable"))
                 continue
+            # pooling requires every seed to sit on the same frozen test rows
+            if pool_y is None:
+                pool_pat, pool_y = pa, ya
+            elif not (np.array_equal(pool_y, ya) and np.array_equal(pool_pat, pa)):
+                out.append(dict(comparison="{} vs {}".format(a_tag, b_tag),
+                                tests=what, seed=seed, metric="-",
+                                diff=np.nan, lo=np.nan, hi=np.nan, p_value=np.nan,
+                                note="test rows differ across seeds; not pooled"))
+                continue
+            pool_a.append(ypa)
+            pool_b.append(ypb)
             for name, fn in (("macro_f1", f1), ("qwk", qwk)):
                 d = paired_bootstrap_diff(pa, ya, ypa, ypb, fn, n_boot=n_boot)
                 out.append(dict(comparison="{} vs {}".format(a_tag, b_tag),
                                 tests=what, seed=seed, metric=name,
                                 diff=d["diff"], lo=d["lo"], hi=d["hi"],
-                                p_value=d["p_value"], note=""))
+                                p_value=d["p_value"], note="per-seed, descriptive"))
+
+        if len(pool_a) > 1:
+            for name, fn in (("macro_f1", f1), ("qwk", qwk)):
+                d = paired_bootstrap_diff_seeds(pool_pat, pool_y, pool_a, pool_b,
+                                                fn, n_boot=n_boot)
+                out.append(dict(comparison="{} vs {}".format(a_tag, b_tag),
+                                tests=what, seed="pooled", metric=name,
+                                diff=d["diff"], lo=d["lo"], hi=d["hi"],
+                                p_value=d["p_value"], note="",
+                                sd_between_seeds=d["sd_between_seeds"],
+                                seed_wins="{}/{}".format(d["seed_wins"],
+                                                         d["n_seeds"])))
 
     cdf = pd.DataFrame(out)
     if len(cdf):
-        valid = cdf.p_value.notna()
-        if valid.any():
-            rej, adj = benjamini_hochberg(cdf.loc[valid, "p_value"].to_numpy())
-            cdf.loc[valid, "p_adjusted"] = adj
-            cdf.loc[valid, "significant_fdr05"] = rej
+        cdf["p_adjusted"] = np.nan
+        cdf["significant_fdr05"] = False
+        # FDR family = the pooled rows only, one per comparison x metric
+        fam = (cdf.seed == "pooled") & cdf.p_value.notna()
+        if fam.any():
+            rej, adj = benjamini_hochberg(cdf.loc[fam, "p_value"].to_numpy())
+            cdf.loc[fam, "p_adjusted"] = adj
+            cdf.loc[fam, "significant_fdr05"] = rej
     return cdf
 
 
@@ -242,21 +279,44 @@ def write_tables(prof, df, cdf, path):
                 tag, a["mean"], a["sd"], b["mean"], b["sd"]))
 
     L.append("\n## Table 4.3 — Pre-specified primary comparisons\n")
-    L.append("Paired patient-level bootstrap. FDR controlled across all rows.\n")
-    L.append("| Comparison | Tests | Metric | Δ | 95% CI | p | p(FDR) | Sig |")
-    L.append("| :-- | :-- | :-- | --: | :-- | --: | --: | :-: |")
-    if len(cdf):
-        for _, r in cdf.iterrows():
-            if r.get("note"):
-                L.append("| {} | {} | — | — | — | — | — | {} |".format(
-                    r.comparison, r.tests, r["note"]))
-                continue
+    L.append("Difference averaged over training seeds, with one patient-level "
+             "bootstrap resample shared across seeds. FDR is controlled across "
+             "these rows only — one test per comparison and metric.\n")
+    L.append("| Comparison | Tests | Metric | Δ | 95% CI | sd(seeds) | seeds + | p | p(FDR) | Sig |")
+    L.append("| :-- | :-- | :-- | --: | :-- | --: | :-: | --: | --: | :-: |")
+    pooled = cdf[cdf.seed == "pooled"] if len(cdf) else cdf
+    if len(pooled):
+        for _, r in pooled.iterrows():
             sig = "yes" if r.get("significant_fdr05") else "no"
-            L.append("| {} | {} | {} | {:+.4f} | [{:+.4f}, {:+.4f}] | {:.4f} | {:.4f} | {} |"
+            L.append("| {} | {} | {} | {:+.4f} | [{:+.4f}, {:+.4f}] | {:.4f} | {} | {:.4f} | {:.4f} | {} |"
                      .format(r.comparison, r.tests, r.metric, r["diff"], r.lo, r.hi,
+                             r.get("sd_between_seeds", np.nan),
+                             r.get("seed_wins", "—"),
                              r.p_value, r.get("p_adjusted", np.nan), sig))
     else:
-        L.append("| — | no comparable runs yet | | | | | | |")
+        L.append("| — | no comparable runs yet | | | | | | | | |")
+
+    if len(cdf):
+        bad = cdf.note.astype(str).str.contains("not pooled|not directly pairable",
+                                                na=False)
+        for _, r in cdf[bad].iterrows():
+            L.append("| {} | {} | — | — | — | — | — | — | — | {} |".format(
+                r.comparison, r.tests, r["note"]))
+
+    L.append("\n### Table 4.3b — Per-seed differences (descriptive, not tested)\n")
+    L.append("Each row resamples patients with that seed's trained model held "
+             "fixed, so its interval covers test-set sampling only and excludes "
+             "training stochasticity. On this campaign that omission is decisive: "
+             "several comparisons reverse sign between seeds with narrow "
+             "intervals on both sides. These rows are shown for transparency and "
+             "carry no significance claim.\n")
+    L.append("| Comparison | Seed | Metric | Δ | 95% CI | p |")
+    L.append("| :-- | :-: | :-- | --: | :-- | --: |")
+    if len(cdf):
+        per = cdf[(cdf.seed != "pooled") & cdf.p_value.notna()]
+        for _, r in per.iterrows():
+            L.append("| {} | {} | {} | {:+.4f} | [{:+.4f}, {:+.4f}] | {:.4f} |".format(
+                r.comparison, r.seed, r.metric, r["diff"], r.lo, r.hi, r.p_value))
 
     L.append("\n## Reading Table 4.3\n")
     L.append("The decisive row is **E6 vs E6_shuffled**. E6_shuffled has the same 25 "

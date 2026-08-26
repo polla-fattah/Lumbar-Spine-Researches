@@ -242,3 +242,70 @@ if __name__ == "__main__":
         {k: round(v, 4) if isinstance(v, float) else v
          for k, v in aggregate_seeds([0.71, 0.74, 0.69, 0.73]).items()}))
     print("-" * 66)
+
+
+def paired_bootstrap_diff_seeds(patient_ids, y_true, preds_a, preds_b, metric_fn,
+                                n_boot: int = 2000, alpha: float = 0.05,
+                                seed: int = 0):
+    """Paired difference (A - B) averaged over training seeds.
+
+    WHY THIS EXISTS
+    ---------------
+    `paired_bootstrap_diff` resamples patients with the trained model held
+    fixed, so its interval covers test-set sampling and nothing else. The full
+    campaign showed that is the SMALLER of the two variance sources: E4 vs E3
+    came out +0.0270 (p=0.000) on seed 42 and -0.0234 (p=0.000) on seed 43 --
+    opposite signs, both "significant". Reporting per-seed intervals therefore
+    invites picking the seed that supports the claim.
+
+    The estimand a component ablation actually needs is the expected difference
+    over training runs. Here one patient resample is shared across all seeds
+    (they share a frozen test split, so the rows correspond), the difference is
+    computed per seed, and the seeds are averaged INSIDE the replicate. The
+    resulting interval is for the mean effect; `sd_between_seeds` reports the
+    training stochasticity alongside it, since three seeds cannot support
+    resampling seeds themselves.
+
+    preds_a, preds_b: lists of prediction arrays, one per seed, aligned to
+    y_true and patient_ids.
+    """
+    patient_ids = np.asarray(patient_ids)
+    y_true = np.asarray(y_true)
+    preds_a = [np.asarray(p) for p in preds_a]
+    preds_b = [np.asarray(p) for p in preds_b]
+    if len(preds_a) != len(preds_b) or not preds_a:
+        raise ValueError("need a matching, non-empty prediction list per arm")
+    rng = np.random.default_rng(seed)
+
+    per_seed = [_metric(metric_fn, y_true, a) - _metric(metric_fn, y_true, b)
+                for a, b in zip(preds_a, preds_b)]
+    point = float(np.mean(per_seed))
+    sd_between = float(np.std(per_seed, ddof=1)) if len(per_seed) > 1 else 0.0
+    wins = int(sum(1 for d in per_seed if d > 0))
+
+    uniq = np.unique(patient_ids)
+    by_patient = {p: np.flatnonzero(patient_ids == p) for p in uniq}
+
+    diffs = np.empty(n_boot, dtype=float)
+    for b in range(n_boot):
+        take = rng.choice(uniq, size=len(uniq), replace=True)
+        idx = np.concatenate([by_patient[p] for p in take])
+        try:
+            yt = y_true[idx]
+            diffs[b] = np.mean([_metric(metric_fn, yt, a[idx])
+                                - _metric(metric_fn, yt, bb[idx])
+                                for a, bb in zip(preds_a, preds_b)])
+        except Exception:
+            diffs[b] = np.nan
+
+    ok = diffs[np.isfinite(diffs)]
+    if ok.size == 0:
+        return dict(diff=point, lo=np.nan, hi=np.nan, p_value=np.nan, n_boot=0,
+                    sd_between_seeds=sd_between, seed_wins=wins,
+                    n_seeds=len(per_seed))
+    lo, hi = np.percentile(ok, [100 * alpha / 2, 100 * (1 - alpha / 2)])
+    p = 2.0 * min((ok <= 0).mean(), (ok >= 0).mean())
+    return dict(diff=point, lo=float(lo), hi=float(hi),
+                p_value=float(min(p, 1.0)), n_boot=int(ok.size),
+                sd_between_seeds=sd_between, seed_wins=wins,
+                n_seeds=len(per_seed))
