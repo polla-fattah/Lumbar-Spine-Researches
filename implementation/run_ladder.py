@@ -297,10 +297,18 @@ def main():
                     os.path.relpath(ck, PROJECT_ROOT)))
             else:
                 print("  pretraining ACSSL encoders (once, shared by all seeds)")
+                # The pretrained encoders must be built with the SAME backbone
+                # the stage will train, or the transfer is refused (correctly)
+                # at load time. Passing the profile's backbone keeps them in
+                # step; omitting it worked only by coincidence when both
+                # happened to default to resnet18.
+                bb = prof.get("backbone") or (
+                    "smallcnn" if prof["mode"] == "smoke" else "resnet18")
                 cmd = [sys.executable,
                        os.path.join(os.path.dirname(os.path.abspath(__file__)),
                                     "amog_acssl.py"),
-                       "--mode", prof["mode"], "--epochs", str(prof["epochs"])]
+                       "--mode", prof["mode"], "--epochs", str(prof["epochs"]),
+                       "--backbone", bb]
                 rc = subprocess.run(cmd, cwd=PROJECT_ROOT).returncode
                 if rc != 0:
                     print("  [FAIL] ACSSL pretraining failed; E4 will be skipped "
