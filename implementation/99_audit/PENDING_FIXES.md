@@ -59,3 +59,48 @@ unnoticed.
 
 **Fix:** record the pretraining configuration in the checkpoint and compare it
 in `run_ladder` the same way rung results are compared.
+
+---
+
+## 3. Router gate weights are discarded, so Contribution II cannot be evidenced
+
+**Where:** `amog_train.py`, `run_epoch()`
+
+```python
+entropies.append(float(DiseaseConditionedRouter.gate_entropy(g, m2)))
+...
+m["gate_entropy"] = float(np.mean(entropies))
+```
+
+The gate tensor `g` is (B, M) -- one weight per sequence per target. Only its
+mean entropy survives; the weights themselves are thrown away. The saved
+predictions file holds `patient_id, y_true, y_pred, y_prob, logits` and nothing
+about allocation.
+
+**Why this blocks a contribution rather than merely losing detail.**
+
+Chapter 3 `sec:method-routing-interpretation` requires two things, and neither
+is computable from a scalar:
+
+> "aggregate routing weights are summarised **by target**. The expected pattern
+> is that foraminal targets allocate more weight to sagittal T1 and
+> subarticular/canal targets more to axial T2"
+
+> "controlled input ablation tests whether removing the sequence with high
+> routing weight causes a greater performance loss than removing a low-weight
+> sequence"
+
+Contribution II claims routing is *disease-conditioned*. Demonstrating that
+needs the per-condition allocation. The quick campaign measured mean gate
+entropy at 0.936 for E2 and 0.919 for E3 -- close to uniform -- which is
+consistent EITHER with a router that does not differentiate at all, OR with one
+that differentiates sharply per condition while averaging near-uniform across
+the cohort. Those are opposite conclusions about the contribution and the
+current output cannot separate them.
+
+**Fix:** save the mean gate vector per (condition, level) alongside the
+predictions, and add the input-ablation comparison. Both are needed before the
+full campaign, or it will finish without the evidence Contribution II requires.
+
+**Status:** the quick campaign will not be able to evidence RQ3/Contribution II
+beyond the aggregate scalar.
