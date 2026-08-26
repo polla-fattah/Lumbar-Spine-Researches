@@ -1,0 +1,116 @@
+case_id,priority,reason,canal_status,canal_severity,level_stated,imaging_path,report_phrase
+6,1,spreadsheet and report disagree,absent,,0,disc protrusion\case.6,
+17,1,report phrase ambiguous or silent,unresolved,,0,dics extrusion\case.17,
+25,1,spreadsheet and report disagree,absent,,0,dics extrusion\case.25,
+53,1,spreadsheet and report disagree,absent,,0,disc bulge\case..53 | disc bulge\case.53 | disc protrusion\case.53,
+54,1,spreadsheet and report disagree,absent,,0,disc bulge\case..54 | disc protrusion\case.54,
+58,1,report phrase ambiguous or silent,unresolved,,1,disc bulge\case..58 | disc protrusion\case.58,"L2-3 Disc space shows   circumferential disc bulge indenting ventral theca with no pressure effect on corresponding exit foramina,causing spinal canal stenosis."
+60,1,spreadsheet and report disagree,present,mild,1,disc bulge\case.60,L3-4 and L4-5 disc space shows circumferential disc bulge indenting ventral theca with pressure effect on corresponding exit foramina at L4-5 disc level with mild spinal canal stenosis.
+64,1,spreadsheet and report disagree,present,,1,disc bulge\case.64,"L1 through L5 Discs show  circumferential disc bulge indenting theca causing pressure effect on corresponding exit foramina, and  spinal canal stenosis at L1-2."
+82,1,spreadsheet and report disagree,absent,,0,disc protrusion\case.82,
+91,1,report phrase ambiguous or silent,not_stated,,0,disc bulge\case.91,
+125,1,spreadsheet and report disagree,absent,,0,disc bulge\case.125,
+134,1,report phrase ambiguous or silent,not_stated,,0,disc bulge\case.134,
+139,1,report phrase ambiguous or silent,not_stated,,0,disc bulge\case.139,
+140,1,report phrase ambiguous or silent,not_stated,,0,disc bulge\case.140,
+149,1,spreadsheet and report disagree,absent,,0,disc bulge\case.149,
+157,1,spreadsheet and report disagree,absent,,0,disc bulge\case.157,
+162,1,spreadsheet and report disagree,absent,,0,disc bulge\case..162 | disc protrusion\case.162,
+166,1,report phrase ambiguous or silent,unresolved,,1,disc bulge\case.166 | disc protrusion\case..166,"L1 through S1  disc level show  circumferential disc bulge indenting theca , with pressure effect on  both  exit foramina at L2-3 ,L3-4,L4-5 and spinal canal stenosis at L2-3 level	."
+170,1,spreadsheet and report disagree,absent,,0,disc bulge\case..170 | disc protrusion\case.170,
+172,1,spreadsheet and report disagree,present,,1,dics extrusion\case.172,"L4-5 disc shows central extrusion with cranial migration on background of  circumferential disc bulge , indenting ventral theca , with pressure effect on corresponding exit foramina and spinal canal stenosis"
+179,1,spreadsheet and report disagree,present,,0,disc bulge\case.179,
+183,1,report phrase ambiguous or silent,not_stated,,0,dics extrusion\case..183 | disc bulge\case.183,
+187,1,report phrase ambiguous or silent,unresolved,,1,disc bulge\case.187 | disc protrusion\case..187,"L1-2 shows central disc extrusion on background of  circumferential disc bulge , indenting ventral theca , with no pressure effect on corresponding exit foramina with mils spinal canal stenosis"
+193,1,spreadsheet and report disagree,absent,,0,disc bulge\case..193 | disc protrusion\case.193,
+195,1,spreadsheet and report disagree,absent,,0,dics extrusion\case..195 | disc bulge\case...195 | disc protrusion\case.195,
+3,2,report asserts stenosis,present,mild;moderate,1,dics extrusion\case.3 | disc bulge\case.3,"L2-3 and L4-5, L5-S1 : shows  circumferential disc bulge , indenting ventral theca , causing pressure effect on corresponding exit foramina with mild spinal canal stenosis  at L2-3."
+12,2,report asserts stenosis,present,moderate,1,disc bulge\case.12,L2 through S1 disc levels show  circumferential disc bulge indenting ventral theca causing pressure effect on corresponding exit foramina with significant spinal canal stenosis at L3-4 and L5-S1 and moderate spinal canal stenosis at L2-3.
+13,2,report asserts stenosis,present,mild,1,dics extrusion\case.13,L2-3 and L5-S1 disc levels show  circumferential disc bulge with  ligementum flavum hypertrophy and facet joint arthrosis at L5-S1 indenting ventral theca causing pressure effect on corresponding exit foramina with mild spinal canal stenosis.
+14,2,report asserts stenosis,present,,1,disc bulge\case.14,"L2 through L5 disc spaces show  circumferential disc bulge , indenting ventral theca , pressure effect on  both exit foramina more on right side ,with spinal canal stenosis at L3-4,L4-5 levels"
+20,2,report asserts stenosis,present,severe,1,dics extrusion\case.20,"causing moderate –severe  pressure effect on corresponding exit foramina , mild – moderate spinal canal stenosis mild at L4/5 , moderate  at L3/4 ."
+27,2,report asserts stenosis,present,moderate;severe,1,disc protrusion\case.27,"L2/3 : shows right paracentral disc protrusion , along with ligementum flavum hypertrophy   facet joint arthrosis  , casuing mild – moderate pressure effect on corresponding exit foramina , severe spinal canal stenosis ."
+30,2,report asserts stenosis,present,,1,dics extrusion\case.30,L4-5 disc level : shows degenerative disc dehydration  and decreased disc height  also showing central extrusion  with cranial migration on the background of  circumferential disc bulge indenting ventral theca causing pressure effect on both  exit foramina and significant  spinal canal stenosis.
+34,2,report asserts stenosis,present,,1,disc bulge\case.34,L2 through S1 disc levels : show degenerative disc dehydration and decreased disc height  circumferential disc bulge causing pressure effect on corresponding exit foramina and spinal canal stenosis at                                  level L2-3 and  L3-4
+61,2,report asserts stenosis,present,mild,1,disc bulge\case.61,"L3-4&L4-5&L5-S1 disc circumferential disc bulge, indenting ventral theca with pressure effect on corresponding exit foramina ,causing mild spinal canal stenosis at L3-4 and L4-5 levels."
+62,2,report asserts stenosis,present,severe,1,dics extrusion\case..62 | disc bulge\case.62,"L3-4,L5-S1 Disc space shows   circumferential disc bulge along with ligamentum flavum hypertrophy indenting theca causing pressure effect on corresponding exit foramina, and  severe spinal canal stenosis."
+63,2,report asserts stenosis,present,severe,1,disc bulge\case.63,"L3-4,L4-5 and L5-S1 Disc show  circumferential disc bulge along with ligamentum flavum hypertrophy indenting theca causing pressure effect on corresponding exit foramina, and  severe spinal canal stenosis at L3-4 and L4-5 level."
+65,2,report asserts stenosis,present,mild,1,disc bulge\case.65,"From L1 through L5 IVDS  : show  circumferential disc bulge , indenting ventral theca , causing pressure effect on corresponding exit foramina with mild spinal canal stenosis at L2-3 level"
+67,2,report asserts stenosis,present,mild,1,disc bulge\case.67,"L4-5 IVDS : show  circumferential disc bulge , indenting ventral theca , pressure effect on both  exit foramina  and ligementum flavum hypertrophy   causing Mild spinal canal stenosis ."
+72,2,report asserts stenosis,present,,1,disc bulge\case..72 | disc protrusion\case.72,"L4-5 disc space shows  right foraminal disc extrusion on background of circumferential disc bulge ,indenting ventral theca ligementum flavum hypertrophy   with pressure effect on corresponding exit foramina causing sever spinal canal stenosis ."
+75,2,report asserts stenosis,present,moderate,1,disc bulge\case..75 | disc protrusion\case.75,"L2-3 , L3-4 and L5-S1 disc levels  show  circumferential disc bulge , ligementum flavum hypertrophy, indenting theca , causing pressure effect on  both  exit foramina ,  moderate  spinal canal stenosis at L4-5disc level ."
+83,2,report asserts stenosis,present,mild,1,disc bulge\case.83,"L3-S1 IVDS shows  circumferential disc bulge ,indenting ventral theca with pressure effect on  exit foramina .with mild spinal canal stenosis at L3-4,L4-5 level"
+84,2,report asserts stenosis,present,mild,1,disc bulge\case.84,"L3-4, l4-5 IVDS shows  circumferential disc bulge ,indenting ventral theca with pressure effect on  exit foramina .with mild spinal canal stenosis at L3-4,L4-5 level"
+86,2,report asserts stenosis,present,severe,1,disc bulge\case.86,"L3-4 and L4-5 disc levels : show  circumferential disc bulge along with ligamentum flavum hypertrophy , indenting theca causing  severe pressure effect on corresponding exit foramina with moderate spinal canal stenosis at L3-4 disc levels ."
+87,2,report asserts stenosis,present,mild;moderate;severe,1,dics extrusion\case.87 | disc bulge\case.87 | disc protrusion\case..87,"L1-2 ,L4-5,L5-S1: shows central disc extrusion, indenting ventral theca , causing pressure effect on corresponding exit foramina  with moderate spinal canal stenosis ."
+88,2,report asserts stenosis,present,mild,1,disc bulge\case.88,"L3-4,L4-5 disc: shows  circumferential disc bulge ,indenting ventral theca , causing pressure effect on corresponding exit foramina with mild spinal canal stenosis ."
+93,2,report asserts stenosis,present,moderate,1,disc bulge\case..93 | disc protrusion\case.93,L4-5 and L5-S1disc level : show mild degenerative disc dehydration with central disc extrusion indenting ventral theca causing pressure effect on corresponding exit foramina and moderate spinal canal stenosis at L4-5.
+98,2,report asserts stenosis,present,mild;severe,1,dics extrusion\case.98 | disc bulge\case..98 | disc protrusion\case..98,indenting theca causing  severe pressure effect on corresponding exit foramina with moderate spinal canal stenosis at L3-4 disc levels .
+99,2,report asserts stenosis,present,mild;moderate,1,dics extrusion\case.99 | disc bulge\case..99,"L1-2 and L2-3 disc levels: show circumferential disc bulge, ligementum flavum hypertrophy indenting theca causing mild pressure effect on corresponding exit foramina with moderate spinal canal stenosis at L2-3 disc level ."
+101,2,report asserts stenosis,present,,1,dics extrusion\case.101 | disc bulge\case..101,"L4-5 disc level shows degenerative disc dehydration  ,  circumferential disc bulge and ligamentum flavum hypertrophy indenting ventral theca causing pressure effect on corresponding exit foramina and spinal canal stenosis"
+104,2,report asserts stenosis,present,mild,1,disc bulge\case.104 | disc protrusion\case..104,"L3-4,L4-5 disc level shows degenerative disc dehydration  ,  circumferential disc bulge and ligamentum flavum hypertrophy indenting ventral theca causing pressure effect on corresponding exit foramina and mild spinal canal stenosis at L4-5"
+111,2,report asserts stenosis,present,,1,disc bulge\case.111,"L3-4,L4-5 disc level shows degenerative disc dehydration  ,  circumferential disc bulge indenting ventral theca casing pressure effect on corresponding exit foramina with sever spinal canal stenosis."
+116,2,report asserts stenosis,present,moderate,1,dics extrusion\case.116,"L4-5 level shows  central disc extrusion with cranial migration on the background of  circumferential disc bulge  ,right facet joint arthrosis seen in same level , ,pressure effect on corresponding exit foramina ,causing moderate spinal canal stenosis ."
+117,2,report asserts stenosis,present,mild;moderate,1,disc bulge\case.117,L2 through L5 disc levels show  circumferential disc bulge indenting ventral theca causing pressure effect on corresponding exit foramina with significant spinal canal stenosis at L3-4 moderate spinal canal stenosis at L2-3.
+120,2,report asserts stenosis,present,moderate;severe,1,dics extrusion\case.120 | disc bulge\case..120,"L3-4 ,L4-5 disc levels show central disc extrusion on background of circumferential disc bulge and ligamentum flavum hypertrophy and facet joint arthrosis causing  pressure effect on corresponding exit foramina and moderate spinal canal stenosis"
+127,2,report asserts stenosis,present,mild,1,disc bulge\case.127,Mild spinal canal stenosis is seen at L1-2 and L2-3.
+128,2,report asserts stenosis,present,,1,disc bulge\case.128,L2 through S1 disc space shows  circumferential disc bulge  indenting ventral theca causing spinal canal stenosis at L2-3 and L3-4.
+133,2,report asserts stenosis,present,moderate,0,dics extrusion\case.133,
+138,2,report asserts stenosis,present,moderate;severe,0,disc bulge\case..138 | disc protrusion\case.138,
+142,2,report asserts stenosis,present,mild,1,disc bulge\case.142,L2 through L5 disc levels show circumferential disc bulge indenting ventral theca with pressure effect on corresponding exit foramina showing mild spinal canal stenosis on L4-L5.
+144,2,report asserts stenosis,present,mild,1,disc bulge\case.144 | disc protrusion\case..144,L2 through L5 disc levels show  circumferential disc bulge indenting ventral theca causing pressure effect on corresponding exit foramina with mild spinal canal stenosis at L3-4 .
+145,2,report asserts stenosis,present,,1,dics extrusion\case..145 | disc bulge\case.145,L3 through S1 disc space show circumferential disc bulge indenting ventral theca with pressure effect on corresponding exit foramina causing significant spinal canal stenosis at L3-4 &L4-5.
+146,2,report asserts stenosis,present,,1,dics extrusion\case.146,L4-L5 disc space shows central disc extrusion with caudal migration on background of  circumferential disc bulge causing indenting ventral theca and pressure effect on  both exit foramina .more on left causing significant spinal canal stenosis
+150,2,report asserts stenosis,present,mild,1,disc bulge\case.150,"L1 through S1  :   shows circumferential disc bulge and central annular fissure at L2-3 level, indenting ventral theca  causing  pressure effect on corresponding exit foramina at L3-4,L4-5,L5-S1 and mild spinal canal stenosis at L3-4,L4-5."
+153,2,report asserts stenosis,present,mild;severe,1,disc bulge\case.153,"L1/2: show degenerative disc dehydration  , decrease disc height ,  circumferential disc bulge , indenting ventral theca , causing pressure effect on both  exit foramina with mild spinal canal stenosis."
+156,2,report asserts stenosis,present,severe,1,disc bulge\case.156,"L1/2: show degenerative disc dehydration  , decrease disc height , with left paracentral disc extrusion on background of circumferential disc bulge , indenting ventral theca , causing pressure effect on both  exit foramina with sever spinal canal stenosis."
+158,2,report asserts stenosis,present,,1,disc bulge\case.158,"L2 through S1 discs  :   shows circumferential disc bulge and degenerative disc dehydration, indenting ventral theca  causing pressure effect on corresponding exit foramina at L3-4,L4-5,L5-S1 and spinal canal stenosis at L4-5 level"
+164,2,report asserts stenosis,present,,1,disc bulge\case.164,"L1 through S1 disc level shows  circumferential disc bulge , indenting ventral theca ,with  pressure effect on   both  exit foramina and spinal canal stenosis at L2-3,L3-4,L4-5 levels ."
+169,2,report asserts stenosis,present,severe,1,disc bulge\case.169,"L1 through S1  disc level shows  circumferential disc bulge , indenting ventral theca ,with  pressure effect on   both  exit foramina at L3-4 and  L4-5 level with mild spinal canal stenosis at L1-2,L2-3 and severe at L3-4."
+171,2,report asserts stenosis,present,severe,1,dics extrusion\case.171 | disc bulge\case..171 | disc protrusion\case...171,"L1-2,L3-4,L4-5 discs level shows degenerative disc dehydration  , decreased disc height with left foraminal disc extrusion on background of  circumferential disc bulge , indenting ventral theca , with pressure effect on corresponding exit foramina and spinal canal stenosis more severe at L3-4 ."
+181,2,report asserts stenosis,present,mild,1,dics extrusion\case...181 | disc bulge\case..181 | disc protrusion\case.181,mild spinal canal stenosis atL3-4 and L4-5
+182,2,report asserts stenosis,present,severe,1,dics extrusion\case.182 | disc bulge\case..182,"L2-3 disc left para central disc extrusion on background of  circumferential disc bulge , indenting ventral theca , with pressure effect on corresponding exit foramina and severe spinal canal stenosis"
+184,2,report asserts stenosis,present,severe,1,disc bulge\case.184,"L3-4,L5-S1shows circumferential disc bulge with pressure effect at corresponding exit foramina with severe spinal canal stenosis at L3-4 and mild stenosis at L2-3 level."
+186,2,report asserts stenosis,present,mild,1,disc bulge\case..186 | disc protrusion\case.186,"L2-3,L3-4 discs show central disc extrusion on background of  circumferential disc bulge , indenting ventral theca , with pressure effect on corresponding exit foramina with mild spinal canal stenosis at L2-3 level."
+194,2,report asserts stenosis,present,mild,1,dics extrusion\case..194 | disc protrusion\case 194.zip | disc protrusion\case.194,"L4-5 shows mild degenerative disc dehydration , RT paracentral disc protrusion on background of  circumferential disc bulge, indenting ventral theca and causing pressure effect on corresponding exit foramina (more sever on RT side) with mild spinal canal stenosis."
+196,2,report asserts stenosis,present,,1,disc bulge\case.196,"L3-L4 and L4-L5 disc levels show central disc extrusion with cranial migration , indenting ventral theca and causing pressure effect on nerve root in both exit foramina,  causing sever spinal canal stenosis at L3-L4 disc level"
+7,3,"negative, sampled for specificity",absent,,0,disc bulge\case.7,
+8,3,"negative, sampled for specificity",absent,,0,normal\case.8,
+10,3,"negative, sampled for specificity",absent,,0,normal\case.10,
+11,3,"negative, sampled for specificity",absent,,0,disc bulge\case.11,
+18,3,"negative, sampled for specificity",absent,,0,disc bulge\case.18,
+19,3,"negative, sampled for specificity",absent,,0,disc bulge\case.19,
+21,3,"negative, sampled for specificity",absent,,0,normal\case.21,
+23,3,"negative, sampled for specificity",absent,,0,disc bulge\case.23,
+24,3,"negative, sampled for specificity",absent,,0,normal\case.24,
+28,3,"negative, sampled for specificity",absent,,0,normal\case.28,
+32,3,"negative, sampled for specificity",absent,,0,disc bulge\case.32,
+36,3,"negative, sampled for specificity",absent,,0,normal\case.36,
+45,3,"negative, sampled for specificity",absent,,0,disc bulge\case.45,
+46,3,"negative, sampled for specificity",absent,,0,disc protrusion\case.46,
+50,3,"negative, sampled for specificity",absent,,0,dics extrusion\case.50 | normal\case.50,
+55,3,"negative, sampled for specificity",absent,,0,dics extrusion\case.55 | disc bulge\case..55,
+57,3,"negative, sampled for specificity",absent,,0,disc bulge\case.57,
+69,3,"negative, sampled for specificity",absent,,0,disc bulge\case.69,
+73,3,"negative, sampled for specificity",absent,,0,disc bulge\case..73 | disc protrusion\case.73,
+76,3,"negative, sampled for specificity",absent,,0,disc bulge\case.76,
+78,3,"negative, sampled for specificity",absent,,0,normal\case.78,
+79,3,"negative, sampled for specificity",absent,,0,disc bulge\case.79,
+92,3,"negative, sampled for specificity",absent,,0,disc protrusion\case.92,
+94,3,"negative, sampled for specificity",absent,,0,disc bulge\case..94 | disc protrusion\case.94,
+95,3,"negative, sampled for specificity",absent,,0,disc protrusion\case.95,
+105,3,"negative, sampled for specificity",absent,,0,normal\case.105,
+109,3,"negative, sampled for specificity",absent,,0,disc bulge\case.109,
+123,3,"negative, sampled for specificity",absent,,0,disc bulge\case.123,
+124,3,"negative, sampled for specificity",absent,,0,disc bulge\case.124,
+131,3,"negative, sampled for specificity",absent,,0,normal\case.131,
+132,3,"negative, sampled for specificity",absent,,0,normal\case.132,
+154,3,"negative, sampled for specificity",absent,,0,normal\case.154,
+160,3,"negative, sampled for specificity",absent,,0,normal\case.160,
+163,3,"negative, sampled for specificity",absent,,0,disc bulge\case.163,
+165,3,"negative, sampled for specificity",absent,,0,dics extrusion\case.165,
+173,3,"negative, sampled for specificity",absent,,0,disc bulge\case.173,
+174,3,"negative, sampled for specificity",absent,,0,disc bulge\case.174,
+185,3,"negative, sampled for specificity",absent,,0,dics extrusion\case..185 | disc bulge\case.185,
+189,3,"negative, sampled for specificity",absent,,0,normal\case.189,
+192,3,"negative, sampled for specificity",absent,,0,disc bulge\case.192,

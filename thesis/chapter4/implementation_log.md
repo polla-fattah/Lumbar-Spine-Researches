@@ -53,7 +53,7 @@ Two of the defects — the shuffled-graph control and the evidence leak — bias
 
 ## Change history
 
-93 commits touching `implementation/` or `thesis/`.
+94 commits touching `implementation/` or `thesis/`.
 
 ### Audit and verification
 
@@ -137,6 +137,7 @@ Two of the defects — the shuffled-graph control and the evidence leak — bias
 
 | Commit | Date | Change |
 | :--- | :--- | :--- |
+| `297a7e3` | 2026-08-26 | fix(track_b): scope report negation to the finding it actually binds to |
 | `6f60e90` | 2026-08-26 | chore(chapter4): remove stale report copies now generated into thesis/chapter4 |
 | `fa68c56` | 2026-08-25 | docs(reports): update phase verification audit reports |
 | `63a4dab` | 2026-08-25 | feat(benchmark): add unified master benchmark and campaign duration estimator |
