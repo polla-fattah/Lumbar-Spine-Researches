@@ -51,6 +51,7 @@ from torch.utils.data import DataLoader
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 from amog_modes import (  # noqa: E402
     add_mode_args, resolve_mode, compute_metrics, PROJECT_ROOT, N_CLASSES,
+    CONDITIONS,
 )
 from amog_models import (  # noqa: E402
     SequenceEncoder, FixedFusion, DiseaseConditionedRouter, apply_modality_dropout,
@@ -201,22 +202,28 @@ class AMOGNet(nn.Module):
         return feats * mask.unsqueeze(-1).to(feats.dtype)
 
     def forward_target(self, imgs, mask, cond_idx, level_idx, ann_slot=None):
+        if not self.use_multiseq:
+            # E0 encodes ONLY its annotated sequence.
+            #
+            # encode() below runs every modality through the shared encoder and
+            # forward_target then discarded all but one. That cost 3x the
+            # forward passes -- E1 with three encoders ran FASTER than E0 --
+            # but the real problem was quieter: resnet18 carries 20 BatchNorm
+            # layers whose running statistics update from every batch they see,
+            # so E0's normalisation was estimated from two sequences it never
+            # reads. Chapter 3 sec:method-e0 defines E0 as grading each target
+            # "from its anatomically localised input", independently.
+            idx = torch.arange(imgs.size(0), device=imgs.device)
+            x = imgs[:, 0] if ann_slot is None else imgs[idx, ann_slot.long()]
+            if x.is_cuda:
+                x = x.contiguous(memory_format=torch.channels_last)
+            return self.encoders[0](x), None
+
         feats = self.encode(imgs, mask)
         if self.use_router:
             fused, g = self.router(feats, mask, cond_idx, level_idx)
-        elif self.use_multiseq:
-            fused, g = self.fusion(feats, mask)
         else:
-            # E0 grades a target from ITS annotated ROI. Chapter 3 sec:method-e0:
-            # "Each target is graded from its anatomically localised input."
-            # Taking slot 0 unconditionally fed 59.5% of targets a sagittal T1
-            # crop when the radiologist had marked sagittal T2 or axial T2.
-            if ann_slot is None:
-                fused = feats[:, 0]
-            else:
-                fused = feats[torch.arange(feats.size(0), device=feats.device),
-                              ann_slot.long()]
-            g = None
+            fused, g = self.fusion(feats, mask)
         return fused, g
 
     def forward_graph(self, imgs, mask, evidence):
@@ -325,6 +332,11 @@ def run_epoch(model, loader, ctx, stage, args, optimizer=None, cost=None):
     tot_loss, n = 0.0, 0
     preds, targets, probs, entropies, pids = [], [], [], [], []
     logits_all = []
+    # Chapter 3 sec:method-routing-interpretation requires routing weights
+    # "summarised by target". The scalar mean entropy cannot distinguish a
+    # router that never differentiates from one that differentiates sharply per
+    # condition and averages near-uniform, so the vectors themselves are kept.
+    gates_all, gate_cond, gate_lvl = [], [], []
 
     for batch in loader:
         if graph:
@@ -380,6 +392,16 @@ def run_epoch(model, loader, ctx, stage, args, optimizer=None, cost=None):
         if g is not None:
             m2 = mask.reshape(-1, N_MODALITIES) if graph else mask
             entropies.append(float(DiseaseConditionedRouter.gate_entropy(g, m2)))
+            gates_all.append(g.detach().float().cpu().numpy())
+            if graph:
+                N = logits.size(1)
+                ar = torch.arange(N, device=g.device)
+                gate_cond.append(ar.remainder(5).repeat(g.size(0) // N).cpu().numpy())
+                gate_lvl.append(ar.div(5, rounding_mode="floor")
+                                .repeat(g.size(0) // N).cpu().numpy())
+            else:
+                gate_cond.append(cond.detach().cpu().numpy())
+                gate_lvl.append(lvl.detach().cpu().numpy())
 
     if n == 0:
         raise RuntimeError("no labelled samples in this split")
@@ -391,6 +413,17 @@ def run_epoch(model, loader, ctx, stage, args, optimizer=None, cost=None):
     m["_predictions"] = dict(patient_id=np.concatenate(pids),
                              y_true=yt, y_pred=yp, y_prob=pr,
                              logits=np.concatenate(logits_all))
+    if gates_all:
+        gg = np.concatenate(gates_all)
+        gc = np.concatenate(gate_cond)
+        gl = np.concatenate(gate_lvl)
+        m["_predictions"].update(gate_weights=gg, gate_condition=gc,
+                                 gate_level=gl)
+        # summarised by target, which is what the chapter asks to be reported
+        m["gate_by_condition"] = {
+            CONDITIONS[c_]: [round(float(v), 4)
+                             for v in gg[gc == c_].mean(axis=0)]
+            for c_ in range(len(CONDITIONS)) if (gc == c_).any()}
     return m
 
 
@@ -743,6 +776,7 @@ def main():
                      "cost_weight": args.cost_weight,
                      "acssl": bool(acssl_info),
                  },
+                 "gate_by_condition": tmet.get("gate_by_condition"),
                  "augmentation": meta.get("augmentation"),
                  "calibration": calib,
                  "acssl": acssl_info,

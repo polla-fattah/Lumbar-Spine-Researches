@@ -338,6 +338,17 @@ def main() -> int:
         "backbone": args.backbone,
         "dim": args.dim,
         "temperature": args.temperature,
+        # Fingerprint, compared by run_ladder before this checkpoint is reused.
+        # load_acssl already refuses a backbone or dim mismatch, so weights
+        # cannot be corrupted -- but a different temperature, epoch count or
+        # split would otherwise be silently inherited by a later campaign.
+        "pretrain_config": {
+            "backbone": args.backbone, "dim": args.dim,
+            "proj_out": args.proj_out, "temperature": args.temperature,
+            "epochs": ctx.epochs, "mode": ctx.mode, "seed": args.seed,
+            "split_seed": SPLIT_SEED,
+            "split_sha256": meta.get("split_sha256") if meta else None,
+        },
         "best_val_infonce": best,
         "chance_infonce": chance,
         "epochs": ctx.epochs,

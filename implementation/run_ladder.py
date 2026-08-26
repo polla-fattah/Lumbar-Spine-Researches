@@ -317,18 +317,40 @@ def main():
                                   "smoke" if prof["mode"] == "smoke" else "",
                                   "checkpoints").replace(os.sep + os.sep, os.sep)
             ck = os.path.join(ck_dir, "acssl_encoders.pt")
+            # The pretrained encoders must be built with the SAME backbone the
+            # stage will train, or the transfer is refused at load time. Needed
+            # here, before the reuse check, because it is part of what makes a
+            # checkpoint reusable.
+            bb = prof.get("backbone") or (
+                "smallcnn" if prof["mode"] == "smoke" else "resnet18")
+            reuse, why = False, ""
             if os.path.exists(ck) and not args.force:
+                try:
+                    import torch as _t
+                    pc = (_t.load(ck, map_location="cpu", weights_only=False)
+                          .get("pretrain_config") or {})
+                    want = {"backbone": bb, "epochs": prof["epochs"],
+                            "mode": prof["mode"]}
+                    diff = {k: (pc.get(k), v) for k, v in want.items()
+                            if pc.get(k) != v}
+                    if not pc:
+                        why = "no pretrain_config recorded"
+                    elif diff:
+                        why = ", ".join("{} {}->{}".format(k, x, y)
+                                        for k, (x, y) in diff.items())
+                    else:
+                        reuse = True
+                except Exception as e:
+                    why = "unreadable ({})".format(e)
+
+            if reuse:
                 print("  ACSSL encoders already present, reusing {}".format(
                     os.path.relpath(ck, PROJECT_ROOT)))
-            else:
+            elif os.path.exists(ck) and not args.force:
+                print("  ACSSL encoders present but stale, re-pretraining: {}"
+                      .format(why))
+            if not reuse:
                 print("  pretraining ACSSL encoders (once, shared by all seeds)")
-                # The pretrained encoders must be built with the SAME backbone
-                # the stage will train, or the transfer is refused (correctly)
-                # at load time. Passing the profile's backbone keeps them in
-                # step; omitting it worked only by coincidence when both
-                # happened to default to resnet18.
-                bb = prof.get("backbone") or (
-                    "smallcnn" if prof["mode"] == "smoke" else "resnet18")
                 cmd = [sys.executable,
                        os.path.join(os.path.dirname(os.path.abspath(__file__)),
                                     "amog_acssl.py"),
