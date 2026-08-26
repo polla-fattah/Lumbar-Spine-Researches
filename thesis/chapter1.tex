@@ -142,10 +142,14 @@ outputs, anatomical cross-sequence supervision, target-conditioned evidence
 allocation and explicit institutional transfer---adds measurable knowledge beyond
 strong matched baselines.
 
-\laterinsert{After the confirmatory experiments are locked, add no more than one
-or two sentences stating the principal empirical outcome of the thesis. This
-addition may report what was found, but must not rewrite the original problem,
-research questions or hypotheses.}
+% Written after the confirmatory experiments were locked. Reports the outcome
+% only; the problem statement, research questions and hypotheses are unchanged.
+The principal empirical outcome is that the complete system improves agreement
+with the reference standard over a single-sequence baseline by $+0.0172$
+quadratic weighted kappa, reproducibly and after correction for multiple
+comparisons, but that the anatomical mechanisms proposed to achieve this do not
+account for the improvement: attribution analysis indicates the convolutional
+encoder already localises the graded structure without them.
 
 % ===========================================================================
 \section{Background and Motivation}
@@ -802,10 +806,23 @@ reader performance directly \cite{lim2022improved}. The present study therefore
 uses language such as ``decision-support potential'' and ``technical portability'',
 not ``clinical benefit''.
 
-\laterinsert{After Chapter 4 is complete, replace this placeholder with a brief
-statement of which significance claims were actually supported. For example, state
-whether the main benefit was discrimination, robustness, label efficiency,
-calibration or transfer. Do not infer patient benefit from model metrics.}
+% Written after Chapter 4. States only what the executed experiments support.
+Of the benefits anticipated above, the executed experiments support
+\emph{discrimination} and, within it, the reduction of clinically distant
+errors. Quadratic weighted kappa improves by $+0.0172$ over a single-sequence
+baseline and recall on Severe targets rises from $62.7\%$ to $65.0\%$, the latter
+attributable to the ordinal and cost-sensitive objective rather than to any
+proposed structural mechanism.
+
+Robustness to missing sequences improves, but the improvement is attributable to
+modality dropout rather than to disease-conditioned routing, which changes
+sequence reliance by an amount indistinguishable from zero. Label efficiency and
+cross-institutional transfer were not evaluated and no claim is made for either.
+Calibration is reported but was not the object of a confirmatory comparison.
+
+No inference is drawn from these figures about patient benefit. The study
+measures agreement with a reference standard on a retrospective benchmark; it
+does not measure any clinical outcome.
 
 % ===========================================================================
 \section{Proposed Contributions}
@@ -868,10 +885,76 @@ structured model behaves sensibly under clinically relevant error definitions an
 limited local annotation. They are retained only when their contribution is
 measurable.
 
-\laterinsert{At final submission, replace ``proposed contributions'' with a concise
-``demonstrated contributions'' subsection listing only components supported by the
-locked experiments. Components that failed should be reported as negative findings,
-not retrospectively removed from the research history.}
+% --------------------------------------------------------------------------
+% Written at final submission, replacing the [LATER INTEGRATION] placeholder.
+% Only components supported by the locked experiments are claimed. Components
+% that failed are reported below as negative findings and remain in the
+% research history and in the ablation ladder.
+% --------------------------------------------------------------------------
+\subsection{Demonstrated Contributions}
+\label{sec:intro-contrib-demonstrated}
+
+The experiments reported in Chapter~
+ef{ch:results} support three
+contributions. They are not the three proposed above, and the difference is
+itself part of what the thesis contributes.
+
+\paragraph{D1 --- A verified anatomy-aware multi-sequence grading system.}
+AMOG-Net improves quadratic weighted kappa over a single-sequence baseline by
+$+0.0172$ (95\% CI $[+0.0064, +0.0285]$), reproducibly across training seeds and
+surviving false discovery rate correction across the pre-specified comparison
+family. The system, its frozen data partition and its behavioural test suite are
+released.
+
+\paragraph{D2 --- A controlled ablation protocol for anatomical priors.} Each
+claimed mechanism is tested against a control matched in capacity rather than
+against its own absence: a degree-preserving edge shuffle for graph topology, a
+router-free fixed-fusion arm for sequence routing, an architecture-matched
+untrained network as an attribution floor, and a label-shuffled model as a
+pipeline-level negative control. Section~
+ef{sec:results-threats} documents
+three analyses that produced incorrect positive conclusions before the
+corresponding control was introduced, in each case in the direction of the
+hypothesis under test.
+
+\paragraph{D3 --- Evidence that anatomical structural priors do not improve
+grading at this data scale, with a mechanism.} Neither anatomically aligned
+cross-sequence self-supervision nor disease-conditioned routing produces a
+detectable improvement, and anatomically correct graph topology does not
+outperform a degree-preserving random shuffle. Gradient-weighted class activation
+mapping shows why: the convolutional encoder already concentrates $2.4$ times the
+chance share of its attention on the annotated lesion before any prior is added.
+The localisation these priors were designed to supply is largely accomplished
+upstream of them.
+
+\subsection{Proposed Contributions Not Supported}
+\label{sec:intro-contrib-negative}
+
+Contribution~1 (anatomical cross-sequence self-supervision) is rejected on
+accuracy, on cross-sequence robustness under controlled input ablation, and on
+attention concentration. The pretext task is learnable and was learned ---
+validation InfoNCE $1.5162$ against a chance value of $3.4657$ --- but the
+representation confers no measurable downstream benefit.
+
+Contribution~2 (disease-conditioned routing) divides. The router does learn
+clinically sensible target-dependent sequence weights, reproducing the expected
+allocation in all fifteen runs in which a gate is present. It does not improve
+grading ($+0.0010$ QWK) and it does not improve robustness to missing sequences.
+Its allocation tracks the annotation structure of the benchmark rather than
+creating a dependence of its own.
+
+Contribution~3 (heterogeneous disease--anatomy graph) is partly supported. Typed
+relational structure improves grading over a homogeneous graph ($+0.0123$ QWK,
+every seed); the anatomical identity of the relations does not. The resulting
+claim is narrower than proposed and more specific than the original: relational
+typing carries information, anatomical adjacency does not.
+
+Contribution~4 (cross-institutional transfer evaluation) was not executed. Cohort
+preparation is complete and is reported in Section~
+ef{sec:results-rq4};
+adjudication of conflicting reference labels and a correct de-identification
+procedure remain outstanding. It is retained here as unexecuted rather than
+withdrawn.
 
 % ===========================================================================
 \section{Scope and Delimitations}
@@ -1081,9 +1164,35 @@ At final submission, the thesis will distinguish three categories explicitly:
 questions}. This is preferable to rewriting the original proposal so that only
 successful components appear to have been planned.
 
-\laterinsert{After all confirmatory analyses are complete, insert a short table or
-paragraph mapping RQ1--RQ5 to their final empirical answers. Keep detailed metrics
-in the results chapter; Chapter 1 should contain only the high-level answer.}
+% Written after Chapter 4. High-level answers only; metrics live in Chapter 4.
+egin{description}
+  \item[RQ1 --- Relational disease modelling.] 	extbf{Partly supported.} A typed
+  heterogeneous graph improves grading over independent heads and over a
+  homogeneous graph, on every seed. The anatomical identity of the relations does
+  not contribute: an anatomically correct topology does not outperform a
+  degree-preserving random shuffle.
+
+  \item[RQ2 --- Anatomically aligned self-supervision.] 	extbf{Not supported.}
+  The pretext task is learnable and was learned, but the resulting representation
+  yields no detectable improvement in grading, in robustness to withheld
+  sequences, or in where the model attends.
+
+  \item[RQ3 --- Disease-conditioned modality routing.] 	extbf{Mechanism
+  supported, benefit not.} The router reliably learns the clinically expected
+  sequence weights, but a router-free model shows the same sequence dependence
+  under intervention, and routing improves neither accuracy nor missing-sequence
+  robustness.
+
+  \item[RQ4 --- Cross-institutional transfer.] 	extbf{Not executed.} Cohort
+  preparation is complete; reference-label adjudication and de-identification
+  remain outstanding.
+
+  \item[RQ5 --- Clinically asymmetric error and uncertainty.] 	extbf{Supported
+  for error asymmetry.} Ordinal and cost-sensitive objectives improve both
+  aggregate agreement and recall on Severe targets, on every seed, and form the
+  most reliable single contributor to final performance. Selective prediction
+  under calibrated uncertainty was not evaluated confirmatorily.
+\end{description}
 
 % ===========================================================================
 \section{Thesis Organisation}
@@ -1112,9 +1221,15 @@ and reproducibility safeguards.
 \textbf{Chapter 4 --- Results and Analysis} will report the staged E0--E8
 experiments, including component-specific ablations, robustness analyses,
 calibration, zero-shot external transfer, few-shot adaptation and failure analysis.
-\laterinsert{Once the results are complete, update the Chapter 4 description to
-reflect the final retained experiment groups without changing the prospective
-research questions.}
+% Written after Chapter 4. Retained experiment groups; research questions unchanged.
+The retained experiment groups are the eight-rung ablation ladder E0--E7 with two
+matched controls on the graph configuration, a controlled input ablation testing
+sequence dependence by intervention rather than by learned allocation, and a
+Grad-CAM attribution analysis against an architecture-matched untrained floor.
+The cross-institutional transfer group was prepared but not executed and is
+reported as such. The research questions are unchanged from those fixed in
+Section~
+ef{sec:intro-rqs}.
 
 \textbf{Chapter 5 --- Discussion and Conclusions} will interpret the findings
 against the literature, distinguish demonstrated contributions from negative
@@ -1195,9 +1310,19 @@ therefore not required to prove that every proposed mechanism succeeds. It is
 required to determine, with reproducible evidence, which assumptions survive
 controlled testing and institutional transfer.
 
-\laterinsert{At final submission, add a two- or three-sentence high-level summary of
-the answers to RQ1--RQ5, preserving the distinction between supported contributions,
-negative results and limitations.}
+% Written at final submission.
+In summary, the complete system improves on a single-sequence baseline
+reproducibly and by a margin that survives correction for multiple comparisons,
+and the objective function designed around clinically asymmetric error is the
+most reliable single contributor to that improvement. Of the three proposed
+structural mechanisms, relational typing is supported, anatomical topology and
+disease-conditioned routing are not, and anatomically aligned self-supervision is
+rejected on every axis on which it was tested; attribution analysis indicates
+that the convolutional encoder already performs the localisation these mechanisms
+were intended to supply. The principal limitations are that all results are
+internal to one benchmark, that cross-institutional transfer was not executed,
+and that the study is underpowered for single-component effects of the magnitude
+observed.
 
 % ===========================================================================
 \printbibliography[heading=bibintoc,title={References}]

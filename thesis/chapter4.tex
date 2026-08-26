@@ -1,0 +1,665 @@
+% ===========================================================================
+%  Chapter 4 -- Results
+%  Disease-Adaptive Heterogeneous Graph Learning with Anatomically Aligned
+%  Multi-Sequence MRI Representations
+%
+%  DRAFT 1 -- written 2026-08-27 against the completed three-seed campaign.
+%  A seven-seed campaign is running; every number tagged [3-SEED] below is to be
+%  refreshed from data/reports/chapter4_tables.md when it completes. The
+%  narrative is not expected to change: the comparisons that separate do so on
+%  3/3 seeds and the ones that do not are one to two orders of magnitude below
+%  the seed-to-seed standard deviation.
+%
+%  Numbers in this chapter are generated, not typed. Their provenance is
+%  thesis/chapter4/*.md and data/reports/chapter4_{results,comparisons}.csv.
+%
+%  Compiles standalone:   pdflatex chapter4 ; biber chapter4 ; pdflatex chapter4
+%  To fold into the thesis, \input{chapter4}; docmute skips this preamble.
+% ===========================================================================
+
+\documentclass[12pt,a4paper]{report}
+
+\usepackage{lmodern}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage[english]{babel}
+\usepackage{csquotes}
+\usepackage{microtype}
+\usepackage[margin=2.5cm]{geometry}
+\usepackage{setspace}
+\onehalfspacing
+\usepackage{amsmath,amssymb}
+\usepackage{booktabs}
+\usepackage{longtable}
+\usepackage{array}
+\usepackage{graphicx}
+\usepackage[hidelinks]{hyperref}
+
+\begin{document}
+
+\chapter{Results}
+\label{ch:results}
+
+% ===========================================================================
+\section{Overview}
+\label{sec:results-overview}
+
+This chapter reports the executed experimental programme. It is organised around
+the research questions of Section~\ref{sec:intro-rqs} rather than around the
+architecture, because the questions are what were fixed prospectively and the
+architecture is only the instrument used to answer them.
+
+Three statements summarise the chapter and are supported in the sections that
+follow.
+
+\begin{enumerate}
+  \item \textbf{The complete system outperforms the single-sequence baseline.}
+  Quadratic weighted kappa rises from $0.7276$ to $0.7448$, a paired difference
+  of $+0.0172$ (95\% CI $[+0.0064, +0.0285]$) that holds on every seed and is the
+  only pre-specified comparison surviving false discovery rate correction.
+
+  \item \textbf{Most of the proposed mechanisms do not account for that gain.}
+  Anatomically aligned self-supervision (RQ2) and disease-conditioned routing
+  (RQ3) produce effects of $+0.0051$ and $+0.0010$ QWK respectively, between two
+  and twenty times smaller than the standard deviation induced by changing the
+  training seed alone. Relational structure (RQ1) helps, but the anatomical
+  content of that structure does not: a typed graph beats a homogeneous one,
+  while an anatomically correct topology does not beat a degree-preserving
+  random shuffle.
+
+  \item \textbf{There is a mechanism for the second statement, not merely a
+  p-value.} Gradient-weighted class activation mapping shows that the
+  convolutional encoder already concentrates $2.4\times$ the chance share of its
+  attention on the annotated lesion before any structural prior is added. The
+  localisation problem the priors were designed to assist is largely solved
+  upstream of them.
+\end{enumerate}
+
+Section~\ref{sec:intro-conceptual} anticipated exactly this possibility in
+stating that \enquote{if local evidence alone is sufficient, more complex
+mechanisms should not be retained}. The results are read here in that spirit.
+
+% ===========================================================================
+\section{Experimental Execution}
+\label{sec:results-execution}
+
+\subsection{What Was Run}
+
+The ablation ladder of Section~\ref{sec:method-ablation} was executed in full on
+the LumbarDISC public benchmark: ten configurations $\times$ three training seeds
+$(42, 43, 44)$, fifty epochs each, thirty runs in total, completed in
+$669.4$~minutes on a single RTX~5090. No run failed. A seven-seed extension is
+in progress at the time of writing.
+
+The ten configurations comprise the eight ladder rungs E0--E7 and two controls
+attached to E6: \texttt{E6\_shuffled}, in which edge endpoints are permuted while
+node and edge counts are preserved, and \texttt{E6\_ungated}, in which the gated
+residual is replaced by an ungated one.
+
+\subsection{Data and Partitioning}
+
+All results are computed on the frozen patient-level test partition: $297$
+patients contributing $7{,}310$ scored targets. The partition is written once
+and reloaded by every run, so all comparisons are paired at the target level.
+Partition membership is derived from a fixed module constant and is independent
+of the training seed by construction, which is verified behaviourally rather
+than by inspection.
+
+\subsection{Integrity Controls}
+
+Three controls guard the reported numbers.
+
+\emph{A label-shuffled negative control.} A copy of E0 trained on permuted labels
+must not exceed chance. It does not, confirming that the evaluation pathway
+cannot manufacture apparent skill from a broken model.
+
+\emph{A run-configuration fingerprint.} Every result file records the
+configuration that produced it. A run whose configuration has changed is
+re-executed rather than reused. This was added after a stale twelve-epoch result
+was silently reused in place of a fifty-epoch one.
+
+\emph{A behavioural test suite.} One hundred and thirteen tests exercise the
+components against the claims made about them in Chapter~\ref{ch:methodology},
+including the ordinal head's cumulative transform, evidence masking in the graph,
+split persistence, and the across-seed inference introduced in
+Section~\ref{sec:results-inference}. All pass.
+
+% ===========================================================================
+\section{The Ablation Ladder}
+\label{sec:results-ladder}
+
+\subsection{Aggregate Performance}
+
+Table~\ref{tab:ladder} reports each configuration averaged over the three seeds.
+[3-SEED]
+
+\begin{table}[htbp]
+\centering
+\caption{Ablation ladder on the held-out test partition, mean $\pm$ standard
+deviation over three training seeds.}
+\label{tab:ladder}
+\begin{tabular}{lccc}
+\toprule
+Configuration & QWK & Macro-F1 & Balanced acc. \\
+\midrule
+E0 single sequence          & $0.7276 \pm 0.0070$ & $0.694 \pm 0.004$ & 69.0\% \\
+E1 multi-sequence           & $0.7221 \pm 0.0058$ & $0.693 \pm 0.004$ & 68.5\% \\
+E2 + disease routing        & $0.7231 \pm 0.0150$ & $0.697 \pm 0.014$ & 69.5\% \\
+E3 + modality dropout       & $0.7263 \pm 0.0151$ & $0.700 \pm 0.009$ & 69.2\% \\
+E4 + ACSSL                  & $0.7314 \pm 0.0110$ & $0.697 \pm 0.011$ & 69.1\% \\
+E5 + homogeneous graph      & $0.7226 \pm 0.0077$ & $0.694 \pm 0.009$ & 68.3\% \\
+E6 + typed graph            & $0.7349 \pm 0.0066$ & $0.710 \pm 0.001$ & 70.3\% \\
+\quad E6 shuffled edges     & $0.7298 \pm 0.0032$ & $0.701 \pm 0.010$ & 69.9\% \\
+\quad E6 ungated residual   & $0.7358 \pm 0.0184$ & $0.704 \pm 0.019$ & 70.9\% \\
+E7 + ordinal, cost-sensitive & $\mathbf{0.7448 \pm 0.0072}$ & $\mathbf{0.714 \pm 0.006}$ & \textbf{72.0\%} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Where the Gain Actually Arrives}
+
+Reporting only the endpoints would conceal the shape of the ladder.
+Table~\ref{tab:steps} decomposes the $+0.0172$ into its seven successive steps.
+
+\begin{table}[htbp]
+\centering
+\caption{Step-by-step decomposition from E0 to E7. \enquote{Seeds $+$} counts the
+seeds on which the step improved QWK.}
+\label{tab:steps}
+\begin{tabular}{lccr}
+\toprule
+Step & $\Delta$ QWK & Seeds $+$ & Cumulative \\
+\midrule
+Multi-sequence input          & $-0.0055$ & 2/3 & $-0.0055$ \\
+Disease-conditioned routing   & $+0.0010$ & 1/3 & $-0.0045$ \\
+Modality dropout              & $+0.0032$ & 2/3 & $-0.0013$ \\
+Anatomical cross-sequence SSL & $+0.0051$ & 2/3 & $+0.0038$ \\
+Homogeneous graph             & $-0.0088$ & 1/3 & $-0.0050$ \\
+Typed heterogeneous edges     & $+0.0123$ & 3/3 & $+0.0073$ \\
+Ordinal and cost-sensitive head & $+0.0099$ & 3/3 & $\mathbf{+0.0172}$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+After six of the seven steps the system sits \emph{below} the baseline it began
+from. The entire improvement arrives in the final two steps, and those two are
+the only steps that improve on all three seeds. This is stated plainly because it
+is precisely the structure an ablation study exists to expose, and because a
+reader who reconstructs it independently from Table~\ref{tab:ladder} would be
+entitled to distrust anything else in this chapter.
+
+% ===========================================================================
+\section{Statistical Inference}
+\label{sec:results-inference}
+
+\subsection{A Correction to the Planned Analysis}
+
+Section~\ref{sec:method-statistics} specifies a paired patient-clustered
+bootstrap with false discovery rate control. Executed literally, that procedure
+produced a table that contradicted itself: cross-sequence self-supervision
+appeared as $+0.0270$ with $p = 0.000$ on seed~42 and as $-0.0234$ with
+$p = 0.000$ on seed~43. Both intervals excluded zero; their signs were opposite.
+
+The cause is that the bootstrap resamples \emph{patients} with the trained model
+held fixed. Its interval therefore covers test-set sampling and excludes training
+stochasticity. On this problem that omission is decisive, because the
+seed-to-seed standard deviation is larger than most of the effects under test.
+Reported per seed, the analysis would have permitted any claim to be supported by
+selecting a seed.
+
+Two changes were made, and neither alters what is compared.
+
+\begin{enumerate}
+  \item \emph{Seeds are averaged inside each bootstrap replicate.} One patient
+  resample is drawn and applied to all seeds, the difference computed per seed,
+  and the seeds averaged before the replicate is recorded. The resulting interval
+  is for the mean effect over training runs. The between-seed standard deviation
+  is reported alongside it rather than absorbed into it.
+
+  \item \emph{The false discovery rate family contains one test per comparison
+  and metric.} Three seeds are three views of one comparison, not three
+  independent tests; including them separately tripled the apparent multiplicity.
+\end{enumerate}
+
+Per-seed intervals are retained in the appendix as descriptive quantities
+carrying no significance claim.
+
+\subsection{Primary Comparisons}
+
+Table~\ref{tab:comparisons} reports the pre-specified comparisons under the
+corrected procedure. [3-SEED]
+
+\begin{table}[htbp]
+\centering
+\small
+\caption{Pre-specified comparisons, QWK. Difference averaged over seeds with the
+patient resample shared across them; FDR controlled across these rows.}
+\label{tab:comparisons}
+\begin{tabular}{llcccc}
+\toprule
+Comparison & Tests & $\Delta$ & 95\% CI & Seeds $+$ & $p_{\mathrm{FDR}}$ \\
+\midrule
+E7 vs E0 & full system      & $+0.0172$ & $[+0.0064, +0.0285]$ & 3/3 & $\mathbf{<0.001}$ \\
+E6 vs E5 & typed edges (RQ1) & $+0.0123$ & $[+0.0028, +0.0216]$ & 3/3 & $0.054$ \\
+E7 vs E6 & ordinal head (RQ5) & $+0.0099$ & $[+0.0017, +0.0186]$ & 3/3 & $0.054$ \\
+E6 vs E6\_shuf & anatomy (RQ1) & $+0.0051$ & $[-0.0036, +0.0141]$ & 2/3 & $0.570$ \\
+E4 vs E3 & ACSSL (RQ2)      & $+0.0051$ & $[-0.0038, +0.0148]$ & 2/3 & $0.570$ \\
+E3 vs E2 & modality dropout & $+0.0032$ & $[-0.0060, +0.0119]$ & 2/3 & $0.724$ \\
+E2 vs E1 & routing (RQ3)    & $+0.0010$ & $[-0.0079, +0.0107]$ & 1/3 & $0.886$ \\
+E6 vs E6\_ungated & gating  & $-0.0009$ & $[-0.0110, +0.0080]$ & 1/3 & $0.886$ \\
+E5 vs E0 & message passing  & $-0.0050$ & $[-0.0153, +0.0057]$ & 2/3 & $0.617$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Statistical Power}
+\label{sec:results-power}
+
+A null result is uninterpretable without knowing what the study could have
+detected. Table~\ref{tab:power} converts each observed effect and its
+between-seed standard deviation into the number of training seeds that would be
+required to detect an effect of that size at 80\% power.
+
+\begin{table}[htbp]
+\centering
+\caption{Detectability of each observed effect. \enquote{Seeds required} is for
+80\% power at the observed effect size and between-seed variance.}
+\label{tab:power}
+\begin{tabular}{lccr}
+\toprule
+Effect & $\Delta$ QWK & sd(seeds) & Seeds required \\
+\midrule
+Full system vs baseline    & $+0.0172$ & $0.0029$ & 1 \\
+Ordinal head (RQ5)         & $+0.0099$ & $0.0017$ & 1 \\
+Typed edges (RQ1)          & $+0.0123$ & $0.0129$ & 10 \\
+Anatomical topology (RQ1)  & $+0.0051$ & $0.0094$ & 29 \\
+Cross-sequence SSL (RQ2)   & $+0.0051$ & $0.0258$ & 216 \\
+Disease routing (RQ3)      & $+0.0010$ & $0.0208$ & 3{,}467 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The distinction this table draws is important and is carried through the rest of
+the chapter. The ladder is not an instrument that reports nothing everywhere: two
+effects are detectable with a single seed and a third with ten. Where it reports
+nothing, that is a statement about the effect, not about the instrument.
+
+For disease-conditioned routing in particular, roughly three and a half thousand
+training runs would be needed to separate the observed effect from zero. At the
+measured $22$~minutes per run this is approximately three years of continuous
+computation. The effect is not merely unproven; it is unprovable at any
+plausible scale, and a $+0.0010$ improvement on a $0.7276$ baseline would carry
+no clinical meaning if it were established.
+
+% ===========================================================================
+\section{RQ1 --- Relational Disease Modelling}
+\label{sec:results-rq1}
+
+\begin{quote}
+\emph{Does representing lumbar disease targets as a typed heterogeneous graph
+improve grading over independent target heads, an ordered five-level transformer
+and a homogeneous graph, and are any gains concentrated where single-target
+evidence is weakest?}
+\end{quote}
+
+RQ1 divides into two claims, and the evidence separates them.
+
+\subsection{Typed Structure Helps}
+
+A typed heterogeneous graph outperforms a homogeneous one by $+0.0123$ QWK
+($[+0.0028, +0.0216]$, 3/3 seeds). Macro-F1 rises from $0.694$ to $0.710$, and
+E6 has the lowest across-seed macro-F1 variance of any configuration
+($\pm 0.001$). The comparison narrowly misses the corrected threshold
+($p_{\mathrm{FDR}} = 0.054$) but is detectable with ten seeds per
+Table~\ref{tab:power}, and its interval excludes zero.
+
+Relational message passing alone does not help: E5 against E0 is $-0.0050$. The
+benefit appears only once relations are typed. Message passing over an untyped
+graph is, on this evidence, slightly worse than no graph at all.
+
+\subsection{Anatomical Topology Does Not}
+
+H3 predicted that \enquote{performance under a shuffled-edge control should
+deteriorate if the topology itself matters}. It does not deteriorate
+meaningfully. E6 exceeds its shuffled control by $+0.0051$ QWK
+($[-0.0036, +0.0141]$, 2/3 seeds, $p_{\mathrm{FDR}} = 0.570$). The control
+preserves node count, edge count and degree, so the two models are matched in
+capacity and differ only in which targets are connected to which.
+
+The conclusion is therefore sharper than the hypothesis anticipated.
+\emph{Typing the relations carries information; the anatomical identity of the
+relations does not.} What the graph supplies is a structured parameterisation of
+interaction between targets, not the specific adjacency of levels, compartments
+and bilateral pairs that motivated it.
+
+\subsection{The Gating Ablation}
+
+Chapter~\ref{ch:methodology} designates the ungated residual a mandatory
+ablation. The gated and ungated formulations are indistinguishable
+($-0.0009$, 1/3 seeds); the ungated variant is marginally higher in the mean.
+The gate can be removed without cost.
+
+\paragraph{Answer to RQ1.} Partly. Typed relational structure improves grading
+over both independent heads and a homogeneous graph. The anatomical content of
+that topology is not what produces the improvement, and the gating mechanism
+contributes nothing.
+
+% ===========================================================================
+\section{RQ2 --- Anatomically Aligned Self-Supervision}
+\label{sec:results-rq2}
+
+\begin{quote}
+\emph{Does cross-sequence pretraining based on DICOM-defined anatomical
+correspondence improve grading, label efficiency and transfer?}
+\end{quote}
+
+Pretraining itself succeeded as an optimisation: validation InfoNCE reached
+$1.5162$ against a chance value of $3.4657$, so the encoders demonstrably learned
+to match corresponding anatomy across sequences. The question is whether that
+representation is worth anything downstream. Three independent probes say it is
+not.
+
+\emph{Accuracy.} E4 against E3 is $+0.0051$ QWK ($[-0.0038, +0.0148]$, 2/3
+seeds, $p_{\mathrm{FDR}} = 0.570$). The between-seed standard deviation
+($0.0258$) is five times the effect.
+
+\emph{Cross-sequence robustness.} This is the probe on which anatomical
+self-supervision should be strongest, because a representation that has learned
+one anatomy across three acquisitions ought to lose less when one acquisition is
+withheld. Under the controlled input ablation of
+Section~\ref{sec:results-rq3-ablation}, adding ACSSL changes reliance on the
+annotated sequence by $-0.0069 \pm 0.0304$ on 2/3 seeds --- indistinguishable
+from zero. By contrast, ordinary modality dropout reduces that reliance by
+$-0.0588$ on 3/3 seeds.
+
+\emph{Attention.} Under the attribution analysis of
+Section~\ref{sec:results-attribution}, E4 is the only configuration whose
+attention concentration falls \emph{below} the single-sequence baseline
+($-0.027$ against E0, 1/3 seeds).
+
+\paragraph{Answer to RQ2.} No. H1 is rejected on all three axes tested. The
+pretext task is learnable and is learned; the representation it produces confers
+no measurable downstream benefit at this data scale. Label efficiency and
+external transfer were not separately evaluated
+(Section~\ref{sec:results-rq4}), so the rejection is scoped to internal grading
+and robustness.
+
+% ===========================================================================
+\section{RQ3 --- Disease-Conditioned Modality Routing}
+\label{sec:results-rq3}
+
+\begin{quote}
+\emph{Can one model learn target- and patient-dependent sequence weights while
+remaining robust to missing and quality-degraded MRI sequences?}
+\end{quote}
+
+\subsection{The Learned Allocation}
+
+The router learns the clinically expected allocation with complete consistency.
+Across all fifteen runs in which a gate is present, foraminal targets allocate
+most weight to sagittal T1, central canal targets to sagittal T2, and
+subarticular targets to axial T2. The pattern reproduced 15/15 without being
+encoded as a prior.
+
+Chapter~\ref{ch:methodology} is explicit that this is insufficient:
+\enquote{the gate weights are model allocations, not causal estimates of sequence
+importance}.
+
+\subsection{Controlled Input Ablation}
+\label{sec:results-rq3-ablation}
+
+The prescribed intervention withholds each sequence at test time and measures the
+per-condition loss. Withholding the sequence a condition is graded from is
+severely damaging --- between $0.06$ and $0.35$ QWK, an order of magnitude larger
+than any difference in Table~\ref{tab:comparisons} --- while withholding the
+others is near-neutral or slightly beneficial. Agreement between allocation and
+intervention is 5/5 conditions on every seed.
+
+Taken alone, this reads as strong causal support for RQ3. It is not, and the
+control is what reveals why.
+
+\emph{E1 has no router.} It fuses the three sequences with fixed weights. It
+produces the same 5/5 pattern with drops as large or larger. The dependence is a
+property of the dataset: each condition is \emph{annotated} on one particular
+sequence, so withholding that sequence removes the only crop actually centred on
+the pathology. Any model suffers, routed or not.
+
+Isolating each step's effect on mean reliance on the annotated sequence:
+
+\begin{center}
+\begin{tabular}{lcc}
+\toprule
+Step & $\Delta$ reliance & Seeds lower \\
+\midrule
+Add the router             & $-0.0010 \pm 0.0382$ & 1/3 \\
+Add modality dropout       & $\mathbf{-0.0588 \pm 0.0561}$ & \textbf{3/3} \\
+Add ACSSL                  & $-0.0069 \pm 0.0304$ & 2/3 \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+The router changes sequence reliance by essentially zero. Its gate weights track
+the annotation structure of the dataset without creating any causal dependence
+beyond what fixed fusion already possesses.
+
+\paragraph{Answer to RQ3.} The first half is yes and the second half is no. One
+model does learn target-dependent sequence weights, and those weights are
+clinically sensible. But they do not improve grading ($+0.0010$ QWK, 1/3 seeds)
+and they do not improve robustness to missing sequences. H2 predicted that
+routing would \enquote{degrade less under missing-sequence experiments than fixed
+concatenation}; it does not. The graceful degradation that the system does
+exhibit is attributable to modality dropout, a standard regulariser that
+Chapter~\ref{ch:introduction} explicitly does not claim as original.
+
+% ===========================================================================
+\section{RQ4 --- Cross-Institutional Transfer}
+\label{sec:results-rq4}
+
+\textbf{Not yet answered.} The zero-shot transfer experiment on the Rizgary
+Hospital cohort has not been executed. Reporting its status honestly is required
+by the protocol changelog commitment of
+Section~\ref{sec:intro-hypotheses}.
+
+Preparatory work is complete and is documented in
+\texttt{thesis/chapter4/}: the cohort has been surveyed, radiology reports parsed
+into structured labels, imaging and report records reconciled, and a grading
+worklist produced. Of the cases with both a report and usable imaging, sixteen
+carry conflicts between the report-derived label and the spreadsheet reference
+that require adjudication by a reader before any transfer number can be
+computed.
+
+Two blockers stand between the present state and an RQ4 result. First, the
+sixteen conflicting cases await regrading. Second, the cohort DICOMs carry
+unredacted patient identifiers, and the existing de-identification routine keys
+on a \texttt{PatientID} field that is not unique in this cohort --- $45$ distinct
+values across $346$ cases --- so applying it would merge roughly eight patients
+into each pseudonym. Neither blocker is technical in the sense of requiring new
+method; both require decisions and reader time.
+
+H4 and H5 are therefore untested. They are retained here rather than removed, in
+keeping with the requirement that components not supported by executed
+experiments be reported as such rather than deleted from the research history.
+
+% ===========================================================================
+\section{RQ5 --- Clinically Asymmetric Error}
+\label{sec:results-rq5}
+
+\begin{quote}
+\emph{Do ordinal and cost-sensitive objectives reduce clinically consequential
+distant errors, particularly Severe$\rightarrow$Normal/Mild?}
+\end{quote}
+
+Yes, and this is the second most reliable effect in the study. Adding the ordinal
+and cost-sensitive head improves QWK by $+0.0099$ ($[+0.0017, +0.0186]$) on 3/3
+seeds, with the smallest between-seed standard deviation of any comparison
+($0.0017$) --- so small that a single seed suffices to detect it
+(Table~\ref{tab:power}).
+
+The clinically material quantity moves in the intended direction. Recall on
+Severe targets rises from $62.7\%$ at E0 to $65.0\%$ at E7, and from $59.6\%$ at
+E6, the same architecture under categorical cross-entropy. The objective is
+doing what it was selected to do rather than trading distant errors for
+aggregate accuracy.
+
+H6 anticipated that these objectives \enquote{may reduce distant errors even if
+they do not improve aggregate macro-F1}. In the event both improved.
+
+\paragraph{Answer to RQ5.} Yes. This is noted with some irony: the objective
+function, explicitly disclaimed in
+Section~\ref{sec:intro-contrib-supporting} as a supporting component and not an
+original method, is a larger and far more reliable contributor to final
+performance than two of the three proposed novel mechanisms.
+
+% ===========================================================================
+\section{Why the Structural Priors Had Little to Add}
+\label{sec:results-attribution}
+
+The results above establish that most of the proposed mechanisms do not improve
+grading. A null result with a mechanism is worth more than a null result with a
+p-value, and this section supplies the mechanism.
+
+\subsection{Method}
+
+Each crop is centred by construction on its target's annotated coordinate, so the
+pathology lies at the middle of the frame and attention on it can be measured
+rather than described: the fraction of Grad-CAM mass falling inside a central
+disc of $15$~mm radius at the $60$~mm field of view.
+
+That disc covers $19.7\%$ of the frame, which is what a uniform map would score.
+Because convolutional networks are centre-biased irrespective of what they have
+learned, the identical architecture with untrained weights is evaluated as a
+floor; it scores $0.204$.
+
+Attribution depth was fixed on resolution grounds before results were compared. A
+residual network downsamples by $32$, so at these $128$~pixel crops the final
+block is $4 \times 4$ --- one cell spanning $15$~mm, too coarse to resolve the
+disc. The penultimate block at $8 \times 8$ matches the $7 \times 7$ resolution
+at which Grad-CAM is conventionally applied to $224$~pixel inputs, and is used
+throughout. All three depths are reported in the appendix so that the dependence
+is visible rather than taken on trust.
+
+\subsection{Result}
+
+\begin{center}
+\begin{tabular}{lccc}
+\toprule
+Configuration & CAM mass in disc & vs.\ untrained & vs.\ E0 \\
+\midrule
+E0 single sequence     & $0.490 \pm 0.058$ & $+0.286$ & --- \\
+E1 multi-sequence      & $0.578 \pm 0.073$ & $+0.374$ & $+0.089$ (3/3) \\
+E2 + routing           & $0.580 \pm 0.063$ & $+0.376$ & $+0.090$ (2/3) \\
+E3 + modality dropout  & $0.515 \pm 0.071$ & $+0.311$ & $+0.026$ (2/3) \\
+E4 + ACSSL             & $0.462 \pm 0.027$ & $+0.258$ & $-0.027$ (1/3) \\
+\midrule
+Untrained (same architecture) & $0.204$ & --- & --- \\
+Uniform map (disc area)       & $0.197$ & --- & --- \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+Every trained configuration places between $2.3$ and $2.9$ times the chance share
+of its attention on the annotated centre. Critically, \textbf{E0 already reaches
+$0.490$} --- a plain single-sequence convolutional network with no routing, no
+self-supervision and no graph.
+
+This is the explanation the null results require. The structural priors of RQ1--RQ3
+were motivated by the premise that anatomical context is needed to find and
+interpret the lesion. The encoder locates it without them. There is little left
+for a prior to contribute, and the ladder measures exactly that little.
+
+\subsection{A Dissociation Worth Noting}
+
+Multi-sequence input is the only step that improves attention on all three seeds
+($+0.089$ against E0), and it is simultaneously the step with the most negative
+accuracy effect ($-0.0055$ QWK). Additional sequences sharpen \emph{where} the
+model looks without improving \emph{what it concludes}. Attention concentration
+and grading accuracy are not the same quantity, and this study can separate them.
+
+% ===========================================================================
+\section{Threats to Validity}
+\label{sec:results-threats}
+
+\subsection{Errors Detected in the Analysis}
+
+Three analyses produced incorrect conclusions before controls were added. Each is
+recorded because each would have been reported as a positive finding, and because
+all three erred in the direction of the hypothesis under test.
+
+\emph{Per-seed intervals reversed sign.} Described in
+Section~\ref{sec:results-inference}. Two comparisons yielded opposite,
+individually significant results on different seeds.
+
+\emph{A mechanism check without a control read as proof.} The 5/5 agreement
+between routing weights and intervention (Section~\ref{sec:results-rq3-ablation})
+appeared to establish RQ3 causally, with effects an order of magnitude larger
+than any ladder difference, until a router-free model produced the same pattern.
+
+\emph{An attribution probe measured the wrong encoder.} The first
+implementation hooked the first encoder unconditionally, which for multi-sequence
+configurations is the sagittal T1 encoder --- including on subarticular targets
+graded from axial T2. It reported that no configuration improved on E0
+($-0.036$, 1/3 seeds). Selecting the encoder that read each target's annotated
+sequence reverses the sign to $+0.089$ on 3/3 seeds.
+
+\subsection{Limitations}
+
+\emph{Seed count.} Three seeds is thin for effects of this magnitude; a
+seven-seed campaign is running. Table~\ref{tab:power} indicates that seven seeds
+will resolve typed edges but will not resolve RQ2 or RQ3, whose requirements are
+$216$ and $3{,}467$ seeds respectively.
+
+\emph{Single benchmark.} All results are internal to LumbarDISC. RQ4 is
+unanswered, so external validity is untested and no claim of generalisation is
+made.
+
+\emph{Point annotations.} Centre concentration presumes the annotated coordinate
+marks the lesion. RSNA coordinates come from single readers; a systematic offset
+would depress the measure uniformly across configurations.
+
+\emph{Attribution method.} Grad-CAM is one attribution technique with known
+failure modes. The untrained floor makes the comparison meaningful, but absolute
+values are method-dependent.
+
+\emph{Graph configurations excluded from two probes.} The input ablation and
+attribution analyses cover E0--E4 only; E5--E7 route through a different batch
+layout. The routing claim is cleanest to test at E2 with the graph out of the
+path, but the attribution result is therefore not measured on the final system.
+
+% ===========================================================================
+\section{Summary of Answers}
+\label{sec:results-summary}
+
+\begin{center}
+\begin{tabular}{llp{6.6cm}}
+\toprule
+RQ & Verdict & Basis \\
+\midrule
+RQ1 & Partly & Typed edges $+0.0123$, 3/3 seeds. Anatomical topology does not
+beat a degree-preserving shuffle ($+0.0051$, 2/3). \\
+RQ2 & No & $+0.0051$, 2/3 seeds; no robustness benefit; attention below
+baseline. Rejected on three axes. \\
+RQ3 & Mechanism yes, benefit no & Allocation replicates 15/15 but a router-free
+model matches it under intervention. $+0.0010$ QWK, 1/3 seeds. \\
+RQ4 & Not executed & Cohort preparation complete; blocked on reader adjudication
+and de-identification. \\
+RQ5 & Yes & $+0.0099$, 3/3 seeds, smallest variance in the study. Severe recall
+$62.7\% \rightarrow 65.0\%$. \\
+\midrule
+System & Yes & $+0.0172$ QWK $[+0.0064, +0.0285]$, 3/3 seeds, survives FDR. \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+The thesis set out to determine whether anatomical structure, imposed explicitly
+on a multi-sequence grading model, improves degenerative lumbar classification.
+The answer this chapter supports is that it largely does not, that the
+convolutional encoder already performs the localisation such structure was meant
+to supply, and that the components which do improve performance are relational
+typing and a clinically motivated objective rather than anatomical correspondence
+or disease-conditioned routing.
+
+Chapter~\ref{ch:discussion} considers what follows for the design of anatomy-aware
+medical imaging models, and why mechanisms that are individually well motivated
+and demonstrably learnable can nonetheless fail to pay.
+
+\end{document}
