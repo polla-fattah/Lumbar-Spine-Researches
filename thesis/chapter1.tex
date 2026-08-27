@@ -145,11 +145,12 @@ strong matched baselines.
 % Written after the confirmatory experiments were locked. Reports the outcome
 % only; the problem statement, research questions and hypotheses are unchanged.
 The principal empirical outcome is that the complete system improves agreement
-with the reference standard over a single-sequence baseline by $+0.0172$
-quadratic weighted kappa, reproducibly and after correction for multiple
-comparisons, but that the anatomical mechanisms proposed to achieve this do not
-account for the improvement: attribution analysis indicates the convolutional
-encoder already localises the graded structure without them.
+with the reference standard over a single-sequence baseline by $+0.0177$
+quadratic weighted kappa, on every one of seven training seeds and after
+correction for multiple comparisons, but that the anatomical mechanisms proposed
+to achieve this do not account for the improvement: attribution analysis
+indicates the convolutional encoder already localises the graded structure
+without them.
 
 % ===========================================================================
 \section{Background and Motivation}
@@ -809,8 +810,9 @@ not ``clinical benefit''.
 % Written after Chapter 4. States only what the executed experiments support.
 Of the benefits anticipated above, the executed experiments support
 \emph{discrimination} and, within it, the reduction of clinically distant
-errors. Quadratic weighted kappa improves by $+0.0172$ over a single-sequence
-baseline and recall on Severe targets rises from $62.7\%$ to $65.0\%$, the latter
+errors. Quadratic weighted kappa improves by $+0.0177$ over a single-sequence
+baseline, Severe$\rightarrow$Normal confusions fall from $5.7\%$ to $3.8\%$ and
+recall on Severe targets rises from $61.1\%$ to $63.1\%$, the last two
 attributable to the ordinal and cost-sensitive objective rather than to any
 proposed structural mechanism.
 
@@ -900,10 +902,11 @@ itself part of what the thesis contributes.
 
 \paragraph{D1 --- A verified anatomy-aware multi-sequence grading system.}
 AMOG-Net improves quadratic weighted kappa over a single-sequence baseline by
-$+0.0172$ (95\% CI $[+0.0064, +0.0285]$), reproducibly across training seeds and
-surviving false discovery rate correction across the pre-specified comparison
-family. The system, its frozen data partition and its behavioural test suite are
-released.
+$+0.0177$ (95\% CI $[+0.0097, +0.0260]$), on every one of seven training seeds
+and surviving false discovery rate correction across the pre-specified
+comparison family. Two further comparisons also survive: typed heterogeneous
+edges and the ordinal, cost-sensitive objective. The system, its frozen data
+partition and its behavioural test suite are released.
 
 \paragraph{D2 --- A controlled ablation protocol for anatomical priors.} Each
 claimed mechanism is tested against a control matched in capacity rather than
@@ -919,7 +922,9 @@ hypothesis under test.
 grading at this data scale, with a mechanism.} Neither anatomically aligned
 cross-sequence self-supervision nor disease-conditioned routing produces a
 detectable improvement, and anatomically correct graph topology does not
-outperform a degree-preserving random shuffle. Gradient-weighted class activation
+outperform a degree-preserving random shuffle. These are bounds rather than
+absences: the paired intervals constrain the three mechanisms to at most
+$1.22\%$, $1.55\%$ and $1.05\%$ of baseline performance respectively. Gradient-weighted class activation
 mapping shows why: the convolutional encoder already concentrates $2.4$ times the
 chance share of its attention on the annotated lesion before any prior is added.
 The localisation these priors were designed to supply is largely accomplished
@@ -937,13 +942,15 @@ representation confers no measurable downstream benefit.
 Contribution~2 (disease-conditioned routing) divides. The router does learn
 clinically sensible target-dependent sequence weights, reproducing the expected
 allocation in all fifteen runs in which a gate is present. It does not improve
-grading ($+0.0010$ QWK) and it does not improve robustness to missing sequences.
+grading ($+0.0053$ QWK, five seeds of seven, bounded at $1.55\%$ of baseline)
+and it does not improve robustness to missing sequences.
 Its allocation tracks the annotation structure of the benchmark rather than
 creating a dependence of its own.
 
 Contribution~3 (heterogeneous disease--anatomy graph) is partly supported. Typed
-relational structure improves grading over a homogeneous graph ($+0.0123$ QWK,
-every seed); the anatomical identity of the relations does not. The resulting
+relational structure improves grading over a homogeneous graph ($+0.0093$ QWK on
+every one of seven seeds, surviving correction at $p_{\mathrm{FDR}} = 0.009$);
+the anatomical identity of the relations does not. The resulting
 claim is narrower than proposed and more specific than the original: relational
 typing carries information, anatomical adjacency does not.
 

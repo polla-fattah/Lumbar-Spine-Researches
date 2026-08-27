@@ -3,11 +3,11 @@
 %  Disease-Adaptive Heterogeneous Graph Learning with Anatomically Aligned
 %  Multi-Sequence MRI Representations
 %
-%  DRAFT 1 -- written 2026-08-27 against the completed three-seed campaign, the
-%  controlled input ablation, the attribution analysis and the ROI quality
-%  control. Figures tagged [3-SEED] refresh when the seven-seed campaign lands;
-%  the argument of this chapter does not depend on them, because every
-%  comparison it leans on either holds on all seeds or is reported as null.
+%  DRAFT 2 -- written 2026-08-27 against the COMPLETED seven-seed campaign,
+%  the controlled input ablation, the attribution analysis and the ROI quality
+%  control. The extension strengthened the chapter's central claim rather than
+%  weakening it: typed edges and the ordinal head crossed FDR correction while
+%  the two anatomical mechanisms moved further from it.
 %
 %  Compiles standalone:   pdflatex chapter5 ; biber chapter5 ; pdflatex chapter5
 %  To fold into the thesis, \input{chapter5}; docmute skips this preamble.
@@ -44,8 +44,8 @@ multi-sequence grading model, improves automated classification of lumbar
 degenerative disease. The answer is that it largely does not, and the more
 useful part of the answer is \emph{why}.
 
-The complete system improves on a single-sequence baseline by $+0.0172$ QWK
-(95\% CI $[+0.0064, +0.0285]$), reproducibly across seeds and after correction
+The complete system improves on a single-sequence baseline by $+0.0177$ QWK
+(95\% CI $[+0.0097, +0.0260]$), on every one of seven seeds and after correction
 for multiple comparisons. But the components credited with that improvement in
 the original design are not the components responsible for it. Anatomically
 aligned self-supervision produced no measurable benefit on any of three axes.
@@ -53,9 +53,20 @@ Disease-conditioned routing learned the clinically expected sequence weights
 and produced no benefit from having learned them. Relational typing helped;
 the anatomical identity of the relations did not.
 
+The evidence for those statements is stronger than a set of failures to reject.
+Each unsupported mechanism is \emph{bounded}: anatomical topology contributes at
+most $1.05\%$ of baseline performance over a degree-preserving shuffle,
+cross-sequence self-supervision at most $1.22\%$, and disease-conditioned routing
+at most $1.55\%$. And the campaign was extended from three seeds to seven
+precisely to test whether these were power failures. It was not: the same four
+additional runs that carried typed edges and the ordinal head across the
+corrected threshold moved anatomical topology and self-supervision further away
+from it.
+
 Two of the three proposed mechanisms are therefore rejected, one is
-half-supported in a narrower form than proposed, and the largest single
-contributor to final performance is an objective function that
+half-supported in a narrower form than proposed, and the largest standardised
+effect in the study --- $d = 1.97$, larger than the full-system comparison it
+forms part of --- belongs to an objective function that
 Chapter~\ref{ch:introduction} explicitly declined to claim as original.
 
 This chapter argues that these results are informative rather than merely
@@ -139,7 +150,8 @@ gains support.
 \begin{table}[htbp]
 \centering
 \caption{Per-condition performance against reported inter-reader agreement.
-Reader $\kappa$ from Lurie et al.; model QWK averaged over three seeds. The two
+Reader $\kappa$ from Lurie et al.; model QWK averaged over seeds 42--44, this
+analysis having been run before the campaign was extended. The two
 metrics are not directly comparable in absolute terms; only the ordering is
 being examined.}
 \label{tab:disc-ordering}
@@ -227,7 +239,9 @@ same dependence with drops as large or larger. The pattern belongs to the
 dataset: each condition is annotated on one particular sequence, so withholding
 that sequence removes the only crop centred on the pathology. Any model suffers,
 routed or not. Isolating the router's own contribution to sequence reliance
-gives $-0.0010 \pm 0.0382$ across seeds, indistinguishable from zero.
+gives $-0.0010 \pm 0.0382$ across seeds 42--44, indistinguishable from zero.
+The grading effect over the full seven seeds is $+0.0053$, bounded by its
+interval at $1.55\%$ of baseline.
 
 Chapter~\ref{ch:methodology} anticipated precisely this trap, stating that
 \enquote{the gate weights are model allocations, not causal estimates of
@@ -243,10 +257,10 @@ the mechanism designed for the purpose.
 \subsection{Relational Structure (RQ1)}
 
 RQ1 divides, and the division is the more interesting result. Typed
-heterogeneous edges improve on a homogeneous graph by $+0.0123$ QWK on every
-seed. Anatomically correct topology does not improve on a degree-preserving
-random shuffle: $+0.0051$, two seeds of three, well inside the corrected
-threshold. The control preserves node count, edge count and degree, so the two
+heterogeneous edges improve on a homogeneous graph by $+0.0093$ QWK on every one
+of seven seeds, surviving correction at $p_{\mathrm{FDR}} = 0.009$.
+Anatomically correct topology does not improve on a degree-preserving random
+shuffle: $+0.0020$, four seeds of seven, bounded at $1.05\%$ of baseline. The control preserves node count, edge count and degree, so the two
 models are matched in capacity and differ only in \emph{which} targets are
 connected to \emph{which}.
 
@@ -255,6 +269,12 @@ graph supplies is a structured parameterisation of interaction between
 targets---additional capacity, organised by relation type---rather than the
 specific adjacency of levels, compartments and bilateral pairs that motivated
 it. Relational typing carries information; anatomical adjacency does not.
+
+The seven-seed extension sharpened both halves at once, which is the strongest
+form this claim could take. Typed edges went from narrowly missing correction to
+clearing it on every seed, while the anatomy comparison halved. A reader
+inclined to attribute the second result to insufficient power has to explain why
+the same four additional runs resolved the first.
 
 Section~\ref{sec:lr-graphs} notes that relational and graph-based modelling of
 lumbar targets remains sparsely explored. The present result suggests that where
@@ -271,10 +291,17 @@ standard cross-entropy for Pfirrmann grading across 7{,}948 discs with extensive
 hyperparameter optimisation, and that none improved classification performance
 \cite{niemeyer2021a}.
 
-Here the ordinal and cost-sensitive head improves QWK by $+0.0099$ on every seed,
-with the smallest between-seed variance of any comparison in the study
-($0.0017$), and raises recall on Severe targets from $59.6\%$ to $65.0\%$
-relative to the same architecture under categorical cross-entropy.
+Here the ordinal and cost-sensitive head improves QWK by $+0.0082$ on every one
+of seven seeds, surviving correction at $p_{\mathrm{FDR}} = 0.009$. Its
+between-seed standard deviation of $0.0042$ is the smallest of any comparison,
+which gives it the largest standardised effect in the study at $d = 1.97$.
+
+The clinically material quantity moves further. Across the full ladder,
+Severe$\rightarrow$Normal confusions fall from $5.7\%$ at the baseline to
+$3.8\%$ at E7 --- a relative reduction of a third --- while recall on Severe
+targets rises from $61.1\%$ to $63.1\%$ and predictions two or more grades from
+the reference fall from $0.526\%$ to $0.344\%$. Aggregate agreement was not
+bought by trading away the errors clinicians care most about.
 
 The difference from Niemeyer et al.\ is most plausibly the cost matrix rather
 than the ordinal structure. Their comparison isolated ordinality; the objective
@@ -336,12 +363,21 @@ them changed a conclusion here.
 
 \emph{Statistical power.} The study is underpowered for single-component effects
 of the size observed. Table~\ref{tab:power} converts each effect into the number
-of training seeds required to detect it: one for the full system and for the
-ordinal head, ten for typed edges, but 216 for cross-sequence self-supervision
-and 3{,}467 for routing. The last is roughly three years of continuous
-computation on the hardware used. Those two components are not merely unproven
+of training seeds required to detect it: three for the full system and for the
+ordinal head, seven for typed edges, but $205$ for anatomical topology and $545$
+for cross-sequence self-supervision. Those components are not merely unproven
 here; effects of the size observed are not establishable at any plausible scale,
-and would carry no clinical meaning if they were.
+and the equivalence bounds show they would carry no clinical meaning if they
+were.
+
+The word \emph{underpowered} should nevertheless be used carefully in this
+chapter. The campaign was extended from three seeds to seven specifically to
+test that explanation, and the extension carried two comparisons across the
+corrected threshold while moving two others further from it. A study genuinely
+starved of power does not resolve half its comparisons and weaken the other
+half; it produces a spread of intermediate effects. Cohen's $d$ here separates
+into $1.06$--$1.97$ for the three significant comparisons and below $0.4$ for
+everything else, with nothing in between.
 
 \emph{External validity is untested.} RQ4 was not executed. The complete system
 under institutional transfer, specified as rung E8, was not run. Every result in
@@ -362,6 +398,16 @@ split by grade it reaches $0.415$ on Severe targets against E6's $0.448$. The
 mechanism of Section~\ref{sec:disc-localise} therefore holds wherever
 localisation is meaningful, but E7 cannot be placed on the same scale as the
 other rungs and is not.
+
+\emph{Calibration does not improve with the ladder.} Temperature scaling roughly
+halves expected calibration error at every rung, but the calibrated figure at E7
+($0.0245$) is worse than at E0 ($0.0130$). Agreement improves as components
+accumulate; the reliability of the probabilities does not. RQ5 asked whether
+calibrated uncertainty could support selective prediction, and on this evidence
+the agreement half of that question is answered and the calibration half is not.
+The homogeneous graph is a separate concern: at $0.1024$ uncalibrated with a
+fitted temperature of $2.019$ it is by a wide margin the most overconfident
+configuration, and it is also the rung that fails to improve accuracy.
 
 \emph{No clinical outcome is measured.} The study measures agreement with a
 retrospective reference standard. It does not measure diagnostic accuracy

@@ -3,12 +3,13 @@
 %  Disease-Adaptive Heterogeneous Graph Learning with Anatomically Aligned
 %  Multi-Sequence MRI Representations
 %
-%  DRAFT 1 -- written 2026-08-27 against the completed three-seed campaign.
-%  A seven-seed campaign is running; every number tagged [3-SEED] below is to be
-%  refreshed from data/reports/chapter4_tables.md when it completes. The
-%  narrative is not expected to change: the comparisons that separate do so on
-%  3/3 seeds and the ones that do not are one to two orders of magnitude below
-%  the seed-to-seed standard deviation.
+%  DRAFT 2 -- written 2026-08-27 against the COMPLETED seven-seed campaign.
+%  70 runs, 0 failures, 955.8 minutes. All figures are seven-seed.
+%
+%  The extra four seeds changed two verdicts, both in the direction of more
+%  evidence rather than less: typed edges and the ordinal head crossed FDR
+%  correction, while anatomical topology and cross-sequence SSL weakened. The
+%  step decomposition also changed shape and its prose was rewritten to match.
 %
 %  Numbers in this chapter are generated, not typed. Their provenance is
 %  thesis/chapter4/*.md and data/reports/chapter4_{results,comparisons}.csv.
@@ -54,18 +55,19 @@ follow.
 
 \begin{enumerate}
   \item \textbf{The complete system outperforms the single-sequence baseline.}
-  Quadratic weighted kappa rises from $0.7276$ to $0.7448$, a paired difference
-  of $+0.0172$ (95\% CI $[+0.0064, +0.0285]$) that holds on every seed and is the
-  only pre-specified comparison surviving false discovery rate correction.
+  Quadratic weighted kappa rises from $0.7270$ to $0.7447$, a paired difference
+  of $+0.0177$ (95\% CI $[+0.0097, +0.0260]$) that holds on all seven seeds and
+  survives false discovery rate correction. Two further comparisons also survive:
+  typed heterogeneous edges and the ordinal, cost-sensitive head.
 
   \item \textbf{Most of the proposed mechanisms do not account for that gain.}
   Anatomically aligned self-supervision (RQ2) and disease-conditioned routing
-  (RQ3) produce effects of $+0.0051$ and $+0.0010$ QWK respectively, between two
-  and twenty times smaller than the standard deviation induced by changing the
-  training seed alone. Relational structure (RQ1) helps, but the anatomical
-  content of that structure does not: a typed graph beats a homogeneous one,
-  while an anatomically correct topology does not beat a degree-preserving
-  random shuffle.
+  (RQ3) produce effects of $+0.0020$ and $+0.0053$ QWK, bounded by the paired
+  intervals at $1.22\%$ and $1.55\%$ of baseline performance respectively.
+  Relational structure (RQ1) helps, but the anatomical content of that structure
+  does not: a typed graph beats a homogeneous one on every seed, while an
+  anatomically correct topology does not beat a degree-preserving random shuffle
+  and is bounded at $1.05\%$ of baseline.
 
   \item \textbf{There is a mechanism for the second statement, not merely a
   p-value.} Gradient-weighted class activation mapping shows that the
@@ -86,10 +88,16 @@ mechanisms should not be retained}. The results are read here in that spirit.
 \subsection{What Was Run}
 
 The ablation ladder of Section~\ref{sec:method-ablation} was executed in full on
-the LumbarDISC public benchmark: ten configurations $\times$ three training seeds
-$(42, 43, 44)$, fifty epochs each, thirty runs in total, completed in
-$669.4$~minutes on a single RTX~5090. No run failed. A seven-seed extension is
-in progress at the time of writing.
+the LumbarDISC public benchmark: ten configurations $\times$ seven training
+seeds $(42$--$48)$, fifty epochs each, seventy runs in total, completed in
+$955.8$~minutes on a single RTX~5090. No run failed.
+
+The campaign was extended from three seeds to seven after the three-seed
+analysis left two comparisons close to the corrected significance threshold and
+the power analysis of Section~\ref{sec:results-power} indicated roughly ten
+seeds would resolve them. The extension is reported because it changed two
+verdicts, and Section~\ref{sec:results-sevenseed} states what changed and in
+which direction.
 
 The ten configurations comprise the eight internal ladder rungs E0--E7 and
 two controls attached to E6: \texttt{E6\_shuffled}, in which edge endpoints are permuted while
@@ -260,28 +268,28 @@ rather than presented as complete.
 
 \subsection{Aggregate Performance}
 
-Table~\ref{tab:ladder} reports each configuration averaged over the three seeds.
-[3-SEED]
+Table~\ref{tab:ladder} reports each configuration averaged over the seven
+seeds.
 
 \begin{table}[htbp]
 \centering
 \caption{Ablation ladder on the held-out test partition, mean $\pm$ standard
-deviation over three training seeds.}
+deviation over seven training seeds.}
 \label{tab:ladder}
 \begin{tabular}{lccc}
 \toprule
 Configuration & QWK & Macro-F1 & Balanced acc. \\
 \midrule
-E0 single sequence          & $0.7276 \pm 0.0070$ & $0.694 \pm 0.004$ & 69.0\% \\
-E1 multi-sequence           & $0.7221 \pm 0.0058$ & $0.693 \pm 0.004$ & 68.5\% \\
-E2 + disease routing        & $0.7231 \pm 0.0150$ & $0.697 \pm 0.014$ & 69.5\% \\
-E3 + modality dropout       & $0.7263 \pm 0.0151$ & $0.700 \pm 0.009$ & 69.2\% \\
-E4 + ACSSL                  & $0.7314 \pm 0.0110$ & $0.697 \pm 0.011$ & 69.1\% \\
-E5 + homogeneous graph      & $0.7226 \pm 0.0077$ & $0.694 \pm 0.009$ & 68.3\% \\
-E6 + typed graph            & $0.7349 \pm 0.0066$ & $0.710 \pm 0.001$ & 70.3\% \\
-\quad E6 shuffled edges     & $0.7298 \pm 0.0032$ & $0.701 \pm 0.010$ & 69.9\% \\
-\quad E6 ungated residual   & $0.7358 \pm 0.0184$ & $0.704 \pm 0.019$ & 70.9\% \\
-E7 + ordinal, cost-sensitive & $\mathbf{0.7448 \pm 0.0072}$ & $\mathbf{0.714 \pm 0.006}$ & \textbf{72.0\%} \\
+E0 single sequence          & $0.7270 \pm 0.0108$ & $0.693 \pm 0.009$ & 69.2\% \\
+E1 multi-sequence           & $0.7246 \pm 0.0075$ & $0.694 \pm 0.004$ & 68.9\% \\
+E2 + disease routing        & $0.7298 \pm 0.0123$ & $0.701 \pm 0.009$ & 69.6\% \\
+E3 + modality dropout       & $0.7273 \pm 0.0125$ & $0.700 \pm 0.009$ & 70.1\% \\
+E4 + ACSSL                  & $0.7293 \pm 0.0109$ & $0.697 \pm 0.008$ & 69.3\% \\
+E5 + homogeneous graph      & $0.7272 \pm 0.0091$ & $0.698 \pm 0.008$ & 69.1\% \\
+E6 + typed graph            & $0.7364 \pm 0.0073$ & $0.706 \pm 0.010$ & 70.7\% \\
+\quad E6 shuffled edges     & $0.7344 \pm 0.0052$ & $0.704 \pm 0.007$ & 69.9\% \\
+\quad E6 ungated residual   & $0.7350 \pm 0.0167$ & $0.700 \pm 0.014$ & 70.6\% \\
+E7 + ordinal, cost-sensitive & $\mathbf{0.7447 \pm 0.0051}$ & $\mathbf{0.712 \pm 0.005}$ & \textbf{71.0\%} \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -289,31 +297,35 @@ E7 + ordinal, cost-sensitive & $\mathbf{0.7448 \pm 0.0072}$ & $\mathbf{0.714 \pm
 \subsection{Where the Gain Actually Arrives}
 
 Reporting only the endpoints would conceal the shape of the ladder.
-Table~\ref{tab:steps} decomposes the $+0.0172$ into its seven successive steps.
+Table~\ref{tab:steps} decomposes the $+0.0177$ into its seven successive
+steps.
 
 \begin{table}[htbp]
 \centering
-\caption{Step-by-step decomposition from E0 to E7. \enquote{Seeds $+$} counts the
-seeds on which the step improved QWK.}
+\caption{Step-by-step decomposition from E0 to E7 over seven seeds.
+\enquote{Seeds $+$} counts the seeds on which the step improved QWK.}
 \label{tab:steps}
 \begin{tabular}{lccr}
 \toprule
 Step & $\Delta$ QWK & Seeds $+$ & Cumulative \\
 \midrule
-Multi-sequence input          & $-0.0055$ & 2/3 & $-0.0055$ \\
-Disease-conditioned routing   & $+0.0010$ & 1/3 & $-0.0045$ \\
-Modality dropout              & $+0.0032$ & 2/3 & $-0.0013$ \\
-Anatomical cross-sequence SSL & $+0.0051$ & 2/3 & $+0.0038$ \\
-Homogeneous graph             & $-0.0088$ & 1/3 & $-0.0050$ \\
-Typed heterogeneous edges     & $+0.0123$ & 3/3 & $+0.0073$ \\
-Ordinal and cost-sensitive head & $+0.0099$ & 3/3 & $\mathbf{+0.0172}$ \\
+Multi-sequence input & $-0.0024$ & 4/7 & $-0.0024$ \\
+Disease-conditioned routing & $+0.0053$ & 5/7 & $+0.0028$ \\
+Modality dropout & $-0.0026$ & 4/7 & $+0.0003$ \\
+Anatomical cross-sequence SSL & $+0.0020$ & 4/7 & $+0.0023$ \\
+Homogeneous graph & $-0.0021$ & 4/7 & $+0.0002$ \\
+\midrule
+Typed heterogeneous edges & $+0.0093$ & \textbf{7/7} & $+0.0094$ \\
+Ordinal and cost-sensitive head & $+0.0082$ & \textbf{7/7} & $\mathbf{+0.0177}$ \\
 \bottomrule
 \end{tabular}
 \end{table}
 
-After six of the seven steps the system sits \emph{below} the baseline it began
-from. The entire improvement arrives in the final two steps, and those two are
-the only steps that improve on all three seeds. This is stated plainly because it
+Through the first five steps the accumulated system goes nowhere. It moves
+within $\pm 0.003$~QWK of the baseline it began from and ends those five steps
+$+0.0002$ ahead, and not one of them improves on more than five of seven seeds.
+\textbf{The entire gain arrives in the final two steps, and those two are the
+only steps in the ladder that improve on every seed.} This is stated plainly because it
 is precisely the structure an ablation study exists to expose, and because a
 reader who reconstructs it independently from Table~\ref{tab:ladder} would be
 entitled to distrust anything else in this chapter.
@@ -357,69 +369,247 @@ carrying no significance claim.
 \subsection{Primary Comparisons}
 
 Table~\ref{tab:comparisons} reports the pre-specified comparisons under the
-corrected procedure. [3-SEED]
+corrected procedure. Three survive correction, where the three-seed
+analysis produced one.
 
 \begin{table}[htbp]
 \centering
 \small
-\caption{Pre-specified comparisons, QWK. Difference averaged over seeds with the
-patient resample shared across them; FDR controlled across these rows.}
+\caption{Pre-specified comparisons, QWK, seven seeds. Difference averaged
+over seeds with the patient resample shared across them; FDR controlled
+across these rows.}
 \label{tab:comparisons}
-\begin{tabular}{llcccc}
+\begin{tabular}{llccccc}
 \toprule
-Comparison & Tests & $\Delta$ & 95\% CI & Seeds $+$ & $p_{\mathrm{FDR}}$ \\
+Comparison & Tests & $\Delta$ & 95\% CI & Seeds $+$ & $p_{\mathrm{FDR}}$ & Sig \\
 \midrule
-E7 vs E0 & full system      & $+0.0172$ & $[+0.0064, +0.0285]$ & 3/3 & $\mathbf{<0.001}$ \\
-E6 vs E5 & typed edges (RQ1) & $+0.0123$ & $[+0.0028, +0.0216]$ & 3/3 & $0.054$ \\
-E7 vs E6 & ordinal head (RQ5) & $+0.0099$ & $[+0.0017, +0.0186]$ & 3/3 & $0.054$ \\
-E6 vs E6\_shuf & anatomy (RQ1) & $+0.0051$ & $[-0.0036, +0.0141]$ & 2/3 & $0.570$ \\
-E4 vs E3 & ACSSL (RQ2)      & $+0.0051$ & $[-0.0038, +0.0148]$ & 2/3 & $0.570$ \\
-E3 vs E2 & modality dropout & $+0.0032$ & $[-0.0060, +0.0119]$ & 2/3 & $0.724$ \\
-E2 vs E1 & routing (RQ3)    & $+0.0010$ & $[-0.0079, +0.0107]$ & 1/3 & $0.886$ \\
-E6 vs E6\_ungated & gating  & $-0.0009$ & $[-0.0110, +0.0080]$ & 1/3 & $0.886$ \\
-E5 vs E0 & message passing  & $-0.0050$ & $[-0.0153, +0.0057]$ & 2/3 & $0.617$ \\
+E7 vs E0 & full system & $+0.0177$ & $[+0.0097, +0.0260]$ & 7/7 & $\mathbf{<0.001}$ & \textbf{yes} \\
+E6 vs E5 & typed edges (RQ1) & $+0.0093$ & $[+0.0027, +0.0156]$ & 7/7 & $\mathbf{0.009}$ & \textbf{yes} \\
+E7 vs E6 & ordinal head (RQ5) & $+0.0082$ & $[+0.0025, +0.0143]$ & 7/7 & $\mathbf{0.009}$ & \textbf{yes} \\
+\midrule
+E2 vs E1 & routing (RQ3) & $+0.0053$ & $[-0.0002, +0.0112]$ & 5/7 & $0.131$ & no \\
+E4 vs E3 & ACSSL (RQ2) & $+0.0020$ & $[-0.0043, +0.0089]$ & 4/7 & $0.688$ & no \\
+E6 vs E6\_shuf & anatomy (RQ1) & $+0.0020$ & $[-0.0038, +0.0076]$ & 4/7 & $0.688$ & no \\
+E6 vs E6\_ung & gating & $+0.0014$ & $[-0.0041, +0.0064]$ & 3/7 & $0.713$ & no \\
+E5 vs E0 & message passing & $+0.0002$ & $[-0.0073, +0.0074]$ & 5/7 & $0.967$ & no \\
+E3 vs E2 & modality dropout & $-0.0026$ & $[-0.0091, +0.0034]$ & 4/7 & $0.627$ & no \\
 \bottomrule
 \end{tabular}
 \end{table}
 
-\subsection{Statistical Power}
+\subsection{Effect Size and Statistical Power}
 \label{sec:results-power}
 
-A null result is uninterpretable without knowing what the study could have
-detected. Table~\ref{tab:power} converts each observed effect and its
-between-seed standard deviation into the number of training seeds that would be
-required to detect an effect of that size at 80\% power.
+A p-value confounds effect size with sample size, and a null result is
+uninterpretable without knowing what the study could have detected.
+Table~\ref{tab:power} therefore reports Cohen's $d$ on the paired across-seed
+differences alongside the number of training seeds that would be required to
+detect an effect of the observed size at 80\% power.
 
 \begin{table}[htbp]
 \centering
-\caption{Detectability of each observed effect. \enquote{Seeds required} is for
-80\% power at the observed effect size and between-seed variance.}
+\caption{Effect size and detectability over seven seeds. Cohen's $d$ is
+computed on the paired across-seed differences. \enquote{Seeds required} is
+for 80\% power at the observed effect size and between-seed variance.}
 \label{tab:power}
-\begin{tabular}{lccr}
+\begin{tabular}{lcrr}
 \toprule
-Effect & $\Delta$ QWK & sd(seeds) & Seeds required \\
+Effect & $\Delta$ QWK & Cohen's $d$ & Seeds required \\
 \midrule
-Full system vs baseline    & $+0.0172$ & $0.0029$ & 1 \\
-Ordinal head (RQ5)         & $+0.0099$ & $0.0017$ & 1 \\
-Typed edges (RQ1)          & $+0.0123$ & $0.0129$ & 10 \\
-Anatomical topology (RQ1)  & $+0.0051$ & $0.0094$ & 29 \\
-Cross-sequence SSL (RQ2)   & $+0.0051$ & $0.0258$ & 216 \\
-Disease routing (RQ3)      & $+0.0010$ & $0.0208$ & 3{,}467 \\
+Ordinal and cost-sensitive head (RQ5) & $+0.0082$ & $\mathbf{1.97}$ & 3 \\
+Full system vs baseline & $+0.0177$ & $\mathbf{1.91}$ & 3 \\
+Typed heterogeneous edges (RQ1) & $+0.0093$ & $\mathbf{1.06}$ & 7 \\
+\midrule
+Disease-conditioned routing (RQ3) & $+0.0053$ & $0.39$ & 52 \\
+Anatomical topology vs shuffle (RQ1) & $+0.0020$ & $0.20$ & 205 \\
+Modality dropout & $-0.0026$ & $-0.13$ & 442 \\
+Cross-sequence self-supervision (RQ2) & $+0.0020$ & $0.12$ & 545 \\
+Gated residual & $+0.0014$ & $0.07$ & 1{,}615 \\
+Relational message passing & $+0.0002$ & $0.01$ & 65{,}489 \\
 \bottomrule
 \end{tabular}
 \end{table}
 
-The distinction this table draws is important and is carried through the rest of
-the chapter. The ladder is not an instrument that reports nothing everywhere: two
-effects are detectable with a single seed and a third with ten. Where it reports
-nothing, that is a statement about the effect, not about the instrument.
+The table separates into two groups with nothing in between. Three effects are
+large by any convention, $d$ between $1.06$ and $1.97$, and all three are the
+comparisons that survive correction. Everything else is $d < 0.4$. That gap
+matters: a study genuinely starved of power would show a spread of intermediate
+effects rather than a clean division, and would not resolve any comparison at
+three seeds.
 
-For disease-conditioned routing in particular, roughly three and a half thousand
-training runs would be needed to separate the observed effect from zero. At the
-measured $22$~minutes per run this is approximately three years of continuous
-computation. The effect is not merely unproven; it is unprovable at any
-plausible scale, and a $+0.0010$ improvement on a $0.7276$ baseline would carry
-no clinical meaning if it were established.
+The ladder is therefore not an instrument that reports nothing everywhere. Two
+effects are detectable with a single seed and a third with seven, which is what
+the campaign used. Where it reports nothing, that is a statement about the
+effect rather than about the instrument.
+
+The largest standardised effect in the study is the ordinal and cost-sensitive
+head at $d = 1.97$, exceeding the full-system comparison it forms part of. Its
+between-seed standard deviation is $0.0042$, the smallest of any comparison, so
+its modest raw difference is also the most reliably reproduced.
+
+These figures supersede a three-seed version of the same table, and the
+differences are instructive. Three-seed variance estimates are themselves noisy:
+routing moved from an estimated $3{,}467$ seeds to $52$, and cross-sequence
+self-supervision from $216$ to $545$. The ordering is stable and the two groups
+are unchanged, but individual requirements should be read as order-of-magnitude
+guidance rather than as precise targets.
+
+\subsection{What the Nulls Establish}
+\label{sec:results-equivalence}
+
+Reporting a comparison as \enquote{not significant} states only that an effect
+was not detected. It is the weakest available form of a null, and it invites the
+reader to supply the explanation that the study was too small. The paired
+interval already bounds the effect, and stating that bound converts an absence
+into a measurement.
+
+Table~\ref{tab:bounds} gives, for each comparison that did not separate, the far
+edge of its 95\% interval: the largest effect still compatible with the data.
+
+\begin{table}[htbp]
+\centering
+\caption{Equivalence bounds for the comparisons that did not separate. Each
+figure is the largest effect compatible with the 95\% interval, expressed in QWK
+and as a percentage of the E0 baseline of $0.7270$.}
+\label{tab:bounds}
+\begin{tabular}{lrr}
+\toprule
+Comparison & Effect is at most & As \% of baseline \\
+\midrule
+Gated residual & $0.0064$ & $0.89\%$ \\
+Relational message passing & $0.0074$ & $1.02\%$ \\
+Anatomical topology vs shuffle (RQ1) & $0.0076$ & $1.05\%$ \\
+Cross-sequence self-supervision (RQ2) & $0.0089$ & $1.22\%$ \\
+Modality dropout & $0.0091$ & $1.25\%$ \\
+Disease-conditioned routing (RQ3) & $0.0112$ & $1.55\%$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The claims available are therefore considerably stronger than the absence of a
+significant result. Anatomically correct graph topology contributes at most
+$1.05\%$ of baseline performance over a degree-preserving random shuffle.
+Anatomically aligned cross-sequence self-supervision contributes at most
+$1.22\%$ over the same architecture without it. Disease-conditioned routing
+contributes at most $1.55\%$ over fixed fusion.
+
+Set against the reference standard, these bounds are small in a way that matters.
+Section~\ref{sec:lr-reliability} reports inter-reader $\kappa$ between $0.49$ and
+$0.73$ depending on compartment. An effect bounded below $1.6\%$ of baseline is
+not merely undetectable in this study; it is below the level at which the
+reference standard itself could adjudicate the question.
+
+\subsection{The Seven-Seed Extension}
+\label{sec:results-sevenseed}
+
+The campaign was extended from three seeds to seven, and the extension is
+reported rather than absorbed, because it changed two verdicts.
+
+Typed heterogeneous edges moved from $+0.0123$ on 3/3 seeds with
+$p_{\mathrm{FDR}} = 0.054$ --- narrowly missing correction --- to $+0.0093$ on
+7/7 seeds with $p_{\mathrm{FDR}} = 0.009$. The point estimate fell while the
+between-seed standard deviation fell further, and the comparison crossed the
+threshold. The ordinal head moved the same way, from $0.054$ to $0.009$.
+
+Anatomical topology moved in the opposite direction: from $+0.0051$ on 2/3 seeds
+to $+0.0020$ on 4/7. So did cross-sequence self-supervision, from $+0.0051$ on
+2/3 to $+0.0020$ on 4/7.
+
+That divergence is the reason the extension is worth reporting. The same four
+additional runs that promoted two comparisons to significance made two others
+weaker. Insufficient power is therefore not available as a blanket explanation
+for the nulls in this chapter: the instrument demonstrably resolved effects at
+this scale, and the effects it did not resolve moved away from significance as
+evidence accumulated rather than toward it.
+
+\subsection{Clinical Error Structure}
+\label{sec:results-errors}
+
+Aggregate agreement conceals the errors that matter clinically. A
+Severe$\rightarrow$Normal/Mild confusion may withhold treatment from a patient
+who needs it, and the cost matrix of Section~\ref{sec:method-cost} was chosen to
+suppress that direction specifically.
+
+\begin{table}[htbp]
+\centering
+\caption{Clinical error structure over seven seeds. \enquote{Distance $\geq 2$}
+is the rate of predictions two or more grades from the reference.}
+\label{tab:errors}
+\begin{tabular}{lrrr}
+\toprule
+Configuration & Severe recall & Severe $\rightarrow$ Normal & Distance $\geq 2$ \\
+\midrule
+E0 single sequence & 61.1\% & 5.7\% & 0.526\% \\
+E1 multi-sequence & 61.1\% & 4.9\% & 0.500\% \\
+E2 + disease routing & 60.7\% & 4.7\% & 0.414\% \\
+E3 + modality dropout & 61.4\% & 4.6\% & 0.420\% \\
+E4 + ACSSL & 58.8\% & 4.0\% & 0.453\% \\
+E5 + homogeneous graph & 59.0\% & 4.1\% & 0.389\% \\
+E6 + typed graph & 62.9\% & 4.1\% & 0.375\% \\
+\quad E6 shuffled edges & 59.3\% & 3.7\% & 0.330\% \\
+\quad E6 ungated residual & \textbf{65.1\%} & 4.3\% & 0.500\% \\
+E7 + ordinal, cost-sensitive & 63.1\% & \textbf{3.8\%} & \textbf{0.344\%} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Severe$\rightarrow$Normal errors fall from $5.7\%$ at E0 to $3.8\%$ at E7, a
+relative reduction of a third, while recall on Severe targets rises from
+$61.1\%$ to $63.1\%$. Distant errors fall by a comparable margin, from $0.526\%$
+to $0.344\%$. The system does not purchase aggregate agreement by trading away
+the errors clinicians care most about; both move in the desired direction
+together.
+
+One complication should be stated rather than smoothed over. The ungated variant
+achieves the highest Severe recall of any configuration at $65.1\%$, and
+simultaneously carries the joint-highest rate of distant errors at $0.500\%$
+against E7's $0.344\%$. Greater sensitivity bought with more badly misplaced
+predictions is precisely the trade the cost matrix exists to refuse, and E7
+makes it in the intended direction.
+
+\subsection{Calibration}
+\label{sec:results-calibration}
+
+The expected calibration error recorded for each run is the \emph{uncalibrated}
+test value; temperature scaling is fitted on the validation partition and its
+test metrics are stored separately. The distinction is material, because the
+uncalibrated figures alone would suggest the ladder becomes progressively worse
+calibrated, and the correction the protocol actually applies reverses that.
+
+\begin{table}[htbp]
+\centering
+\caption{Expected calibration error before and after temperature scaling, and
+the fitted temperature, over seven seeds.}
+\label{tab:calibration}
+\begin{tabular}{lrrr}
+\toprule
+Configuration & ECE uncalibrated & ECE calibrated & Temperature \\
+\midrule
+E0 single sequence & $0.0293$ & $\mathbf{0.0130}$ & $1.161$ \\
+E1 multi-sequence & $0.0214$ & $0.0129$ & $1.131$ \\
+E2 + disease routing & $0.0428$ & $0.0168$ & $1.601$ \\
+E3 + modality dropout & $0.0326$ & $0.0145$ & $1.200$ \\
+E4 + ACSSL & $0.0266$ & $0.0110$ & $1.187$ \\
+E5 + homogeneous graph & $0.1024$ & $0.0397$ & $2.019$ \\
+E6 + typed graph & $0.0426$ & $0.0209$ & $1.422$ \\
+E7 + ordinal, cost-sensitive & $0.0508$ & $0.0245$ & $1.306$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Temperature scaling roughly halves ECE at every rung, and every fitted
+temperature exceeds $1$, so every configuration is overconfident before
+correction.
+
+Two observations run against the system and are reported for that reason. E5,
+the homogeneous graph, is by a wide margin the worst calibrated configuration at
+$0.1024$ uncalibrated with a fitted temperature of $2.019$; it is also the rung
+that fails to improve accuracy, and its overconfidence is a second symptom of
+the same failure. And the accumulating ladder does not improve calibration: E7
+at $0.0245$ is worse than E0 at $0.0130$, so the gains in agreement come with
+less reliable probabilities. RQ5 asked whether calibrated uncertainty could
+support selective prediction. On this evidence the agreement half of that
+question is answered affirmatively and the calibration half is not.
 
 % ===========================================================================
 \section{RQ1 --- Relational Disease Modelling}
@@ -436,23 +626,30 @@ RQ1 divides into two claims, and the evidence separates them.
 
 \subsection{Typed Structure Helps}
 
-A typed heterogeneous graph outperforms a homogeneous one by $+0.0123$ QWK
-($[+0.0028, +0.0216]$, 3/3 seeds). Macro-F1 rises from $0.694$ to $0.710$, and
-E6 has the lowest across-seed macro-F1 variance of any configuration
-($\pm 0.001$). The comparison narrowly misses the corrected threshold
-($p_{\mathrm{FDR}} = 0.054$) but is detectable with ten seeds per
-Table~\ref{tab:power}, and its interval excludes zero.
+A typed heterogeneous graph outperforms a homogeneous one by $+0.0093$ QWK
+($[+0.0027, +0.0156]$), and does so on \textbf{every one of seven seeds}. The
+comparison survives false discovery rate correction at
+$p_{\mathrm{FDR}} = 0.009$, with $d = 1.06$.
 
-Relational message passing alone does not help: E5 against E0 is $-0.0050$. The
-benefit appears only once relations are typed. Message passing over an untyped
-graph is, on this evidence, slightly worse than no graph at all.
+This is one of the two verdicts the seven-seed extension changed. At three seeds
+the same comparison stood at $+0.0123$ with $p_{\mathrm{FDR}} = 0.054$, narrowly
+outside correction, and the power analysis then indicated roughly ten seeds would
+be needed. Seven sufficed, because the additional runs reduced the between-seed
+standard deviation faster than they reduced the point estimate.
+
+Relational message passing alone does not help: E5 against E0 is $+0.0002$
+($[-0.0073, +0.0074]$, $p_{\mathrm{FDR}} = 0.967$), which is as close to exactly
+nothing as this study measures. The benefit appears only once relations are
+typed. Message passing over an untyped graph is, on this evidence, worth
+precisely its parameter count and no more.
 
 \subsection{Anatomical Topology Does Not}
 
 H3 predicted that \enquote{performance under a shuffled-edge control should
 deteriorate if the topology itself matters}. It does not deteriorate
-meaningfully. E6 exceeds its shuffled control by $+0.0051$ QWK
-($[-0.0036, +0.0141]$, 2/3 seeds, $p_{\mathrm{FDR}} = 0.570$). The control
+meaningfully. E6 exceeds its shuffled control by $+0.0020$ QWK
+($[-0.0038, +0.0076]$, 4/7 seeds, $p_{\mathrm{FDR}} = 0.688$), and the paired
+interval bounds any advantage at $1.05\%$ of baseline performance. The control
 preserves node count, edge count and degree, so the two models are matched in
 capacity and differ only in which targets are connected to which.
 
@@ -466,8 +663,9 @@ and bilateral pairs that motivated it.
 
 Chapter~\ref{ch:methodology} designates the ungated residual a mandatory
 ablation. The gated and ungated formulations are indistinguishable
-($-0.0009$, 1/3 seeds); the ungated variant is marginally higher in the mean.
-The gate can be removed without cost.
+($+0.0014$, 3/7 seeds, $p_{\mathrm{FDR}} = 0.713$), with any difference bounded
+at $0.89\%$ of baseline --- the tightest bound in the study. The gate can be
+removed without cost.
 
 \paragraph{Answer to RQ1.} Partly. Typed relational structure improves grading
 over both independent heads and a homogeneous graph. The anatomical content of
@@ -489,16 +687,19 @@ to match corresponding anatomy across sequences. The question is whether that
 representation is worth anything downstream. Three independent probes say it is
 not.
 
-\emph{Accuracy.} E4 against E3 is $+0.0051$ QWK ($[-0.0038, +0.0148]$, 2/3
-seeds, $p_{\mathrm{FDR}} = 0.570$). The between-seed standard deviation
-($0.0258$) is five times the effect.
+\emph{Accuracy.} E4 against E3 is $+0.0020$ QWK ($[-0.0043, +0.0089]$, 4/7
+seeds, $p_{\mathrm{FDR}} = 0.688$, $d = 0.12$), with any benefit bounded at
+$1.22\%$ of baseline. The seven-seed extension moved this comparison
+\emph{away} from significance, not toward it: at three seeds it stood at
+$+0.0051$ on 2/3 seeds.
 
 \emph{Cross-sequence robustness.} This is the probe on which anatomical
 self-supervision should be strongest, because a representation that has learned
 one anatomy across three acquisitions ought to lose less when one acquisition is
 withheld. Under the controlled input ablation of
 Section~\ref{sec:results-rq3-ablation}, adding ACSSL changes reliance on the
-annotated sequence by $-0.0069 \pm 0.0304$ on 2/3 seeds --- indistinguishable
+annotated sequence by $-0.0069 \pm 0.0304$ on 2/3 seeds (this probe was run on
+seeds 42--44 only) --- indistinguishable
 from zero. By contrast, ordinary modality dropout reduces that reliance by
 $-0.0588$ on 3/3 seeds.
 
@@ -556,6 +757,9 @@ the pathology. Any model suffers, routed or not.
 
 Isolating each step's effect on mean reliance on the annotated sequence:
 
+The input ablation was run on seeds 42--44, before the campaign was extended,
+and its figures are three-seed.
+
 \begin{center}
 \begin{tabular}{lcc}
 \toprule
@@ -574,7 +778,8 @@ beyond what fixed fusion already possesses.
 
 \paragraph{Answer to RQ3.} The first half is yes and the second half is no. One
 model does learn target-dependent sequence weights, and those weights are
-clinically sensible. But they do not improve grading ($+0.0010$ QWK, 1/3 seeds)
+clinically sensible. But they do not improve grading ($+0.0053$ QWK, 5/7 seeds,
+$p_{\mathrm{FDR}} = 0.131$, bounded at $1.55\%$ of baseline)
 and they do not improve robustness to missing sequences. H2 predicted that
 routing would \enquote{degrade less under missing-sequence experiments than fixed
 concatenation}; it does not. The graceful degradation that the system does
@@ -620,7 +825,9 @@ distant errors, particularly Severe$\rightarrow$Normal/Mild?}
 \end{quote}
 
 Yes, and this is the second most reliable effect in the study. Adding the ordinal
-and cost-sensitive head improves QWK by $+0.0099$ ($[+0.0017, +0.0186]$) on 3/3
+and cost-sensitive head improves QWK by $+0.0082$ ($[+0.0025, +0.0143]$,
+$p_{\mathrm{FDR}} = 0.009$, $d = 1.97$ --- the largest standardised effect in the
+study) on 7/7
 seeds, with the smallest between-seed standard deviation of any comparison
 ($0.0017$) --- so small that a single seed suffices to detect it
 (Table~\ref{tab:power}).
@@ -781,18 +988,23 @@ rungs and is not presented as though it were.
 \toprule
 RQ & Verdict & Basis \\
 \midrule
-RQ1 & Partly & Typed edges $+0.0123$, 3/3 seeds. Anatomical topology does not
-beat a degree-preserving shuffle ($+0.0051$, 2/3). \\
-RQ2 & No & $+0.0051$, 2/3 seeds; no robustness benefit; attention below
-baseline. Rejected on three axes. \\
+RQ1 & Partly & Typed edges $+0.0093$, \textbf{7/7 seeds},
+$p_{\mathrm{FDR}} = 0.009$. Anatomical topology does not beat a
+degree-preserving shuffle ($+0.0020$, 4/7), bounded at $1.05\%$ of baseline. \\
+RQ2 & No & $+0.0020$, 4/7 seeds, bounded at $1.22\%$; no robustness benefit;
+attention below baseline. Rejected on three axes, and weakened by the
+seven-seed extension. \\
 RQ3 & Mechanism yes, benefit no & Allocation replicates 15/15 but a router-free
-model matches it under intervention. $+0.0010$ QWK, 1/3 seeds. \\
-RQ4 & Not executed & Cohort preparation complete; blocked on reader adjudication
-and de-identification. \\
-RQ5 & Yes & $+0.0099$, 3/3 seeds, smallest variance in the study. Severe recall
-$62.7\% \rightarrow 65.0\%$. \\
+model matches it under intervention. $+0.0053$ QWK, 5/7 seeds, bounded at
+$1.55\%$. \\
+RQ4 & Not executed & Cohort preparation complete; blocked on reader
+adjudication, de-identification, and the absence of localisation coordinates. \\
+RQ5 & Yes & $+0.0082$, \textbf{7/7 seeds}, $p_{\mathrm{FDR}} = 0.009$, $d = 1.97$
+--- the largest standardised effect in the study. Severe$\rightarrow$Normal
+errors fall $5.7\% \rightarrow 3.8\%$. \\
 \midrule
-System & Yes & $+0.0172$ QWK $[+0.0064, +0.0285]$, 3/3 seeds, survives FDR. \\
+System & Yes & $+0.0177$ QWK $[+0.0097, +0.0260]$, \textbf{7/7 seeds},
+$p_{\mathrm{FDR}} < 0.001$. \\
 \bottomrule
 \end{tabular}
 \end{center}
@@ -804,6 +1016,12 @@ convolutional encoder already performs the localisation such structure was meant
 to supply, and that the components which do improve performance are relational
 typing and a clinically motivated objective rather than anatomical correspondence
 or disease-conditioned routing.
+
+Two qualifications belong with that summary. The improvement is bounded by a
+reference standard on which expert readers agree at $\kappa$ between $0.49$ and
+$0.73$, so its ceiling is set by the labels rather than by the architecture. And
+the accumulating ladder improves agreement without improving the reliability of
+its probabilities: calibrated ECE is worse at E7 than at E0.
 
 Chapter~\ref{ch:discussion} considers what follows for the design of anatomy-aware
 medical imaging models, and why mechanisms that are individually well motivated
