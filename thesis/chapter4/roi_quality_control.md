@@ -39,27 +39,52 @@ select the slice carrying that level's own axial annotations? Two independent
 human annotations are compared through the transform; nothing can pass by
 algebraic identity.
 
-144 sagittal canal annotations projected into axial, over 30 sampled test
-studies:
+Run over the **entire cohort** -- 9,542 projections across 1,973 of the 1,974
+studies -- and separately per partition, because ACSSL pretrained on the dev
+partition and that is the correspondence Contribution I actually depended on.
 
-| Slice offset from that level's own axial annotation | Count | Share |
-| :-- | --: | --: |
-| exactly 0 slices | 101 | 70% |
-| exactly 1 slice | 31 | 22% |
-| exactly 2 slices | 1 | 1% |
-| more than 2 | 11 | 8% |
+| Partition | Projections | 0 slices | 1 slice | 2 slices | >2 | Within 1 |
+| :-- | --: | --: | --: | --: | --: | --: |
+| test (297 studies) | 1,429 | 69% | 24% | 2% | 6% | **93%** |
+| dev (1,676 studies) | 8,113 | 70% | 24% | 2% | 5% | **94%** |
+| **all** | **9,542** | 70% | 24% | 2% | 5% | **93.6%** |
 
-Median offset **0.0 mm**; 90th percentile **4.0 mm**, i.e. one slice thickness.
-**92% land within one slice of an independently annotated target at the same
-level** (95% on the 8-study rendering subset).
+Median offset **0.0 mm** in every partition; 90th percentile **4.0 mm**, i.e.
+one slice thickness. An initial 30-study sample gave 92%, so the sample was
+representative.
 
 **The DICOM correspondence behaves as Chapter 3 assumes.** RQ2's rejection is
 therefore interpretable: ACSSL was given a fair test and still conferred no
 measurable benefit. Before this check, that could not be asserted.
 
-The 8% beyond two slices are candidates for the "correspondence failure caused
-by unusual axial angulation" category Chapter 3 asks to be recorded, and are
-listed in `geometry_crosscheck.csv` for a reader.
+### The failures are not systematic
+
+Whether the residual 5-6% matters depends entirely on whether it is spread thin
+or concentrated, and on whether it is level-dependent. Both were checked.
+
+| Studies by share of failing projections | Count | Share |
+| :-- | --: | --: |
+| no projection fails | 1,734 | 88% |
+| some fail | 155 | 8% |
+| most fail | 75 | 4% |
+| every projection fails | **9** | 0.5% |
+
+**88% of studies are clean**, and the nine studies that fail completely account
+for only 8% of all outliers. Failure is therefore spread thin rather than
+concentrated in a broken subpopulation.
+
+More telling, outliers are **evenly distributed across levels** -- L1-L2 19.7%,
+L2-L3 20.6%, L3-L4 19.9%, L4-L5 19.1%, L5-S1 20.8%, against an overall
+distribution of 18.8-20.6%. A systematically wrong transform would not do that:
+it would fail worst at L5-S1, where segmental angulation is greatest. A flat
+level profile is what annotation noise and genuine acquisition oddities look
+like, not what a broken affine looks like.
+
+The nine complete failures, with median offsets of 16-67 mm, are the
+"correspondence failure caused by unusual axial angulation" category Chapter 3
+asks to be recorded. They are listed in
+`data/reports/roi_qc/geometry_exclusion_candidates.csv` for reader adjudication
+and form the beginning of the promised inclusion/exclusion table.
 
 ## Result 2 -- left/right orientation is correct, quantitatively
 

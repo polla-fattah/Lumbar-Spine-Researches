@@ -199,6 +199,12 @@ def main():
     ap.add_argument("--outdir", default=None)
     ap.add_argument("--validate_only", action="store_true",
                     help="run the cross-annotation geometry check, no figures")
+    ap.add_argument("--partition", default="test",
+                    choices=["test", "train", "val", "dev", "all"],
+                    help="'dev' is train+val, the partition ACSSL pretrained on "
+                         "and therefore the one whose correspondence Contribution "
+                         "I actually depended on. 'test' is what the review "
+                         "sheets should show.")
     args = ap.parse_args()
 
     import pandas as pd
@@ -210,8 +216,17 @@ def main():
                                    "rsna_roi_v2_index.csv"))
     split = pd.read_csv(os.path.join(PROJECT_ROOT, "implementation", "splits",
                                      "rsna_patient_split.csv"))
-    test_ids = set(split.loc[split.partition == "test", "study_id"].astype(int))
-    idx = idx[idx.study_id.isin(test_ids)]
+    if args.partition == "all":
+        keep = set(split.study_id.astype(int))
+    elif args.partition == "dev":
+        keep = set(split.loc[split.partition.isin(["train", "val"]),
+                             "study_id"].astype(int))
+    else:
+        keep = set(split.loc[split.partition == args.partition,
+                             "study_id"].astype(int))
+    idx = idx[idx.study_id.isin(keep)]
+    print("  partition '{}': {} studies available".format(
+        args.partition, idx.study_id.nunique()))
 
     rng = np.random.default_rng(args.seed)
     studies = sorted(idx.study_id.unique())
@@ -298,9 +313,9 @@ def main():
         else:
             print("           [!] correspondence is NOT reliable; RQ2's null")
             print("           result cannot be interpreted until this is resolved.")
-        v.to_csv(os.path.join(outdir, "geometry_crosscheck.csv"), index=False)
+        v.to_csv(os.path.join(outdir, "geometry_crosscheck_{}.csv".format(args.partition)), index=False)
         print("  {}".format(os.path.relpath(
-            os.path.join(outdir, "geometry_crosscheck.csv"), PROJECT_ROOT)))
+            os.path.join(outdir, "geometry_crosscheck_{}.csv".format(args.partition)), PROJECT_ROOT)))
     else:
         print("  [FAIL] no comparable annotation pairs found.")
 
