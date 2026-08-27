@@ -1,0 +1,415 @@
+% ===========================================================================
+%  Chapter 5 -- Discussion and Conclusions
+%  Disease-Adaptive Heterogeneous Graph Learning with Anatomically Aligned
+%  Multi-Sequence MRI Representations
+%
+%  DRAFT 1 -- written 2026-08-27 against the completed three-seed campaign, the
+%  controlled input ablation, the attribution analysis and the ROI quality
+%  control. Figures tagged [3-SEED] refresh when the seven-seed campaign lands;
+%  the argument of this chapter does not depend on them, because every
+%  comparison it leans on either holds on all seeds or is reported as null.
+%
+%  Compiles standalone:   pdflatex chapter5 ; biber chapter5 ; pdflatex chapter5
+%  To fold into the thesis, \input{chapter5}; docmute skips this preamble.
+% ===========================================================================
+
+\documentclass[12pt,a4paper]{report}
+
+\usepackage{lmodern}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage[english]{babel}
+\usepackage{csquotes}
+\usepackage{microtype}
+\usepackage[margin=2.5cm]{geometry}
+\usepackage{setspace}
+\onehalfspacing
+\usepackage{amsmath,amssymb}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{graphicx}
+\usepackage[hidelinks]{hyperref}
+
+\begin{document}
+
+\chapter{Discussion and Conclusions}
+\label{ch:discussion}
+
+% ===========================================================================
+\section{What This Study Found}
+\label{sec:disc-summary}
+
+The thesis asked whether explicit anatomical structure, imposed on a
+multi-sequence grading model, improves automated classification of lumbar
+degenerative disease. The answer is that it largely does not, and the more
+useful part of the answer is \emph{why}.
+
+The complete system improves on a single-sequence baseline by $+0.0172$ QWK
+(95\% CI $[+0.0064, +0.0285]$), reproducibly across seeds and after correction
+for multiple comparisons. But the components credited with that improvement in
+the original design are not the components responsible for it. Anatomically
+aligned self-supervision produced no measurable benefit on any of three axes.
+Disease-conditioned routing learned the clinically expected sequence weights
+and produced no benefit from having learned them. Relational typing helped;
+the anatomical identity of the relations did not.
+
+Two of the three proposed mechanisms are therefore rejected, one is
+half-supported in a narrower form than proposed, and the largest single
+contributor to final performance is an objective function that
+Chapter~\ref{ch:introduction} explicitly declined to claim as original.
+
+This chapter argues that these results are informative rather than merely
+disappointing, offers two mechanisms for them, situates them against the
+literature of Chapter~\ref{ch:litreview}, and states plainly what the study
+cannot conclude.
+
+% ===========================================================================
+\section{Why the Anatomical Priors Did Not Pay}
+\label{sec:disc-why}
+
+A null result without a mechanism invites the reader to supply their own, and
+the most available one---that the implementation was faulty---is the least
+interesting and the most damaging. Two mechanisms are supported by evidence
+gathered specifically to test them.
+
+\subsection{The Encoder Already Localises}
+\label{sec:disc-localise}
+
+The structural priors of RQ1--RQ3 share a premise: that anatomical context is
+needed to find and interpret the graded structure, and that supplying it
+explicitly will help. The attribution analysis of
+Section~\ref{sec:results-attribution} tests that premise directly and finds it
+largely unmet.
+
+Every trained configuration concentrates between $2.3$ and $2.9$ times the
+chance share of its attention on the annotated lesion. Decisively, E0---a plain
+single-sequence convolutional network with no routing, no self-supervision and
+no graph---already reaches $0.490$ against an untrained floor of $0.204$ and a
+uniform expectation of $0.197$. The localisation the priors were designed to
+supply is largely accomplished before any of them is added.
+
+This is consistent with Section~\ref{sec:lr-localize-first}, which
+assembles the evidence that localisation precedes classification. The present
+result sharpens that literature rather than contradicting it: localisation does
+precede classification, and on a benchmark that supplies the localisation as an
+annotated coordinate, a convolutional encoder given a tight physical crop
+performs the residual localisation unaided. Structure imposed above that
+encoder is competing for a job already done.
+
+Section~\ref{sec:intro-conceptual} anticipated this possibility in advance,
+stating that \enquote{if local evidence alone is sufficient, more complex
+mechanisms should not be retained}. The finding is that local evidence is very
+nearly sufficient.
+
+\subsection{The Reference Standard Constrains the Headroom}
+\label{sec:disc-ceiling}
+
+Section~\ref{sec:lr-label-ceiling} argues that reader reliability is a hard
+constraint on interpretation rather than a peripheral caveat. Lurie et al.\
+report inter-reader $\kappa$ of $0.73$ for central canal stenosis, $0.58$ for
+foraminal stenosis and $0.49$ for subarticular stenosis
+\cite{lurie2008reliability}. A model trained on one reader's labels cannot be
+expected to exceed the agreement those readers achieve with each other.
+
+The comparison must be made carefully. Quadratic weighted kappa credits
+near-misses that unweighted $\kappa$ penalises fully, so the QWK values reported
+here are not directly comparable with Lurie's figures, and the two are measured
+on different cohorts under different protocols. The point is not that this
+system outperforms radiologists; nothing in this study supports that claim.
+
+The point is about headroom. If the achievable band is bounded by a reference
+standard on which experts disagree at $\kappa \approx 0.5$ for the lateral
+compartments, then the margin available to any architectural refinement is
+narrow, and effects of the size proposed here---$0.005$ QWK---sit far inside the
+noise of the labels themselves. Chapter~\ref{ch:litreview} warns that
+\enquote{a reported accuracy approaching unity on such a target should prompt
+scrutiny of the evaluation protocol rather than admiration}; the corollary is
+that failure to improve on such a target by half a percentage point warrants
+less alarm than it first appears to.
+
+\subsection{A Test of That Explanation, and Its Limits}
+\label{sec:disc-ordering}
+
+Section~\ref{sec:lr-reliability} makes a checkable prediction: agreement is
+\enquote{systematically worse for the lateral compartments than for the central
+canal---the same ordering that later appears in automated model performance}.
+If model difficulty tracks reader difficulty, the label-ceiling explanation
+gains support.
+
+\begin{table}[htbp]
+\centering
+\caption{Per-condition performance against reported inter-reader agreement.
+Reader $\kappa$ from Lurie et al.; model QWK averaged over three seeds. The two
+metrics are not directly comparable in absolute terms; only the ordering is
+being examined.}
+\label{tab:disc-ordering}
+\begin{tabular}{lcccc}
+\toprule
+Condition & Reader $\kappa$ & E0 & E2 & E4 \\
+\midrule
+Central canal        & 0.73 & 0.799 & 0.786 & 0.805 \\
+Left foraminal       & 0.58 & 0.659 & 0.623 & 0.644 \\
+Right foraminal      & 0.58 & 0.685 & 0.672 & 0.671 \\
+Left subarticular    & 0.49 & 0.758 & 0.749 & 0.767 \\
+Right subarticular   & 0.49 & 0.712 & 0.731 & 0.736 \\
+\midrule
+Central $-$ lateral mean & $+0.20$ & $+0.095$ & $+0.092$ & $+0.100$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The coarse prediction holds. Central canal stenosis is the easiest condition for
+the model, as it is for readers, and the central-versus-lateral gap runs in the
+same direction for both, though smaller in magnitude for the model.
+
+The fine ordering does not hold, and the discrepancy is informative. Readers find
+\emph{subarticular} stenosis hardest at $\kappa = 0.49$; the model finds
+\emph{foraminal} stenosis hardest, while subarticular is its second-best
+condition. Model difficulty is therefore not a simple reflection of label noise.
+
+A representational explanation fits the discrepancy. Foraminal targets are
+graded on sagittal T1, where left--right is a \emph{through-plane} axis: the two
+sides are different slices rather than different in-plane positions. Subarticular
+targets are graded on axial T2, where left--right is in-plane and the lateral
+recesses are directly visible. The 2.5D representation used here---three adjacent
+slices treated as channels---captures in-plane structure well and through-plane
+structure poorly, which is exactly the axis on which foraminal grading depends.
+If correct, this locates the residual difficulty in the input representation
+rather than in the absence of anatomical priors, and it predicts that a volumetric
+or cross-plane-aware representation would help foraminal grading specifically.
+
+That prediction is not tested here. It is offered as the most economical account
+of a dissociation the study did not set out to produce, and it is the clearest
+direction for subsequent work.
+
+Two cautions apply to this section. Only five conditions exist, two pairs of
+which share a reported $\kappa$, so rank correlation between the two orderings
+has essentially no statistical power and none is claimed. And Lurie's cohort is
+not LumbarDISC; the comparison is indicative rather than a matched analysis.
+
+% ===========================================================================
+\section{The Components Individually}
+\label{sec:disc-components}
+
+\subsection{Anatomical Self-Supervision (RQ2)}
+
+The pretext task was learnable and was learned: validation InfoNCE reached
+$1.5162$ against a chance value of $3.4657$, so the encoders demonstrably
+learned to match corresponding anatomy across sequences. The representation
+that resulted conferred no measurable downstream benefit on accuracy, on
+robustness to a withheld sequence, or on where the model attends.
+
+The natural objection is that the correspondence itself was wrong---that the
+pretext task matched misaligned patches and the null is an artefact. That
+objection is answered. Section~\ref{sec:results-roiqc} verifies the DICOM
+correspondence externally, comparing two independent human annotations through
+the transform across 9{,}542 projections, of which 94\% on the pretraining
+partition land within one slice of an independently annotated target at the same
+level. ACSSL was given correctly aligned data and still conferred nothing.
+
+The result is best read alongside Section~\ref{sec:disc-localise}. Cross-sequence
+self-supervision is designed to teach an encoder that one anatomy appears under
+several acquisitions. If the supervised task already drives the encoder to
+localise that anatomy, the pretext task is teaching something the downstream
+objective supplies for free.
+
+\subsection{Disease-Conditioned Routing (RQ3)}
+
+The routing result is the study's clearest illustration of why a mechanism check
+requires a control. The router reproduces the clinically expected allocation in
+all fifteen runs in which a gate is present, and withholding the
+high-weight sequence for a condition is severely damaging---between $0.06$ and
+$0.35$ QWK, an order of magnitude larger than any difference in the ablation
+ladder. Presented alone, that is a compelling causal story.
+
+It does not survive its control. E1, which has no router at all, exhibits the
+same dependence with drops as large or larger. The pattern belongs to the
+dataset: each condition is annotated on one particular sequence, so withholding
+that sequence removes the only crop centred on the pathology. Any model suffers,
+routed or not. Isolating the router's own contribution to sequence reliance
+gives $-0.0010 \pm 0.0382$ across seeds, indistinguishable from zero.
+
+Chapter~\ref{ch:methodology} anticipated precisely this trap, stating that
+\enquote{the gate weights are model allocations, not causal estimates of
+sequence importance}, and requiring the intervention that produced the control.
+The methodology's caution was correct and load-bearing.
+
+What robustness the system does exhibit under missing sequences comes from
+modality dropout, which reduces reliance on the annotated sequence by
+$-0.0588$ on every seed. That is a standard regulariser, disclaimed in
+Section~\ref{sec:intro-contrib-supporting} as not original, and it outperforms
+the mechanism designed for the purpose.
+
+\subsection{Relational Structure (RQ1)}
+
+RQ1 divides, and the division is the more interesting result. Typed
+heterogeneous edges improve on a homogeneous graph by $+0.0123$ QWK on every
+seed. Anatomically correct topology does not improve on a degree-preserving
+random shuffle: $+0.0051$, two seeds of three, well inside the corrected
+threshold. The control preserves node count, edge count and degree, so the two
+models are matched in capacity and differ only in \emph{which} targets are
+connected to \emph{which}.
+
+The conclusion is therefore narrower and sharper than H3 proposed. What the
+graph supplies is a structured parameterisation of interaction between
+targets---additional capacity, organised by relation type---rather than the
+specific adjacency of levels, compartments and bilateral pairs that motivated
+it. Relational typing carries information; anatomical adjacency does not.
+
+Section~\ref{sec:lr-graphs} notes that relational and graph-based modelling of
+lumbar targets remains sparsely explored. The present result suggests that where
+it is explored, the shuffled-topology control should be mandatory, because a
+typed graph will outperform a homogeneous one for reasons that have nothing to
+do with the anatomy its edges are named after.
+
+\subsection{Ordinal and Cost-Sensitive Objectives (RQ5)}
+
+RQ5 is the study's most reliable positive result and it contradicts the strongest
+prior evidence. Section~\ref{sec:lr-ordinal-losses} reports that Niemeyer et al.\
+tested soft kappa loss, ordinal cross-entropy and regression losses against
+standard cross-entropy for Pfirrmann grading across 7{,}948 discs with extensive
+hyperparameter optimisation, and that none improved classification performance
+\cite{niemeyer2021a}.
+
+Here the ordinal and cost-sensitive head improves QWK by $+0.0099$ on every seed,
+with the smallest between-seed variance of any comparison in the study
+($0.0017$), and raises recall on Severe targets from $59.6\%$ to $65.0\%$
+relative to the same architecture under categorical cross-entropy.
+
+The difference from Niemeyer et al.\ is most plausibly the cost matrix rather
+than the ordinal structure. Their comparison isolated ordinality; the objective
+tested here additionally encodes clinical asymmetry, penalising
+Severe$\rightarrow$Normal errors more heavily than the reverse. The gain appears
+where that asymmetry acts. This reading is consistent with
+Section~\ref{sec:lr-error-asymmetry}, which argues that the clinical cost of an
+error depends on its direction while standard objectives optimise a symmetric
+one.
+
+It is worth stating plainly that the supporting component outperformed the novel
+ones, and that this is a result about where effort is best spent rather than an
+embarrassment.
+
+% ===========================================================================
+\section{Methodological Implications}
+\label{sec:disc-method}
+
+Three analyses in this study produced positive conclusions that their controls
+subsequently overturned. All three erred in the direction of the hypothesis
+under test. They are reported in Section~\ref{sec:results-threats} and are
+summarised here because the pattern is more instructive than any individual
+case.
+
+\emph{Per-seed confidence intervals understate variance.} A paired bootstrap
+that resamples patients with the trained model held fixed excludes training
+stochasticity. On this problem that omission is decisive: one comparison
+returned $+0.0270$ with $p = 0.000$ on one seed and $-0.0234$ with $p = 0.000$
+on another. Reported per seed, any claim in this study could have been supported
+by choosing a seed.
+
+\emph{A mechanism check without a control reads as proof.} The routing
+intervention produced 5/5 agreement with effects an order of magnitude above any
+ladder difference, and a router-free model reproduced it exactly.
+
+\emph{An instrument can penalise the hypothesis it is measuring.} The first
+attribution probe hooked the first encoder unconditionally, which for
+multi-sequence configurations reads the sagittal T1 encoder even on targets
+graded from axial T2. It reported that no configuration improved on the
+baseline; hooking the encoder that actually read each target reverses the sign.
+
+The general lesson is that in a study of this kind the controls are not
+supporting apparatus but the primary instrument. A degree-preserving shuffle, a
+router-free arm, an architecture-matched untrained floor and a label-shuffled
+pipeline control are what separate a mechanism from a coincidence, and each of
+them changed a conclusion here.
+
+% ===========================================================================
+\section{Limitations}
+\label{sec:disc-limits}
+
+\emph{Statistical power.} The study is underpowered for single-component effects
+of the size observed. Table~\ref{tab:power} converts each effect into the number
+of training seeds required to detect it: one for the full system and for the
+ordinal head, ten for typed edges, but 216 for cross-sequence self-supervision
+and 3{,}467 for routing. The last is roughly three years of continuous
+computation on the hardware used. Those two components are not merely unproven
+here; effects of the size observed are not establishable at any plausible scale,
+and would carry no clinical meaning if they were.
+
+\emph{External validity is untested.} RQ4 was not executed. The complete system
+under institutional transfer, specified as rung E8, was not run. Every result in
+this thesis is internal to LumbarDISC, and no claim of generalisation to another
+institution, scanner population or reference standard is made.
+
+\emph{Single benchmark, single reference standard.} LumbarDISC labels derive
+from a reading process whose inter-reader agreement is moderate for the lateral
+compartments. Conclusions about which mechanisms help are conditional on that
+reference standard.
+
+\emph{Attribution is not measured on the final system.} The Grad-CAM analysis
+covers E0--E4; the graph rungs route through a different batch layout. The
+mechanism offered in Section~\ref{sec:disc-localise} is therefore established on
+the encoder rather than on E7 in full.
+
+\emph{No clinical outcome is measured.} The study measures agreement with a
+retrospective reference standard. It does not measure diagnostic accuracy
+against a surgical or clinical ground truth, does not measure effect on
+reporting time, and does not support any claim of patient benefit.
+
+\emph{The quality-control reader pass is outstanding.} The ROI inspection
+sheets and the checklist of Section~\ref{sec:results-roiqc} have been generated;
+the reader adjudication that converts them into the promised
+inclusion/exclusion table has not been completed.
+
+% ===========================================================================
+\section{Implications and Future Work}
+\label{sec:disc-future}
+
+\emph{For anatomy-aware model design.} The most transferable finding is that a
+convolutional encoder given a tight, physically-defined crop already performs
+most of the localisation that anatomical priors are introduced to supply. Before
+adding structure above such an encoder, the marginal room for that structure
+should be measured---an attribution floor against an untrained network costs
+nothing and would have predicted these results in advance.
+
+\emph{For relational modelling.} A degree-preserving shuffle should be standard
+practice wherever a graph's topology is claimed to be meaningful. Without it,
+capacity and anatomy are confounded, and this study finds that the capacity
+explains the gain.
+
+\emph{For the representation.} The dissociation of
+Section~\ref{sec:disc-ordering}---readers find subarticular hardest, the model
+finds foraminal hardest---points to the 2.5D representation as a specific,
+testable limitation on through-plane structure. A volumetric or genuinely
+cross-plane representation is the most direct follow-up this study suggests.
+
+\emph{For transfer.} The infrastructure for RQ4 exists: the cohort is
+reconciled, reports are parsed, and the geometric machinery is verified. What
+remains is reader adjudication of conflicting reference labels, a correct
+de-identification procedure, and---the largest gap---localisation for a cohort
+that carries no annotated coordinates. Automated disc localisation is the
+enabling step, and it is a separate piece of work rather than an extension of
+this one.
+
+% ===========================================================================
+\section{Conclusion}
+\label{sec:disc-conclusion}
+
+This thesis set out to determine whether explicit anatomical structure improves
+automated grading of lumbar degenerative disease. It determined that, at this
+data scale and under this reference standard, it largely does not, and it
+established why: the convolutional encoder already localises the graded
+structure, and the reference standard leaves narrow headroom above it.
+
+The system that was built works, reproducibly and by a margin that survives
+correction. The components that make it work are relational typing and a
+clinically motivated objective, not anatomical correspondence or
+disease-conditioned routing. Two proposed mechanisms are rejected on evidence
+gathered specifically to test them, a third is supported in a narrower and more
+precise form than proposed, and the study's own controls overturned three
+conclusions that would otherwise have been reported as findings.
+
+Chapter~\ref{ch:introduction} framed the aim as \enquote{a determination rather
+than a promise of superiority}. That framing was prescient, and this thesis
+should be read as having discharged it.
+
+\end{document}
