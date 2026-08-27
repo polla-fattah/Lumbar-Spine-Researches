@@ -1,0 +1,6 @@
+experiment_id,config,architecture,fold_version,seed,epochs,labels,checkpoint,primary_metric,status,notes
+MSC2-A-R01,A,,,,,,,planned,
+MSC2-B-R01,B,,,,,,,planned,
+MSC2-C-R01,C,,,,,,,planned,
+MSC2-D-R01,D,,,,,,,planned,
+MSC2-DROPOUT-R01,secondary_dropout,,,,,,,planned,
