@@ -70,7 +70,66 @@ from geometry import (  # noqa: E402
     pixel_to_patient, patient_to_pixel, nearest_slice,
 )
 
-RSNA_DIR = r"C:\Users\USER\Desktop\Polla\Lumbar\rsna"
+# Overridable, because a hardcoded absolute path makes every figure in this
+# chapter unreproducible on any other machine. Order: --rsna_dir, then the
+# RSNA_DIR environment variable, then the location on the development machine.
+RSNA_DIR = os.environ.get(
+    "RSNA_DIR", r"C:\Users\USER\Desktop\Polla\Lumbar\rsna")
+
+
+def file_digest(path, n=16):
+    """Short SHA-256 of a file, for recording which data version was used."""
+    import hashlib
+    if not os.path.exists(path):
+        return None
+    h = hashlib.sha256()
+    with open(path, "rb") as fh:
+        for chunk in iter(lambda: fh.read(1 << 20), b""):
+            h.update(chunk)
+    return h.hexdigest()[:n]
+
+
+def provenance(args, index_path, split_path):
+    """Everything a second researcher needs to reproduce this figure set.
+
+    Two audiences need different halves of this. A computer-vision reader needs
+    the commit, the seed, the library versions and the digest of the exact
+    index and split files, because a different cache build changes which
+    targets exist and therefore which studies a seed selects. A radiologist
+    needs the DICOM provenance recorded per panel (see the checklist), because
+    a figure that cannot be traced back to a study, series and instance cannot
+    be looked up and cannot be disputed.
+    """
+    import subprocess
+    import platform
+    try:
+        commit = subprocess.run(
+            ["git", "rev-parse", "HEAD"], cwd=PROJECT_ROOT,
+            capture_output=True, text=True).stdout.strip() or None
+        dirty = bool(subprocess.run(
+            ["git", "status", "--porcelain"], cwd=PROJECT_ROOT,
+            capture_output=True, text=True).stdout.strip())
+    except Exception:
+        commit, dirty = None, None
+
+    vers = {}
+    for m in ("numpy", "pandas", "matplotlib", "pydicom"):
+        try:
+            vers[m] = __import__(m).__version__
+        except Exception:
+            vers[m] = None
+
+    return dict(
+        generated=__import__("datetime").datetime.now().isoformat(timespec="seconds"),
+        git_commit=commit, git_dirty=dirty,
+        python=platform.python_version(), platform=platform.platform(),
+        libraries=vers,
+        rsna_dir_basename=os.path.basename(os.path.normpath(RSNA_DIR)),
+        index_sha256_16=file_digest(index_path),
+        split_sha256_16=file_digest(split_path),
+        args={k: v for k, v in vars(args).items()})
+
+
 GRADES = ["Normal/Mild", "Moderate", "Severe"]
 GRADE_COLOUR = {0: "#3fbf5f", 1: "#e8b23a", 2: "#e2483c"}
 SERIES_OF = {"Sagittal T1": "sag_t1", "Sagittal T2/STIR": "sag_t2",
@@ -100,6 +159,7 @@ def load_series_headers(study_id, series_id):
                 ps=np.asarray(getattr(ds, "PixelSpacing", [1.0, 1.0]), float),
                 rows=int(getattr(ds, "Rows", 0)), cols=int(getattr(ds, "Columns", 0)),
                 instance=int(getattr(ds, "InstanceNumber", -1)),
+                series_id=int(series_id),
                 thickness=float(getattr(ds, "SliceThickness", 0) or 0)))
         except Exception:
             continue
@@ -173,6 +233,11 @@ def draw_panel(ax, img, col, row, ps, fov_mm, title, sub, colour,
 # --------------------------------------------------------------------------- #
 #  Cross-plane correspondence
 # --------------------------------------------------------------------------- #
+def fname_for(study_id, level):
+    """Sheet filename. Shared so checklist and manifest cannot disagree."""
+    return "qc_{}_{}.png".format(study_id, str(level).replace("/", "-"))
+
+
 def project_into(point3d, headers):
     """Nearest slice in `headers` plus the projected pixel and out-of-plane mm."""
     if not headers:
@@ -197,6 +262,10 @@ def main():
     ap.add_argument("--levels", default="L4-L5",
                     help="comma-separated, or 'all'")
     ap.add_argument("--outdir", default=None)
+    ap.add_argument("--rsna_dir", default=None,
+                    help="root of the RSNA download; also settable via the "
+                         "RSNA_DIR environment variable. Required for anyone "
+                         "reproducing these figures on another machine.")
     ap.add_argument("--validate_only", action="store_true",
                     help="run the cross-annotation geometry check, no figures")
     ap.add_argument("--partition", default="test",
@@ -207,15 +276,30 @@ def main():
                          "sheets should show.")
     args = ap.parse_args()
 
+    global RSNA_DIR
+    if args.rsna_dir:
+        RSNA_DIR = args.rsna_dir
+    if not os.path.isdir(os.path.join(RSNA_DIR, "train_images")):
+        print("[FAIL] no train_images under {}".format(RSNA_DIR))
+        print("       pass --rsna_dir or set the RSNA_DIR environment variable")
+        return 1
+
     import pandas as pd
 
     outdir = args.outdir or os.path.join(PROJECT_ROOT, "data", "reports", "roi_qc")
     os.makedirs(outdir, exist_ok=True)
 
-    idx = pd.read_csv(os.path.join(PROJECT_ROOT, "data", "cache",
-                                   "rsna_roi_v2_index.csv"))
-    split = pd.read_csv(os.path.join(PROJECT_ROOT, "implementation", "splits",
-                                     "rsna_patient_split.csv"))
+    index_path = os.path.join(PROJECT_ROOT, "data", "cache",
+                              "rsna_roi_v2_index.csv")
+    split_path = os.path.join(PROJECT_ROOT, "implementation", "splits",
+                              "rsna_patient_split.csv")
+    if not os.path.exists(index_path):
+        print("[FAIL] ROI index not found: {}".format(index_path))
+        print("       It is generated by the cache builder and is gitignored")
+        print("       because of its size. Rebuild it before running this.")
+        return 1
+    idx = pd.read_csv(index_path)
+    split = pd.read_csv(split_path)
     if args.partition == "all":
         keep = set(split.study_id.astype(int))
     elif args.partition == "dev":
@@ -228,10 +312,21 @@ def main():
     print("  partition '{}': {} studies available".format(
         args.partition, idx.study_id.nunique()))
 
+    # Sample from the TRACKED split, not from the index. The index is a build
+    # artefact of the cache and is gitignored; keying the sample on it means a
+    # different cache build silently yields a different figure set for the same
+    # seed. The split file is in version control and is what a second
+    # researcher will actually have.
     rng = np.random.default_rng(args.seed)
-    studies = sorted(idx.study_id.unique())
+    studies = sorted(keep)
     pick = rng.choice(studies, size=min(args.n_studies, len(studies)),
                       replace=False)
+    have = set(idx.study_id.unique())
+    missing = [int(s) for s in pick if s not in have]
+    pick = [int(s) for s in pick if s in have]
+    if missing:
+        print("  [note] {} sampled studies absent from the index, skipped: {}"
+              .format(len(missing), missing[:5]))
 
     want_levels = (None if args.levels == "all"
                    else [s.strip() for s in args.levels.split(",")])
@@ -391,9 +486,23 @@ def main():
                     drew = True
                     ok_any = True
                     checklist.append(dict(
+                        sheet=fname_for(st, lv),
                         study_id=st, level=t.level_key,
                         condition=t.condition_key, reference_grade=GRADES[int(t.label)],
-                        annotated_plane=t.modality, cross_plane=other_mod,
+                        # DICOM provenance for BOTH panels. A radiologist who
+                        # disputes a figure must be able to pull the exact slice
+                        # up in a viewer; a figure that cannot be traced back to
+                        # a study, series and instance cannot be checked.
+                        annotated_plane=t.modality,
+                        annotated_series=int(t.series_id),
+                        annotated_instance=int(t.instance_number),
+                        annotated_col=round(float(t.x), 2),
+                        annotated_row=round(float(t.y), 2),
+                        cross_plane=other_mod,
+                        cross_series=int(proj["slice"].get("series_id", -1)),
+                        cross_instance=int(proj["slice"]["instance"]),
+                        cross_col=round(float(proj["col"]), 2),
+                        cross_row=round(float(proj["row"]), 2),
                         out_of_plane_mm=round(proj["out_of_plane_mm"], 2),
                         crop_truncated=bool(trunc),
                         correct_level="", canal_foramen_included="",
@@ -415,7 +524,7 @@ def main():
             "The system grades severity at a supplied location. It does not "
             "detect or name pathology.".format(st, lv), fontsize=8)
         fig.tight_layout(rect=(0, 0, 1, 1 - 0.10 / max(1, n) - 0.02))
-        fname = "qc_{}_{}.png".format(st, lv.replace("/", "-"))
+        fname = fname_for(st, lv)
         p = os.path.join(outdir, fname)
         fig.savefig(p, dpi=170)
         plt.close(fig)
@@ -431,6 +540,11 @@ def main():
         mdf.to_csv(mp, index=False)
         # the exact command that produced this set, so the figure set in the
         # thesis is regenerable rather than a one-off artefact
+        import json as _json
+        prov = provenance(args, index_path, split_path)
+        with open(os.path.join(outdir, "provenance.json"), "w",
+                  encoding="utf-8") as fh:
+            _json.dump(prov, fh, indent=2)
         with open(os.path.join(outdir, "REPRODUCE.txt"), "w",
                   encoding="utf-8") as fh:
             fh.write("python implementation/roi_qc.py --n_studies {} "
@@ -441,11 +555,35 @@ def main():
             fh.write("\n{} sheets, {} studies, levels {}\n".format(
                 len(mdf), mdf.study_id.nunique(),
                 ", ".join(sorted(mdf.level.unique()))))
+            fh.write("commit {}{}\n".format(
+                prov["git_commit"],
+                "  (WORKING TREE DIRTY)" if prov["git_dirty"] else ""))
+            fh.write("index sha256[:16] {}\n".format(prov["index_sha256_16"]))
+            fh.write("split sha256[:16] {}\n".format(prov["split_sha256_16"]))
+            fh.write("Set RSNA_DIR to your own RSNA download first.\n")
+
+        # data/ is gitignored for size, so the PROVENANCE (not the
+        # PNGs) is mirrored somewhere tracked. Without this the
+        # record of how the thesis figures were produced does not
+        # survive a clone.
+        import shutil
+        tracked = os.path.join(PROJECT_ROOT, "thesis", "chapter4",
+                               "roi_qc")
+        os.makedirs(tracked, exist_ok=True)
+        for f in ("roi_qc_manifest.csv", "provenance.json",
+                  "REPRODUCE.txt"):
+            src = os.path.join(outdir, f)
+            if os.path.exists(src):
+                shutil.copy2(src, os.path.join(tracked, f))
 
     if checklist:
         cdf = pd.DataFrame(checklist)
         cp = os.path.join(outdir, "roi_qc_checklist.csv")
         cdf.to_csv(cp, index=False)
+        import shutil as _sh
+        _tracked = os.path.join(PROJECT_ROOT, "thesis", "chapter4", "roi_qc")
+        os.makedirs(_tracked, exist_ok=True)
+        _sh.copy2(cp, os.path.join(_tracked, "roi_qc_checklist.csv"))
         print("  {} review sheets, {} targets".format(made, len(cdf)))
         print("  truncated crops: {} ({:.0%})".format(
             int(cdf.crop_truncated.sum()), cdf.crop_truncated.mean()))
