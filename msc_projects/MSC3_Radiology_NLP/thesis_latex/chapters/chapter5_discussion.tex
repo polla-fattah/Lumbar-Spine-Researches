@@ -1,30 +1,24 @@
-\chapter{Discussion, Clinical Deployment, Limitations, and Conclusion}
+\chapter{Discussion, On-Premise Deployment, Limitations, and Conclusion}
 \label{ch:discussion}
 
-\section{Discussion of Primary Findings}
+\section{Discussion of Primary Empirical Findings}
 This thesis presented a comparative evaluation of a \textbf{Rule-Based Regex Extraction Engine} and \textbf{Open-Weight Large Language Models} for level-resolved clinical relation extraction from narrative lumbar MRI reports at Rizgary Teaching Hospital.
 
-Key insights include:
+Key empirical insights include:
 \begin{enumerate}
-    \item \textbf{High Baseline Precision of Rule-Based NLP:} The deterministic Regex engine achieved an overall F1-score of \textbf{0.93} and a level-binding accuracy of \textbf{95.2\%}. Because radiology report language at regional teaching hospitals follows predictable syntactic patterns, carefully crafted regex rules with multi-level list expansion provide an exceptionally strong baseline.
-    \item \textbf{Generative Extraction via Open LLMs:} Few-shot prompting of open-weight LLMs (Llama 3 8B Instruct) achieved competitive performance (F1 = 0.91, Level-Binding = 93.8\%), demonstrating that open-weight instruction models can successfully extract structured JSON schemas without exposing patient data to external cloud APIs.
+    \item \textbf{Challenges of Narrative Phrase Variance:} The rule-based Regex engine achieved an empirical F1-score of \textbf{0.133} (0.298 for disc bulge, 0.197 for canal stenosis). While regex parsing provides high execution speed, narrative phrase variance and non-standard level range descriptions present significant recall bottlenecks.
+    \item \textbf{Generative Extraction via Open LLMs:} Open-weight instruction models (Llama 3 8B) demonstrated structured extraction capability without transmitting patient data to external cloud APIs, establishing an on-premise foundation for hospital text processing.
 \end{enumerate}
 
-\section{Privacy-Preserving Local Clinical Deployment}
-A critical contribution of this research is establishing an architecture for \textbf{on-premise, privacy-preserving clinical NLP deployment}. By containerizing the Python extraction scripts (\texttt{msc3\_regex\_extractor.py}) and running open-weight LLMs locally on hospital GPU servers, the system operates \textbf{100\% offline}, ensuring zero Protected Health Information (PHI) leaves the hospital network.
+\section{On-Premise Privacy-Preserving Clinical Deployment}
+A core contribution of this research is establishing an architecture for \textbf{on-premise, privacy-preserving clinical NLP deployment}. By containerizing extraction scripts and running open-weight LLMs locally on hospital hardware, the system operates \textbf{offline behind the institutional firewall}, reducing data disclosure risks associated with cloud providers.
 
 \section{Limitations}
 \begin{enumerate}
-    \item \textbf{Single-Center Reporting Style:} The dataset is derived from Rizgary Teaching Hospital in Erbil. While reports follow standard radiological conventions, reporting syntax may vary across different regional hospital systems.
-    \item \textbf{Exclusion of Subarticular Stenosis:} Subarticular / lateral-recess stenosis was omitted from extraction because local narrative reports do not consistently record it.
-    \item \textbf{Binary Schema Scope:} The extraction schema categorizes findings as present/absent. Future extensions could incorporate multi-grade ordinal severity scales.
+    \item \textbf{Single-Center Reporting Style:} The dataset is derived from Rizgary Teaching Hospital in Erbil. Reporting syntax may vary across different regional hospital systems.
+    \item \textbf{Anatomical Noun Conflation:} The initial regex schema conflated general foraminal stenosis with central canal stenosis, highlighting the need for dependency-tree relation parsing.
+    \item \textbf{Binary Schema Scope:} The extraction schema categorizes findings as present/absent. Future extensions should incorporate multi-grade ordinal severity scales.
 \end{enumerate}
 
-\section{Recommendations for Clinical Practice}
-\begin{itemize}
-    \item \textbf{Standardized Reporting Templates:} Hospitals should encourage structured radiology reporting templates to further reduce syntactic ambiguities in level binding.
-    \item \textbf{Automated Audit Pipelines:} Hospital management can deploy the rule-based extractor to audit historical MRI archives, track lumbar pathology burden, and optimize scanner scheduling.
-\end{itemize}
-
 \section{Conclusion}
-This master's thesis successfully developed and benchmarked privacy-preserving NLP pipelines for level-resolved lumbar MRI report extraction. The rule-based regex baseline achieved a 93\%+ F1-score and 95.2\% level-binding accuracy across 975 lumbar level observations. Local open-weight LLMs demonstrated strong structured extraction capability without violating patient privacy. These open-source tools provide a robust foundation for clinical data mining, epidemiological research, and automated radiology decision support in Middle Eastern teaching hospitals.
+This master's thesis established a reproducible empirical benchmark for level-resolved lumbar MRI report extraction. The open-source pipeline provides a foundational baseline for clinical archive structuring and research data extraction in regional Middle Eastern teaching hospitals.
