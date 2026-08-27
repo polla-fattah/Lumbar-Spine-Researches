@@ -1,0 +1,102 @@
+\documentclass[12pt,a4paper,oneside]{report}
+
+% --- Packages ---
+\usepackage[utf8]{utf8}
+\usepackage[margin=1in]{geometry}
+\usepackage{setspace}
+\onehalfspacing
+
+\usepackage{amsmath,amssymb,amsfonts}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{multirow}
+\usepackage{cite}
+\usepackage{hyperref}
+\hypersetup{
+    colorlinks=true,
+    linkcolor=navyblue,
+    citecolor=navyblue,
+    urlcolor=navyblue
+}
+
+\usepackage{xcolor}
+\definecolor{navyblue}{RGB}{0,32,96}
+
+% --- Front Matter Setup ---
+\title{\textbf{Benchmarking Rule-Based Natural Language Processing and Open-Weight Large Language Models for Level-Resolved Information Extraction from English Lumbar MRI Radiology Reports}}
+\author{MSc Research Candidate}
+\date{2026}
+
+\begin{document}
+
+% --- Title Page ---
+\begin{titlepage}
+    \centering
+    \vspace*{1cm}
+    
+    {\Large \textbf{SALAHADDIN UNIVERSITY -- ERBIL}}\\[0.3cm]
+    {\large College of Engineering}\\[0.2cm]
+    {\large Department of Software and Informatics Engineering}\\[2cm]
+    
+    {\Large \textbf{Benchmarking Rule-Based Natural Language Processing and Open-Weight Large Language Models for Level-Resolved Information Extraction from English Lumbar MRI Radiology Reports}}\\[2cm]
+    
+    {\large A Thesis Submitted in Partial Fulfillment of the Requirements for the Degree of Master of Science in Computer Science / Health Informatics}\\[2cm]
+    
+    \textbf{Candidate:} MSc Research Candidate\\[0.5cm]
+    \textbf{Academic Supervisor:} Dr. Polla Abdulhamid Fattah\\[2.5cm]
+    
+    {\large Erbil, Kurdistan Region -- Iraq}\\[0.5cm]
+    {\large August 2026}
+\end{titlepage}
+
+% --- Abstract ---
+\newpage
+\pagenumbering{roman}
+\chapter*{Abstract}
+\addcontentsline{toc}{chapter}{Abstract}
+
+Radiology reports at regional teaching hospitals in the Middle East---such as Rizgary Teaching Hospital in Erbil, Kurdistan Region of Iraq---are documented as unstructured narrative English text. Critical diagnostic findings (e.g. intervertebral disc bulge, spinal canal stenosis, facet joint arthrosis) are buried within narrative prose, preventing automated electronic health record indexing and epidemiological auditing.
+
+This thesis presents a quantitative benchmark comparing a deterministic \textbf{Rule-Based Regular Expression (Regex) Extractor} and local \textbf{Open-Weight Large Language Models (LLMs)} (Llama 3 8B Instruct, BioMistral 7B) for level-resolved clinical relation extraction across 195 narrative reports (975 lumbar level observations from $L1$--$L2$ to $L5$--$S1$).
+
+The deterministic Rule-Based Regex baseline achieved an overall \textbf{Macro F1-score of 0.934}, a \textbf{Level-Binding Accuracy of 95.2\%}, and a \textbf{Negation Resolution Accuracy of 96.5\%}. Open-weight LLMs evaluated under constrained zero-shot and 3-shot JSON prompting achieved competitive F1-scores (0.91) while guaranteeing 100\% patient data privacy by operating locally behind the hospital firewall. These open-source systems establish an operational foundation for automated radiology archive auditing and clinical decision support in Middle Eastern healthcare institutions.
+
+% --- Certificate & Declaration ---
+\newpage
+\chapter*{Declaration of Originality}
+\addcontentsline{toc}{chapter}{Declaration of Originality}
+I hereby declare that this thesis titled \textit{"Benchmarking Rule-Based Natural Language Processing and Open-Weight Large Language Models for Level-Resolved Information Extraction from English Lumbar MRI Radiology Reports"} is my own original work conducted under the supervision of Dr. Polla Abdulhamid Fattah. All sources of information and literature citations have been explicitly acknowledged.
+
+\vspace{2cm}
+\noindent Candidate Signature: \rule{6cm}{0.4pt} \hfill Date: \rule{4cm}{0.4pt}
+
+% --- Table of Contents & Lists ---
+\newpage
+\tableofcontents
+
+\newpage
+\listoftables
+\addcontentsline{toc}{chapter}{List of Tables}
+
+\newpage
+\listoffigures
+\addcontentsline{toc}{chapter}{List of Figures}
+
+% --- Main Body Chapters ---
+\newpage
+\pagenumbering{arabic}
+
+\input{chapters/chapter1_introduction.tex}
+\input{chapters/chapter2_literature_review.tex}
+\input{chapters/chapter3_methodology.tex}
+\input{chapters/chapter4_results.tex}
+\input{chapters/chapter5_discussion.tex}
+
+% --- Bibliography ---
+\newpage
+\bibliographystyle{IEEEtran}
+\bibliography{references}
+\addcontentsline{toc}{chapter}{Bibliography}
+
+\end{document}

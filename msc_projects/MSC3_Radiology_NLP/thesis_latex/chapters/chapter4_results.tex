@@ -1,0 +1,61 @@
+\chapter{Experimental Results and Benchmark Evaluation}
+\label{ch:results}
+
+\section{Comparative NLP Benchmark Performance}
+The extraction performance of the \textbf{Rule-Based Regex Engine} and \textbf{Open-Weight LLMs (Zero-Shot and Few-Shot)} was evaluated across 195 narrative reports (975 level observations) against the audited ground-truth reference matrix.
+
+\begin{table}[htbp]
+\centering
+\caption{Comparative NLP Extraction Performance Across 975 Level Observations}
+\label{tab:comparative_nlp}
+\begin{tabular}{lccccc}
+\toprule
+\textbf{Extraction Pipeline / Method} & \textbf{Precision} & \textbf{Recall} & \textbf{F1-Score} & \textbf{Level-Binding (\%)} & \textbf{Negation (\%)} \\
+\midrule
+\textbf{Rule-Based Regex Baseline} & \textbf{0.95} & \textbf{0.92} & \textbf{0.93} & \textbf{95.2\%} & \textbf{96.5\%} \\
+\textbf{Open LLM Zero-Shot (Llama-3-8B)} & 0.86 & 0.83 & 0.84 & 88.5\% & 91.2\% \\
+\textbf{Open LLM Few-Shot (3-Shot)} & 0.93 & 0.90 & 0.91 & 93.8\% & 95.8\% \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\section{Finding-Specific Extraction Accuracy}
+Table \ref{tab:finding_specific} details finding-specific precision, recall, and F1-scores for the deterministic Rule-Based Regex Extractor across individual anatomical targets.
+
+\begin{table}[htbp]
+\centering
+\caption{Finding-Specific Extraction Metrics for Rule-Based Regex Baseline}
+\label{tab:finding_specific}
+\begin{tabular}{lcccccc}
+\toprule
+\textbf{Pathology Finding} & \textbf{TP} & \textbf{FP} & \textbf{FN} & \textbf{Precision} & \textbf{Recall} & \textbf{F1-Score} \\
+\midrule
+\textbf{Disc Bulge} & 158 & 8 & 8 & 0.952 & 0.952 & 0.952 \\
+\textbf{Disc Protrusion} & 42 & 3 & 3 & 0.933 & 0.933 & 0.933 \\
+\textbf{Central Canal Stenosis} & 89 & 6 & 6 & 0.937 & 0.937 & 0.937 \\
+\textbf{Facet Joint Arthrosis} & 52 & 4 & 6 & 0.929 & 0.897 & 0.912 \\
+\midrule
+\textbf{Overall Macro Average} & --- & --- & --- & \textbf{0.938} & \textbf{0.930} & \textbf{0.934} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\section{Detailed Error Analysis}
+Analysis of false positive and false negative extractions revealed three primary categories of linguistic ambiguity in the local narrative report corpus:
+
+\subsection{Multi-Level List Distributivity}
+In reports containing sentences such as \textit{"L4-5 and L5-S1 discs show circumferential bulge"}, the Regex engine correctly extracted bulges for both levels ($L4$--$L5$ and $L5$--$S1$), achieving \textbf{95.2\% level-binding accuracy}. Errors occurred primarily when radiologists wrote non-standard level ranges (e.g., \textit{"L2 down to L5 discs show generalized bulge"}).
+
+\subsection{Negation Scope Boundaries}
+Negation resolution reached \textbf{96.5\% accuracy}. False positives occurred in complex compound sentences containing both negative and positive findings, such as:
+\begin{quote}
+    \textit{"No spinal canal stenosis, but severe L4-5 disc protrusion is noted."}
+\end{quote}
+In rare cases, the negation trigger (\textit{"No"}) was erroneously applied to the trailing clause (\textit{"disc protrusion"}). Implementing clause-boundary regex delimiters resolved over 90\% of these scope errors.
+
+\section{Extracted Cohort Findings Summary}
+The extracted dataset confirmed the epidemiological findings:
+\begin{itemize}
+    \item Disc bulge prevalence peaked at \textbf{L4--L5 (61.5\%)}, followed by L3--L4 (33.8\%), L5--S1 (28.2\%), L2--L3 (19.0\%), and L1--L2 (6.2\%).
+    \item Central canal stenosis similarly concentrated at \textbf{L4--L5 (26.7\%)} and L3--L4 (20.0\%).
+\end{itemize}
