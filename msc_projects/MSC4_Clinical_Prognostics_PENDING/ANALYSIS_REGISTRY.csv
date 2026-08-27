@@ -1,0 +1,5 @@
+analysis_id,question,outcome,predictors,model,primary_or_secondary,status,notes
+MSC4-A01,RQ1,symptom_pattern,,,primary,blocked_pending_data,
+MSC4-A02,RQ2,treatment_path,,,primary,blocked_pending_data,
+MSC4-A03,RQ3,treatment_path,,,secondary,blocked_pending_data,
+MSC4-A04,RQ4,followup_outcome,,,conditional,blocked_pending_data,
