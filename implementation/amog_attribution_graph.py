@@ -74,8 +74,50 @@ def _noop():
 def gradcam_graph(model, imgs, mask, ev, layers, device):
     """CAM per NODE, from the encoder that read that node's annotated sequence.
 
+    ONE BACKWARD PASS PER NODE, NOT ONE PER BATCH.
+
+    The obvious implementation backpropagates the sum of all node logits and
+    reads each node's CAM from its own row. That is correct only when nodes are
+    independent. Here the GNN couples them: node k's features reach many nodes'
+    logits, so the gradient arriving at node k's encoder is the sum over all of
+    them, and the resulting map answers "what in this image moved the whole
+    graph" rather than "what made THIS target look severe".
+
+    The effect is large and it points the wrong way. Measured on E6, summed
+    attribution gave concentrations of 0.442, 0.185 and 0.287 for three canal
+    nodes where single-node attribution gives 0.534, 0.453 and 0.445 -- a mean
+    understatement of 0.173. Reported from the summed version, the graph rungs
+    appeared to attend far more diffusely than the target rungs, and E7 appeared
+    to attend at chance.
+
+    So each of the N node positions gets its own backward pass. That is N times
+    the cost and it is the only version that measures the intended quantity.
+
     Returns (cam (B*N, CROP, CROP), node_condition (B*N,)).
     """
+    B, N = imgs.shape[:2]
+    cond = torch.arange(N, device=imgs.device).remainder(5).repeat(B)
+    slot_of = torch.tensor(CONDITION_SLOT, device=imgs.device)
+    out = torch.zeros(B * N, CROP, CROP, device=imgs.device)
+
+    for node in range(N):
+        maps = _cam_for_node(model, imgs, mask, ev, layers, node)
+        if not maps:
+            continue
+        want = int(CONDITION_SLOT[node % 5])
+        m = maps.get(want, next(iter(maps.values())))
+        idx = torch.arange(B, device=imgs.device) * N + node
+        out[idx] = m[idx]
+
+    flat = out.reshape(B * N, -1)
+    tot = flat.sum(dim=1, keepdim=True)
+    flat = torch.where(tot > 0, flat / tot, torch.full_like(flat, 1.0 / flat.size(1)))
+    return (flat.reshape(-1, CROP, CROP).detach().cpu().numpy(),
+            cond.detach().cpu().numpy())
+
+
+def _cam_for_node(model, imgs, mask, ev, layers, node):
+    """Grad-CAM maps for every encoder, from ONE node's own logit."""
     acts, grads, handles = {}, {}, []
 
     def mk(i):
@@ -94,41 +136,30 @@ def gradcam_graph(model, imgs, mask, ev, layers, device):
         model.zero_grad(set_to_none=True)
         with torch.enable_grad():
             logits, _g = model.forward_graph(imgs, mask, ev)
-            flat = logits.reshape(-1, logits.size(-1))
-            sel = flat.argmax(dim=1)
-            flat.gather(1, sel.unsqueeze(1)).sum().backward()
+            B, N, C = logits.shape
+            flat = logits.reshape(-1, C)
+            # A categorical head emits one logit per class and argmax is the
+            # prediction. E7's ordinal head emits CUMULATIVE logits, P(y>0) and
+            # P(y>1), where argmax is not a class choice at all. Their sum is
+            # monotone in predicted grade, so explaining it answers "what made
+            # this target look severe".
+            if getattr(model, "use_ordinal", False):
+                sc = flat.sum(dim=1)
+            else:
+                sc = flat.gather(1, flat.argmax(dim=1, keepdim=True)).squeeze(1)
+            picker = torch.zeros_like(sc)
+            picker[torch.arange(B, device=sc.device) * N + node] = 1.0
+            (sc * picker).sum().backward()
 
         maps = {}
         for i in acts:
             if i not in grads:
                 continue
-            a, g = acts[i], grads[i]
-            w = g.mean(dim=(2, 3), keepdim=True)
-            cam = F.relu((w * a).sum(dim=1, keepdim=True))
+            w = grads[i].mean(dim=(2, 3), keepdim=True)
+            cam = F.relu((w * acts[i]).sum(dim=1, keepdim=True))
             maps[i] = F.interpolate(cam.float(), size=(CROP, CROP),
                                     mode="bilinear", align_corners=False)[:, 0]
-        if not maps:
-            raise RuntimeError("Grad-CAM hooks captured nothing")
-
-        B, N = imgs.shape[:2]
-        cond = torch.arange(N, device=imgs.device).remainder(5).repeat(B)
-        slot = torch.tensor(CONDITION_SLOT, device=imgs.device)[cond]
-
-        any_map = list(maps.values())[0]
-        out = torch.zeros(any_map.shape[0], CROP, CROP, device=imgs.device)
-        for i, m in maps.items():
-            pick = (slot == i)
-            if pick.any():
-                out[pick] = m[pick]
-        covered = torch.isin(slot, torch.tensor(sorted(maps), device=imgs.device))
-        if (~covered).any():
-            out[~covered] = any_map[~covered]
-
-        f2 = out.reshape(out.shape[0], -1)
-        tot = f2.sum(dim=1, keepdim=True)
-        f2 = torch.where(tot > 0, f2 / tot, torch.full_like(f2, 1.0 / f2.size(1)))
-        return (f2.reshape(-1, CROP, CROP).detach().cpu().numpy(),
-                cond.detach().cpu().numpy())
+        return maps
     finally:
         for h in handles:
             h.remove()

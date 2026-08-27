@@ -1,6 +1,6 @@
 {
-  "generated": "2026-08-27T05:17:58",
-  "git_commit": "6813343435203ea18b835e7b52ecb667bfa0648b",
+  "generated": "2026-08-27T05:43:27",
+  "git_commit": "2ee746704590656fda777f19f241de01a90b00b3",
   "git_dirty": true,
   "python": "3.14.2",
   "platform": "Windows-11-10.0.26200-SP0",
@@ -14,7 +14,7 @@
   "index_sha256_16": "9316f2877b380ca9",
   "split_sha256_16": "2b01dd9143a91bea",
   "args": {
-    "n_studies": 20,
+    "n_studies": 60,
     "seed": 20260827,
     "fov_mm": 100.0,
     "radius_mm": 10.0,

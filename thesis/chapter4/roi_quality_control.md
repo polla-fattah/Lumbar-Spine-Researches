@@ -132,10 +132,11 @@ physical field of view, which is 213 px at 0.469 mm spacing but only 107 px at
 0.938 mm; upsampling without stating the native size would imply detail that is
 not present.
 
-On the 8-study sample: 40 targets, **0% truncated crops**, median out-of-plane
-distance for cross-plane projection **1.5 mm** -- well inside the 3.5-4.8 mm
-slice thickness, so the projected point genuinely lies within the displayed
-slice rather than being an extrapolation.
+The current set is **300 sheets over 60 studies** -- 20% of the test partition --
+at all five levels, covering **1,474 targets**. Seven crops (0.5%) are truncated
+at the image edge. The median out-of-plane distance for cross-plane projection is
+**1.1 mm**, well inside the 3.5-4.8 mm slice thickness, so the projected point
+genuinely lies within the displayed slice rather than being extrapolated to it.
 
 `roi_qc_checklist.csv` carries one row per target with blank columns for the
 reader: `correct_level`, `canal_foramen_included`, `left_right_correct`,

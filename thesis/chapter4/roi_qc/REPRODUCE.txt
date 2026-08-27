@@ -1,7 +1,7 @@
-python implementation/roi_qc.py --n_studies 20 --partition test --seed 20260827 --levels all --fov_mm 100.0 --radius_mm 10.0
+python implementation/roi_qc.py --n_studies 60 --partition test --seed 20260827 --levels all --fov_mm 100.0 --radius_mm 10.0
 
-100 sheets, 20 studies, levels L1-L2, L2-L3, L3-L4, L4-L5, L5-S1
-commit 6813343435203ea18b835e7b52ecb667bfa0648b  (WORKING TREE DIRTY)
+300 sheets, 60 studies, levels L1-L2, L2-L3, L3-L4, L4-L5, L5-S1
+commit 2ee746704590656fda777f19f241de01a90b00b3  (WORKING TREE DIRTY)
 index sha256[:16] 9316f2877b380ca9
 split sha256[:16] 2b01dd9143a91bea
 Set RSNA_DIR to your own RSNA download first.
