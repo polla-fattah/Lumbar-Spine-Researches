@@ -5,12 +5,8 @@ Phase 1: Real Rizgary Clinical Cohort Extraction & 5-Level Expansion Engine
 Candidate: Elaf
 Supervisor: Dr. Polla Abdulhamid Fattah
 
-Reads `Data/research LSS 1.xlsx` (195 patient records extracted from Rizgary Teaching Hospital narrative reports),
-cleans patient demographics, normalizes multi-level text strings, and expands into a 975-row level-resolved dataset
-(195 patients × 5 lumbar levels: L1-L2, L2-L3, L3-L4, L4-L5, L5-S1).
-
 Output:
-    msc_projects/MSC1_Cohort_Characterisation/elaf_audited_cohort_matrix.csv
+    msc_projects/MSC1_Cohort_Characterisation/results/elaf_audited_cohort_matrix.csv
 """
 
 import os
@@ -34,7 +30,6 @@ LEVEL_PATTERNS = {
 
 
 def parse_level_string(text_val: str, target_level: str) -> int:
-    """Check if target_level is present in the text string (e.g. 'L4-5, L5-S1')."""
     if pd.isna(text_val):
         return 0
     text_str = str(text_val).lower().strip()
@@ -49,7 +44,6 @@ def parse_level_string(text_val: str, target_level: str) -> int:
 
 
 def assign_age_group(age: float) -> str:
-    """Assign standardized age band."""
     if pd.isna(age) or age <= 0:
         return "Unknown"
     if age < 35:
@@ -68,9 +62,11 @@ def main():
     print("  Candidate: Elaf | Supervisor: Dr. Polla Abdulhamid Fattah")
     print("=" * 75)
 
-    base_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
+    base_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", ".."))
     excel_path = os.path.join(base_dir, "Data", "research LSS 1.xlsx")
-    out_csv = os.path.join(os.path.dirname(__file__), "elaf_audited_cohort_matrix.csv")
+    results_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "results"))
+    out_csv = os.path.join(results_dir, "elaf_audited_cohort_matrix.csv")
+    os.makedirs(results_dir, exist_ok=True)
 
     if not os.path.exists(excel_path):
         print(f"[FAIL] Source data file not found: {excel_path}")
@@ -78,14 +74,12 @@ def main():
 
     print(f"\n[Step 1] Loading raw transcription data from: {os.path.relpath(excel_path, base_dir)}")
     raw_df = pd.read_excel(excel_path)
-    print(f"   -> Raw dataset shape: {raw_df.shape[0]} patients, {raw_df.shape[1]} columns")
 
     expanded_rows = []
 
     for idx, row in raw_df.iterrows():
         p_id = f"RIZGARY_P_{idx+1:03d}"
         
-        # Age cleaning
         raw_age = row.get("age ", row.get("age", np.nan))
         try:
             age = float(str(raw_age).strip())
@@ -93,14 +87,12 @@ def main():
         except (ValueError, TypeError):
             age = np.nan
             
-        # Gender cleaning (0: Female, 1: Male)
         raw_gender = str(row.get("gender", "")).lower().strip()
         sex = 1 if "male" in raw_gender and "female" not in raw_gender else 0
         sex_str = "Male" if sex == 1 else "Female"
         
         age_grp = assign_age_group(age)
 
-        # Extract text columns for pathology fields
         bulge_text = str(row.get("Disc bulge", ""))
         protrusion_text = str(row.get("Disc protrusion", ""))
         extrusion_text = str(row.get("Disc extrusion", ""))
@@ -135,8 +127,6 @@ def main():
             })
 
     matrix_df = pd.DataFrame(expanded_rows)
-    
-    # Impute missing ages with median if any missing
     median_age = matrix_df["age"].median()
     matrix_df["age"] = matrix_df["age"].fillna(median_age)
     
@@ -145,8 +135,6 @@ def main():
     print(f"\n[Step 2] Expanded dataset successfully created:")
     print(f"   -> Patients Ingested : {len(raw_df)}")
     print(f"   -> Level Observations: {len(matrix_df)} ({len(raw_df)} × 5 levels)")
-    print(f"   -> Mean Age          : {matrix_df['age'].mean():.1f} ± {matrix_df['age'].std():.1f} years")
-    print(f"   -> Sex Breakdown     : {matrix_df['sex_label'].value_counts().to_dict()}")
     print(f"   -> Output File       : {os.path.relpath(out_csv, base_dir)}")
     print("=" * 75)
 
