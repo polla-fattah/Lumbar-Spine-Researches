@@ -20,6 +20,7 @@ import glob
 import zipfile
 import xml.etree.ElementTree as ET
 import pandas as pd
+import numpy as np
 
 if hasattr(sys.stdout, "reconfigure"):
     sys.stdout.reconfigure(encoding="utf-8")
@@ -43,23 +44,19 @@ def read_docx_text(file_path: str) -> str:
             xml_content = z.read("word/document.xml")
             tree = ET.fromstring(xml_content)
             text = "".join(tree.itertext())
-            # Normalize whitespace
             return re.sub(r"\s+", " ", text).strip()
-    except Exception as err:
+    except Exception:
         return ""
 
 
 def extract_patient_demographics(text: str) -> tuple[str, float, str]:
     """Extract Patient ID, Age, and Sex from narrative report text header."""
-    # Patient ID / Name
     case_match = re.search(r"(?:name|case|patient)\s*[:\-]?\s*(case\s*\d+|\w+)", text, re.IGNORECASE)
     case_id = case_match.group(1) if case_match else "UNKNOWN"
     
-    # Age
     age_match = re.search(r"age\s*[:\-]?\s*(\d{1,3})", text, re.IGNORECASE)
     age = float(age_match.group(1)) if age_match else np.nan
     
-    # Sex
     sex_match = re.search(r"\b(female|male|f|m)\b", text, re.IGNORECASE)
     sex_str = "Female"
     if sex_match:
@@ -70,7 +67,7 @@ def extract_patient_demographics(text: str) -> tuple[str, float, str]:
     return case_id, age, sex_str
 
 
-def parse_report_sentence_findings(text: str) -> list[dict]:
+def parse_report_sentence_findings(text: str) -> dict:
     """Parse report into sentences and extract level-resolved findings."""
     sentences = re.split(r"[.\n;]", text)
     level_findings = {lvl: {"disc_bulge": 0, "disc_protrusion": 0, "disc_extrusion": 0, "canal_stenosis": 0, "facet_arthrosis": 0, "osteophytes": 0} for lvl in LUMBAR_LEVELS}
@@ -80,7 +77,6 @@ def parse_report_sentence_findings(text: str) -> list[dict]:
         if not sent_clean:
             continue
             
-        # Detect which levels are referenced in this sentence block
         mentioned_levels = []
         for lvl, patterns in LEVEL_PATTERNS.items():
             for pat in patterns:
@@ -91,10 +87,8 @@ def parse_report_sentence_findings(text: str) -> list[dict]:
         if not mentioned_levels:
             continue
 
-        # Check for negation terms in sentence block
         is_negated = bool(re.search(r"\b(no|normal|without|absent|denies|negative|unremarkable)\b", sent_clean))
 
-        # Check findings
         has_bulge = bool(re.search(r"\b(bulge|bulging|circumferential bulge)\b", sent_clean))
         has_protrusion = bool(re.search(r"\b(protrusion|protruding|focal protrusion)\b", sent_clean))
         has_extrusion = bool(re.search(r"\b(extrusion|extruding|sequestration)\b", sent_clean))
@@ -131,9 +125,9 @@ def main():
     print("  Candidate: MSc Track 3 | Supervisor: Dr. Polla Abdulhamid Fattah")
     print("=" * 75)
 
-    base_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
+    base_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", ".."))
     reports_dir = os.path.join(base_dir, "Data", "reports")
-    results_dir = os.path.join(os.path.dirname(__file__), "results")
+    results_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "results"))
     os.makedirs(results_dir, exist_ok=True)
 
     docx_files = glob.glob(os.path.join(reports_dir, "*.docx"))

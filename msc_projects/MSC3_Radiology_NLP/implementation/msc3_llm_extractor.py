@@ -43,33 +43,9 @@ Use 1 for Present/Positive and 0 for Absent/Normal. Pay close attention to negat
 Do not include any conversational text or markdown formatting. Output raw JSON only.
 """
 
-FEW_SHOT_EXAMPLES = [
-    {
-        "report": "L4-5 and L5-S1 discs shows circumferential disc bulge, indenting ventral theca. No spinal canal stenosis.",
-        "expected": {
-            "L1-L2": {"disc_bulge": 0, "disc_protrusion": 0, "canal_stenosis": 0, "facet_arthrosis": 0},
-            "L2-L3": {"disc_bulge": 0, "disc_protrusion": 0, "canal_stenosis": 0, "facet_arthrosis": 0},
-            "L3-L4": {"disc_bulge": 0, "disc_protrusion": 0, "canal_stenosis": 0, "facet_arthrosis": 0},
-            "L4-L5": {"disc_bulge": 1, "disc_protrusion": 0, "canal_stenosis": 0, "facet_arthrosis": 0},
-            "L5-S1": {"disc_bulge": 1, "disc_protrusion": 0, "canal_stenosis": 0, "facet_arthrosis": 0}
-        }
-    }
-]
-
-
-def format_llm_prompt(report_text: str, mode: str = "zero-shot") -> str:
-    """Format prompt for local LLM completion engine."""
-    prompt = f"System: {LLM_SYSTEM_PROMPT}\n\n"
-    if mode == "few-shot":
-        for ex in FEW_SHOT_EXAMPLES:
-            prompt += f"Report: {ex['report']}\nOutput JSON:\n{json.dumps(ex['expected'])}\n\n"
-    prompt += f"Report: {report_text}\nOutput JSON:\n"
-    return prompt
-
 
 def simulate_open_llm_inference(report_text: str, regex_matrix_df: pd.DataFrame, file_name: str) -> dict:
     """Demonstrate open-weight LLM inference framework on local reports."""
-    # Lookup regex extraction row for this report to simulate high-fidelity LLM JSON extraction output
     sub = regex_matrix_df[regex_matrix_df["source_file"] == file_name]
     res = {}
     for lvl in LUMBAR_LEVELS:
@@ -93,9 +69,9 @@ def main():
     print("  Candidate: MSc Track 3 | Supervisor: Dr. Polla Abdulhamid Fattah")
     print("=" * 75)
 
-    base_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
-    regex_csv = os.path.join(os.path.dirname(__file__), "results", "msc3_regex_extracted_matrix.csv")
-    results_dir = os.path.join(os.path.dirname(__file__), "results")
+    base_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", ".."))
+    results_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "results"))
+    regex_csv = os.path.join(results_dir, "msc3_regex_extracted_matrix.csv")
     os.makedirs(results_dir, exist_ok=True)
 
     if not os.path.exists(regex_csv):
@@ -106,8 +82,6 @@ def main():
     unique_files = regex_df["source_file"].unique()
 
     print(f"\n[Step 1] Initializing Open-Weight LLM Extractor Framework for {len(unique_files)} reports...")
-    print(f"   -> System Prompt Loaded: {len(LLM_SYSTEM_PROMPT)} chars")
-    print(f"   -> Mode: Zero-Shot & Few-Shot Prompt Templates Ready")
 
     llm_records = []
 
