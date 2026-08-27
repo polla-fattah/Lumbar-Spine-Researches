@@ -93,6 +93,11 @@ the colour map would separate both pairs.
   the observed pair is $-11.30$ and $+0.94$. The left condition is displaced and
   the right sits near the midline. Whatever produces the separation is not a
   simple reflection.
+- **NOT inherited from the annotations.** The obvious explanation -- that RSNA
+  annotates the two sides asymmetrically -- was tested and rejected: across 2,881
+  axial annotations the left/right subarticular means are +8.99 mm and -8.14 mm,
+  0.85 mm from a perfect mirror (see roi_quality_control.md). The asymmetry is a
+  property of the model, of this seed, or of the measurement.
 - **An unexplained common offset.** Both foraminal conditions sit $+12$ px right
   of centre. A systematic displacement of that size in the annotated crop is not
   accounted for and should be understood before the laterality claim is made in
