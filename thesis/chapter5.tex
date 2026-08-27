@@ -316,6 +316,14 @@ multi-sequence configurations reads the sagittal T1 encoder even on targets
 graded from axial T2. It reported that no configuration improved on the
 baseline; hooking the encoder that actually read each target reverses the sign.
 
+\emph{A probe can measure the wrong quantity twice over.} Extending attribution
+to the graph rungs required two further corrections. Backpropagating the sum of
+node logits let message passing carry gradient between nodes, so each map
+reported what an image contributed to the whole graph rather than to its own
+target, understating concentration by $0.173$. And E7's ordinal head has no
+argmax to explain, so the scalar had to be chosen deliberately and its choice
+shown not to matter.
+
 The general lesson is that in a study of this kind the controls are not
 supporting apparatus but the primary instrument. A degree-preserving shuffle, a
 router-free arm, an architecture-matched untrained floor and a label-shuffled
@@ -345,10 +353,15 @@ from a reading process whose inter-reader agreement is moderate for the lateral
 compartments. Conclusions about which mechanisms help are conditional on that
 reference standard.
 
-\emph{Attribution is not measured on the final system.} The Grad-CAM analysis
-covers E0--E4; the graph rungs route through a different batch layout. The
-mechanism offered in Section~\ref{sec:disc-localise} is therefore established on
-the encoder rather than on E7 in full.
+\emph{Attribution on E7 measures a different quantity.} The analysis now covers
+every rung. E5 and E6 confirm the mechanism on the graph path, reaching $0.341$
+and $0.428$ against untrained floors near $0.18$. E7's ordinal head explains an
+accumulated severity score rather than a class logit, so its pooled
+concentration is dominated by the $77.33\%$ of targets that carry no pathology;
+split by grade it reaches $0.415$ on Severe targets against E6's $0.448$. The
+mechanism of Section~\ref{sec:disc-localise} therefore holds wherever
+localisation is meaningful, but E7 cannot be placed on the same scale as the
+other rungs and is not.
 
 \emph{No clinical outcome is measured.} The study measures agreement with a
 retrospective reference standard. It does not measure diagnostic accuracy

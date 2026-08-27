@@ -750,10 +750,27 @@ would depress the measure uniformly across configurations.
 failure modes. The untrained floor makes the comparison meaningful, but absolute
 values are method-dependent.
 
-\emph{Graph configurations excluded from two probes.} The input ablation and
-attribution analyses cover E0--E4 only; E5--E7 route through a different batch
-layout. The routing claim is cleanest to test at E2 with the graph out of the
-path, but the attribution result is therefore not measured on the final system.
+\emph{The input ablation covers E0--E4 only.} Those rungs reach the fusion stage
+directly, whereas E5--E7 route through the graph. The routing claim of RQ3 is in
+any case cleanest to test at E2, with the graph out of the path.
+
+\emph{Attribution on the graph rungs measures a different quantity for E7.}
+Attribution was extended to E5--E7, which required one backward pass per node
+rather than one per batch: message passing couples the nodes, so a summed
+backward pass reports what an image contributed to the \emph{whole graph} rather
+than to its own target, understating concentration by $0.173$ on the nodes
+examined. With that corrected, E5 and E6 reach $0.341$ and $0.428$ against
+untrained floors near $0.18$.
+
+E7 pools to $0.171$, below chance, and that figure is a prevalence artefact
+rather than a property of the model. Its ordinal head explains an accumulated
+severity score, so asking what makes a target look severe highlights the
+\emph{absence} of evidence on a target with no pathology, and $77.33\%$ of
+targets are Normal/Mild. Split by grade, E7 gives $0.098$, $0.269$ and $0.415$
+for Normal/Mild, Moderate and Severe, while E6 is flat at $0.429$, $0.419$ and
+$0.448$. On targets that carry pathology the full system localises as well as
+the rung below it. E7's pooled value is therefore not comparable with the other
+rungs and is not presented as though it were.
 
 % ===========================================================================
 \section{Summary of Answers}
