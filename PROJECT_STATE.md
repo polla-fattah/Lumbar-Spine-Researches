@@ -122,9 +122,34 @@ mid-campaign would break every remaining run.
   not merely on admin. This was under-reported earlier and is the largest of the
   three.
 
-**`deidentify_dicom.py` is not fit for use.** It keys on `PatientID`, which has
-45 distinct values across 346 cases -- a site or scanner code, not a patient
-identifier. Using it would merge roughly eight patients per pseudonym.
+**Two de-identification scripts exist and only one is broken.** Corrected
+2026-08-27; the earlier entry here named the wrong file.
+
+- `implementation/00_deidentify/deidentify_dicom.py` keys on `PatientID`, which
+  has 45 distinct values across 346 cases -- a site or scanner code, not a
+  patient identifier. It would merge roughly eight patients per pseudonym. Do
+  not use it.
+- `tools/deidentify_dicom.py` is sound. It keys on the case path, writes the
+  linkage file outside the project, strips private tags, keeps sex/age and
+  reduces StudyDate to the year. It deliberately does not remap UIDs, and says
+  so; revisit that before any publication.
+
+Its `--dry-run` currently fails because it looks for `Data/cases`, while the
+data is at `data/rizgary_unpacked/`. The path needs parameterising before use.
+
+**Burned-in pixel text: screened, and the screen is validated.** The header
+check inside `tools/deidentify_dicom.py` fires on `BurnedInAnnotation == "YES"`
+or modality SC/OT, and can therefore never fire on this cohort -- the tag is
+absent from every file and every object is MR Image Storage. That is false
+assurance, not assurance.
+
+`tools/detect_burned_in_text.py` screens the pixels instead, using the property
+that a scanner overlay occupies the same pixels in every slice while anatomy
+moves: the per-series minimum preserves text and suppresses anatomy. Across 57
+series the median bright-pixel count in the minimum image is **0** and nothing
+is flagged. `tools/burned_in_positive_control.py` confirms the screen is not
+merely inert -- the same series with text burned in scores 27.0 against 0.0
+clean.
 
 **PHI exposure, measured on 379 sampled files:** PatientName, PatientID,
 BirthDate, Sex, Age, StudyDate present in 100%; InstitutionName 99%; private
