@@ -31,6 +31,10 @@ automatically.
 | DICOM to NIfTI converter | `implementation/dicom_to_nifti.py` |
 | ROI quality control, whole cohort | `thesis/chapter4/roi_quality_control.md` |
 | 100 two-plane review sheets, 20 studies x 5 levels | `data/reports/roi_qc/` |
+| Chapter 5, Discussion and Conclusions | `thesis/chapter5.tex` |
+| Attribution on graph rungs E5-E7 | `thesis/chapter4/attribution_graph.md` |
+| Validated burned-in text screen | `tools/detect_burned_in_text.py` |
+| Superseded-script map | `implementation/SUPERSEDED.md` |
 | 113 behavioural tests, all passing | `implementation/99_audit/test_components.py` |
 
 **Headline result:** E7 - E0 = +0.0172 QWK [+0.0064, +0.0285], every seed, the
@@ -102,11 +106,15 @@ mid-campaign would break every remaining run.
    Their cohort is very likely the same Rizgary data (`data/rizgary_unpacked/`
    is organised as bulge / extrusion / normal / protrusion -- their exact four
    classes). Their pipeline may be directly reusable.
-4. **CAM peak for the viewer: extend to E7 (~2 h) or take grades from E7 and
-   the crosshair from E2?** The latter is defensible but must be stated.
-5. **Which cases for radiologist review?** All 297 test patients is too many to
-   review. A stratified sample -- severe cases, disagreements, confident errors
-   -- is far more informative.
+4. **DONE 2026-08-27.** Attribution extended to E5-E7. Required per-node
+   backward passes (message passing was smearing gradient across the graph) and
+   a deliberate scalar for the ordinal head. E7's pooled figure is a prevalence
+   artefact; by grade it reaches 0.415 on Severe against E6's 0.448.
+5. **Which cases for radiologist review?** 300 sheets over 60 studies (20% of
+   the test partition) are now rendered, 1,474 targets. The binding constraint is
+   reader time, not sheet count. A stratified subset -- severe cases,
+   disagreements, confident errors -- would be more informative than working
+   through all of them.
 
 ---
 
