@@ -220,6 +220,9 @@ lands a plausible distance from that plane's own annotations.
 
 ## 6. The clinical system: fast vs not fast
 
+Full design in `SYSTEM_DESIGN.md`: four stages with file-shaped interfaces,
+SQLite schema, API surface, five frontend screens, build order and risks.
+
 **Buildable in about two days:** FastAPI backend, drag-and-drop frontend, job
 queue, SQLite schema, and the chain wired end to end -- `dicom_to_nifti` ->
 TotalSpineSeg -> model -> two-plane render. A working demo.
