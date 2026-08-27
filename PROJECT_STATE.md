@@ -29,6 +29,8 @@ automatically.
 | Viva defence narrative | `thesis/viva_defence.md` |
 | Reframing proposal | `thesis/chapter4/reframing_proposal.md` |
 | DICOM to NIfTI converter | `implementation/dicom_to_nifti.py` |
+| ROI quality control, whole cohort | `thesis/chapter4/roi_quality_control.md` |
+| 100 two-plane review sheets, 20 studies x 5 levels | `data/reports/roi_qc/` |
 | 113 behavioural tests, all passing | `implementation/99_audit/test_components.py` |
 
 **Headline result:** E7 - E0 = +0.0172 QWK [+0.0064, +0.0285], every seed, the
@@ -87,9 +89,12 @@ mid-campaign would break every remaining run.
 
 ## 3. Waiting on a decision from Polla
 
-1. **Build the Tier 1 QC viewer?** One day. Discharges the Chapter 3 ROI quality
-   control commitment and tests whether ACSSL's correspondence was sound.
-   Recommended -- see section 5 for why it matters more than it looks.
+1. **DONE 2026-08-27.** Tier 1 QC viewer built; correspondence verified over
+   9,542 projections at 93.6% within one slice, dev partition 94%. RQ2's null
+   is therefore interpretable. Outstanding: a reader must complete
+   `data/reports/roi_qc/roi_qc_checklist.csv` to produce the
+   inclusion/exclusion table Chapter 3 promised, and adjudicate the nine
+   studies in `geometry_exclusion_candidates.csv`.
 2. **QC sample: random or enriched?** Random gives an unbiased geometry error
    rate; enriched finds problems faster but yields no rate. Recommendation:
    random, with a stratified supplement.

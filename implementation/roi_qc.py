@@ -328,14 +328,26 @@ def main():
     print("")
     print("  Rendering review sheets...")
     checklist = []
+    manifest = []
     made = 0
+    # One sheet per (study, level). A whole study at all five levels is 25
+    # targets, which as a single figure is 25 rows tall and unreadable; per
+    # level it is five condition rows, which is what a reader actually reviews
+    # at one sitting.
+    jobs = []
     for st in pick:
-        sub = idx[idx.study_id == st]
+        sub_all = idx[idx.study_id == st]
         if want_levels is not None:
-            sub = sub[sub.level_key.isin(want_levels)]
-        if sub.empty:
+            sub_all = sub_all[sub_all.level_key.isin(want_levels)]
+        for lv in sorted(sub_all.level_key.unique()):
+            jobs.append((st, lv))
+
+    for st, lv in jobs:
+        sub = idx[idx.study_id == st]
+        sub_lv = sub[sub.level_key == lv]
+        if sub_lv.empty:
             continue
-        targets = sub.sort_values(["level_key", "condition_key"])
+        targets = sub_lv.sort_values("condition_key")
         n = len(targets)
         if n == 0:
             continue
@@ -395,18 +407,40 @@ def main():
             plt.close(fig)
             continue
         fig.suptitle(
-            "ROI quality control - study {}\n"
+            "ROI quality control - study {}, level {}\n"
             "Solid circle = annotated plane. Dashed = the SAME 3D point projected "
             "into the other plane.\n"
             "Colour = REFERENCE grade. Red border = crop truncated at the image "
             "edge.\n"
             "The system grades severity at a supplied location. It does not "
-            "detect or name pathology.".format(st), fontsize=8)
+            "detect or name pathology.".format(st, lv), fontsize=8)
         fig.tight_layout(rect=(0, 0, 1, 1 - 0.10 / max(1, n) - 0.02))
-        p = os.path.join(outdir, "qc_study_{}.png".format(st))
+        fname = "qc_{}_{}.png".format(st, lv.replace("/", "-"))
+        p = os.path.join(outdir, fname)
         fig.savefig(p, dpi=170)
         plt.close(fig)
         made += 1
+        manifest.append(dict(
+            sheet=fname, study_id=st, level=lv, n_targets=n,
+            partition=args.partition, seed=args.seed,
+            fov_mm=args.fov_mm, radius_mm=args.radius_mm))
+
+    if manifest:
+        mdf = pd.DataFrame(manifest)
+        mp = os.path.join(outdir, "roi_qc_manifest.csv")
+        mdf.to_csv(mp, index=False)
+        # the exact command that produced this set, so the figure set in the
+        # thesis is regenerable rather than a one-off artefact
+        with open(os.path.join(outdir, "REPRODUCE.txt"), "w",
+                  encoding="utf-8") as fh:
+            fh.write("python implementation/roi_qc.py --n_studies {} "
+                     "--partition {} --seed {} --levels {} --fov_mm {} "
+                     "--radius_mm {}\n".format(
+                         args.n_studies, args.partition, args.seed,
+                         args.levels, args.fov_mm, args.radius_mm))
+            fh.write("\n{} sheets, {} studies, levels {}\n".format(
+                len(mdf), mdf.study_id.nunique(),
+                ", ".join(sorted(mdf.level.unique()))))
 
     if checklist:
         cdf = pd.DataFrame(checklist)

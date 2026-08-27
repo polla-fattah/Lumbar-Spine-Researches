@@ -131,6 +131,129 @@ split persistence, and the across-seed inference introduced in
 Section~\ref{sec:results-inference}. All pass.
 
 % ===========================================================================
+\section{ROI Quality Control}
+\label{sec:results-roiqc}
+
+Section~\ref{sec:method-roi-qc} commits to visual inspection of a validation
+subset using overlays of the detected level, crop boundary and corresponding
+axial slices, recording correct lumbar level, inclusion of the relevant
+canal/foramen/recess, correct left/right orientation, adequate axial coverage,
+crop truncation, and correspondence failure caused by unusual axial angulation.
+It further commits to a final inclusion/exclusion table.
+
+This section reports that inspection. It is placed before the results because
+one of its findings determines whether a later result can be interpreted at all.
+
+\subsection{Why the Correspondence Had to Be Verified}
+
+Core Contribution I rests entirely on DICOM-defined anatomical correspondence:
+ACSSL's positive pairs are anatomically aligned rather than augmentation-derived.
+If that alignment were wrong, the pretext task would have been matching
+misaligned patches, and the null result for RQ2
+(Section~\ref{sec:results-rq2}) would be an artefact of the data pipeline rather
+than a finding about self-supervision.
+
+No data-grounded evidence existed either way. The correspondence code records
+that an earlier implementation never read \texttt{ImageOrientationPatient} and
+substituted textbook direction cosines selected by a substring match on the
+series description, and that its reported round-trip error of $0.00000000$~mm
+was vacuous: mapping a point through a matrix and back through its inverse
+returns the original point whatever the matrix contains.
+
+\subsection{An External Validation}
+
+The check used here compares two \emph{independent human annotations} through
+the transform, so it cannot succeed by algebraic identity. LumbarDISC annotates
+different conditions of the same level on different sequences: central canal on
+sagittal T2, subarticular on axial T2. The sagittal canal annotation for a level
+is therefore projected into the axial series and asked whether it selects the
+slice that carries that level's own axial annotations.
+
+\begin{table}[htbp]
+\centering
+\caption{Cross-annotation correspondence check. Offset is in whole slices from
+the nearest independently annotated target at the same level.}
+\label{tab:roiqc}
+\begin{tabular}{lrrrrrr}
+\toprule
+Partition & Projections & 0 & 1 & 2 & $>2$ & Within 1 \\
+\midrule
+Test (297 studies)  & 1{,}429 & 69\% & 24\% & 2\% & 6\% & 93\% \\
+Dev (1{,}676 studies) & 8{,}113 & 70\% & 24\% & 2\% & 5\% & \textbf{94\%} \\
+All & 9{,}542 & 70\% & 24\% & 2\% & 5\% & 93.6\% \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Median offset is $0.0$~mm in every partition and the 90th percentile is
+$4.0$~mm, one slice thickness. The dev row is the relevant one for Contribution
+I, since ACSSL pretrained on that partition.
+
+\subsection{The Residual Failures Are Not Systematic}
+
+Whether the remaining 5--6\% undermines the verdict depends on whether failure is
+concentrated and whether it is level-dependent.
+
+Of 1{,}973 studies, 1{,}734 (88\%) have no failing projection at all, and the
+nine studies that fail on every projection account for only 8\% of all outliers.
+Failure is spread thin rather than confined to a broken subpopulation.
+
+More decisively, outliers are evenly distributed across levels: 19.7\%, 20.6\%,
+19.9\%, 19.1\% and 20.8\% for L1--L2 through L5--S1, against an overall
+distribution of 18.8--20.6\%. A systematically incorrect affine transform would
+not produce that profile; it would fail worst at L5--S1, where segmental
+angulation is greatest. A flat level profile is the signature of annotation
+noise and genuine acquisition variation.
+
+The nine complete failures, with median offsets of 16--67~mm, are recorded as
+the \enquote{correspondence failure caused by unusual axial angulation} category
+and form the first entries of the inclusion/exclusion table.
+
+\subsection{Left/Right Orientation}
+
+Orientation is measurable rather than impressionistic. Across 2{,}881 axial
+annotations, left subarticular targets sit at $+8.99$~mm and right subarticular
+targets at $-8.14$~mm relative to each slice's own horizontal centre, where
+positive is right of centre. Radiological convention renders patient-left on the
+image right, so left targets appearing at $+9$~mm is correct. Separation is
+$17.12$~mm and departure from a perfect mirror is $0.85$~mm.
+
+This also constrains the lateralisation observation reported in
+Section~\ref{sec:results-attribution}: since the annotations are symmetric to
+within $0.85$~mm, the asymmetry observed in the attention maps is not inherited
+from the data.
+
+\subsection{Review Sheets and Reproducibility}
+
+One sheet per study and level, five condition rows, two panels per row: the
+annotated plane with a solid marker and the same three-dimensional point
+projected into the orthogonal plane with a dashed marker. Markers are $10$~mm in
+physical radius, sized per slice from \texttt{PixelSpacing} so they are
+comparable across scanners. Colour encodes the reference grade and a red border
+marks a crop truncated at the image edge.
+
+Each panel states its \emph{native} pixel size. A $100$~mm field of view is
+213~px at $0.469$~mm spacing but 107~px at $0.938$~mm, and an upsampled panel
+that does not declare what it was upsampled from implies detail it does not
+have.
+
+The current set is 100 sheets over 20 studies at all five levels, 492 targets,
+with 1\% truncated crops and a median cross-plane distance of $1.2$~mm --- well
+inside the $3.5$--$4.8$~mm slice thickness, so the projected point lies within
+the displayed slice rather than being extrapolated to it.
+
+Studies are drawn at random from the frozen partition under a fixed seed, so the
+subset is reproducible and cannot be reselected after a result is seen. The
+generating command is stored beside the figures, and a manifest records every
+sheet with its study, level, target count, partition, seed and geometry
+parameters.
+
+The accompanying checklist carries one row per target with the six Chapter~3
+fields left blank for a reader. Completing it produces the inclusion/exclusion
+table; at the time of writing the reader pass is outstanding, and this is stated
+rather than presented as complete.
+
+% ===========================================================================
 \section{The Ablation Ladder}
 \label{sec:results-ladder}
 
