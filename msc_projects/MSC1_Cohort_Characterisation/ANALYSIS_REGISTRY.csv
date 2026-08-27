@@ -1,0 +1,6 @@
+analysis_id,question,cohort_version,outcome,predictors,model_or_test,primary_or_secondary,status,notes
+MSC1-A01,RQ1,,,,,primary,planned,
+MSC1-A02,RQ2,,,,,primary,planned,
+MSC1-A03,RQ3,,,,,secondary,planned,
+MSC1-A04,RQ4,,,,,primary,planned,
+MSC1-A05,RQ5,,,,,secondary,planned,

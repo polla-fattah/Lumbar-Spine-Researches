@@ -1,10 +1,11 @@
-# MSc Project Plan — Student 1: Tertiary-Hospital Lumbar MRI Cohort Characterisation
+# MSc Project Plan — Candidate: Elaf (MSc Track 1)
 
 **Project Title:** Level-Specific Distribution and Demographic Patterns of Lumbar Degenerative MRI Findings in a Tertiary-Hospital Cohort in the Kurdistan Region of Iraq  
 **Academic Supervisor:** Dr. Polla Abdulhamid Fattah  
+**Primary MSc Candidate:** Elaf  
 **Best-Fit Degrees:** MSc in Data Science / Medical Informatics / Public Health / Clinical Data Science  
 **Computer Science fit:** acceptable only where programme regulations permit an applied health-analytics thesis  
-**Duration:** 4–6 Months
+**Duration:** 4–6 Months  
 
 ---
 
