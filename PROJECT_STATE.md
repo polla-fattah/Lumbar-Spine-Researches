@@ -127,8 +127,13 @@ mid-campaign would break every remaining run.
 - De-identification is not solved (below).
 - **Rizgary has no localisation at all.** The manifest carries `disc_level` but
   no x/y coordinates, so zero-shot transfer is blocked on missing model *input*,
-  not merely on admin. This was under-reported earlier and is the largest of the
-  three.
+  not merely on admin. **A solution now exists** -- see
+  `thesis/chapter4/localisation_feasibility.md`. TotalSpineSeg identified 140 of
+  140 levels correctly across 28 RSNA test studies, and a per-condition constant
+  offset derives all 25 targets from the 5 disc centroids with 5.5-6.8 mm
+  scatter, placing 99-100% inside the model's 60 mm crop. Not yet measured on
+  Kurdish protocols, and containment is not centring: the decisive test is to
+  rebuild the cache from derived coordinates and measure the actual QWK cost.
 
 **Two de-identification scripts exist and only one is broken.** Corrected
 2026-08-27; the earlier entry here named the wrong file.
@@ -176,10 +181,15 @@ TotalSpineSeg can run natively; install into the main environment after the
 campaign, with torch pinned. WSL is not installed. Disabling Smart App Control
 is a system security setting and was not attempted.
 
-**TotalSpineSeg is unvalidated on this data.** Its 99% labelling accuracy is its
-own published figure on its own benchmark. The students almost certainly quoted
-the paper rather than measuring it locally. RSNA is where to measure it, because
-ground-truth coordinates exist there.
+**TotalSpineSeg: installed and validated on RSNA (2026-08-28).** 140/140 levels
+correct across 28 studies. Three obstacles cost time and will recur: Smart App
+Control blocks the generated .exe wrappers, so invoke
+`totalspineseg.inference:main` directly; `auglab` pulls kornia 0.8.3 which
+dropped `kornia.core.Tensor`, breaking the nnU-Net trainer import while the
+pipeline still exits 0, so pin `kornia==0.7.4`; and the disc label values
+(92-95, 100) are not shipped as a table and must be derived from the package's
+labelling command, then verified. Still unmeasured on Kurdish clinical
+protocols.
 
 **No LaTeX toolchain on this machine.** `chapter4.tex` has never been compiled.
 Braces and environments balance and all `\ref` resolve, but it needs a real
