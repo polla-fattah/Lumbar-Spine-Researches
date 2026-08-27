@@ -1,0 +1,6 @@
+experiment_id,method,model_version,prompt_or_code_version,split_version,seed,training_data,primary_metric,status,notes
+MSC3-RULES-01,regex_heuristic,,,,,,exact_relation_f1,planned,
+MSC3-CLASSICAL-01,classical_nlp,,,,,,exact_relation_f1,planned,
+MSC3-LLM-ZS-01,open_weight_zero_shot,,,,,,exact_relation_f1,planned,
+MSC3-LLM-FS-01,open_weight_few_shot,,,,,,exact_relation_f1,planned,
+MSC3-PEFT-01,lora_or_peft,,,,,,exact_relation_f1,planned,
