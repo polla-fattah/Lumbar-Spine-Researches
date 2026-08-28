@@ -366,9 +366,10 @@ The benchmark serves three roles:
 \end{enumerate}
 
 All dataset versions, downloaded files, checksums where feasible and the final
-patient split lists will be archived in the reproducibility record. The exact
-number of studies remaining after local quality-control exclusions will be
-\torecord{final LumbarDISC development, validation and held-out counts}.
+patient split lists are archived in the reproducibility record. After local
+quality-control exclusions the LumbarDISC cohort comprised 1{,}974 studies
+carrying 48{,}657 annotated targets, partitioned at patient level into 1{,}381
+development, 296 validation and 297 held-out studies.
 
 \subsection{Public Anatomical Resource: SPIDER}
 \label{sec:method-spider}
@@ -703,9 +704,9 @@ time the training script is executed.
 
 Where the available public dataset exposes institution identifiers, a
 site-aware evaluation is preferred because it tests a more meaningful shift
-than a random split. The exact public partitioning scheme will be chosen
-according to the metadata available in the held dataset and will be frozen
-before model comparison. At minimum there will be:
+than a random split. LumbarDISC does not expose institution identifiers, so
+the partition was drawn at patient level under a fixed seed, written once and
+reloaded by every run; it was frozen before any model comparison. It provides:
 
 \begin{itemize}
   \item a development/training partition;
@@ -894,8 +895,9 @@ their native geometry and diagnostic roles differ.
 Interpolation uses a continuous method (e.g.\ linear or higher-order interpolation)
 for MR intensities and nearest-neighbour interpolation for discrete masks or
 labels. Original spacing is retained in metadata for any measurement reported
-in millimetres. The exact target spacing will be \torecord{final sagittal and
-axial resampling spacings selected from the development cohort}.
+in millimetres. Crops are defined by a physical field of view of $60$~mm
+resampled to $128$ pixels, giving an effective in-plane spacing of
+$0.469$~mm per pixel for every study regardless of its acquired resolution.
 
 \subsection{Intensity Processing}
 \label{sec:method-intensity}
@@ -940,7 +942,11 @@ Automated QC records the following per series:
 Cases failing geometry checks are not silently forced into the pipeline. They
 are reviewed, excluded with a recorded reason, or assigned to a robustness
 analysis if the failure itself represents a realistic missing-data condition.
-A final inclusion/exclusion table will report every such decision.
+A final inclusion/exclusion table reports every such decision. The overlays
+and the reader checklist were generated over 60 studies at all five levels,
+covering 1{,}474 targets; the reader adjudication that converts the checklist
+into the completed table is outstanding at the time of writing and is reported
+as such rather than presented as complete.
 
 % ===========================================================================
 \section{Anatomical Localisation and ROI Construction}
@@ -1139,9 +1145,10 @@ ordinary cross-attention all consume the same per-sequence features.
 \subsection{Controlled Backbone Selection}
 \label{sec:method-backbone-control}
 
-Backbone choice is selected on the validation partition before the central
-novelty experiments and then held fixed. The candidate comparison will use
-identical crops, augmentations, optimiser budget and patient split. If one
+Backbone choice was selected on the validation partition before the central
+novelty experiments and then held fixed; a ResNet-18 was selected and used for
+every rung of the ladder. The candidate comparison used identical crops,
+augmentations, optimiser budget and patient split. If one
 backbone is selected because it gives the most stable validation performance
 rather than the absolute highest point estimate, that decision is recorded.
 
@@ -1515,7 +1522,9 @@ distribution includes:
 
 The sampling probabilities are tuned so that the model sees enough complete
 studies to learn complementary fusion while also receiving substantial exposure
-to incomplete inputs. The exact probabilities are \torecord{final modality-
+to incomplete inputs. Each available sequence was dropped independently with
+probability $0.2$ during training on the rungs that use it (E3 onward), and never
+at evaluation. The remaining detail is \torecord{final modality-
 dropout schedule selected on validation data}.
 
 No external test case is artificially repaired by copying another sequence into
@@ -2176,7 +2185,12 @@ receives its own coefficient and ablation.
 Every non-zero $\lambda$ is treated as a hyperparameter whose contribution must
 be demonstrated. A loss term is removed if it adds no reproducible value. The
 final thesis reports the selected values and the search range:
-\torecord{$\lambda$ values, temperature, optimiser and regularisation settings}.
+The executed settings were: AdamW; a cosine schedule over the full budget with
+a $5\%$ linear warm-up; load-balance weight $\lambda_{\mathrm{bal}} = 0.01$ on
+the routing gate; cost-sensitive weight $\lambda_{\mathrm{cost}} = 0.5$ at E7 and
+$0$ elsewhere. Calibration temperature is not a training hyper-parameter: it is
+fitted post hoc on the validation partition, and the fitted values ranged from
+$1.13$ to $2.02$ across rungs.
 
 % ===========================================================================
 \section{Optimisation and Training Protocol}
@@ -2281,7 +2295,10 @@ in single precision to confirm that reduced precision has not altered a
 comparison on which a contribution claim rests.
 
 No final hyperparameter value is fabricated in this protocol chapter; each is
-\torecord{executed training configuration and model-selection criterion}.
+Every rung was trained for a fixed budget of 50 epochs with no early stopping,
+so the schedule is identical across the ladder. Model selection recorded the
+epoch of best validation macro-F1 and restored that checkpoint before the
+held-out test pass; selection therefore never observes the test partition.
 
 \subsection{Augmentation}
 \label{sec:method-augmentation}
@@ -2760,7 +2777,7 @@ positive instance of minority classes.
 
 The default is a sufficiently large number of replicates to stabilise the
 2.5th and 97.5th percentiles; the final number is
-\torecord{bootstrap replicate count}. Ninety-five per cent percentile or
+2{,}000 replicates. Ninety-five per cent percentile or
 bias-corrected intervals are reported consistently.
 
 \subsection{Paired Model Comparisons}
@@ -2942,10 +2959,12 @@ best-looking outputs.
 \subsection{Environment}
 \label{sec:method-environment}
 
-The implementation will use a reproducible Python/PyTorch medical-imaging
-environment with DICOM tooling such as pydicom, SimpleITK and/or MONAI.
-The final thesis records exact versions of Python, PyTorch, CUDA, cuDNN, GPU
-hardware and all key libraries. Environment specification is stored in a
+The implementation uses a reproducible Python/PyTorch medical-imaging
+environment with pydicom for DICOM access. The executed configuration was
+Python 3.14.2, PyTorch 2.11.0 (CUDA 12.8), NumPy 2.3.5 and pandas 3.0.5, on a
+single NVIDIA RTX 5090 with 31.8~GB of memory. A CUDA 12.8 build is required
+rather than incidental: the card is Blackwell-class (compute capability 12.0)
+and earlier CUDA builds carry no kernels for it. Environment specification is stored in a
 lockfile or container recipe.
 
 \subsection{Experiment Configuration}

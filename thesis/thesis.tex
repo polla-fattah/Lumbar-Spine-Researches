@@ -154,17 +154,72 @@
 
 \begin{minipage}{0.85\textwidth}
 \footnotesize\raggedright
-\textbf{Status of this build.} This document contains Chapters 2 and 3. The
-remaining chapters are not yet written; their \verb|\input| lines are present
-below and commented out. The chapter counter is advanced so that the literature
-review numbers as Chapter~2, matching every cross-reference in the text. Data
-collection is conducted at Rizgary Teaching Hospital; no patient-identifiable
-data appears in this document or in the repository that produces it.
+\textbf{Status of this build.} This document contains Chapters 1 to 5:
+introduction, literature review, methodology, results, and discussion and
+conclusions. Chapters are numbered naturally; the counter advance used while
+Chapter~1 was unwritten has been removed. Research question RQ4,
+cross-institutional transfer, was not executed and is reported as such rather
+than omitted. Data collection is conducted at Rizgary Teaching Hospital; no
+patient-identifiable data appears in this document or in the repository that
+produces it.
 \end{minipage}
 
 \vspace{1cm}
 {\footnotesize Compiled \today \par}
 \end{titlepage}
+
+\cleardoublepage
+\chapter*{Abstract}
+\addcontentsline{toc}{chapter}{Abstract}
+
+Magnetic resonance grading of lumbar degenerative disease is slow, and expert
+readers agree with one another only moderately: reported inter-reader $\kappa$
+ranges from $0.49$ for subarticular stenosis to $0.73$ for the central canal.
+This thesis asks whether explicit anatomical structure, imposed on a
+multi-sequence convolutional model, improves automated grading on the LumbarDISC
+benchmark of 1{,}974 studies and 48{,}657 annotated targets.
+
+Three mechanisms were proposed and each was tested against a control matched in
+capacity rather than against its own absence: anatomically aligned cross-sequence
+self-supervision, disease-conditioned sequence routing, and a heterogeneous
+disease--anatomy graph. An eight-rung ablation ladder was executed over seven
+training seeds, seventy runs in total, with inference on a frozen patient-level
+test partition and false discovery rate control across a pre-specified
+comparison family.
+
+The complete system improves on a single-sequence baseline by $+0.0177$
+quadratic weighted kappa (95\% CI $[+0.0097, +0.0260]$) on every seed, and
+Severe$\rightarrow$Normal confusions fall from $5.7\%$ to $3.8\%$. Two further
+comparisons survive correction: typed heterogeneous graph edges
+($+0.0093$, $p_{\mathrm{FDR}} = 0.009$) and a clinically cost-sensitive ordinal
+objective ($+0.0082$, $p_{\mathrm{FDR}} = 0.009$), the latter carrying the
+largest standardised effect in the study.
+
+The anatomical mechanisms do not. Cross-sequence self-supervision confers no
+measurable benefit on accuracy, on robustness to a withheld sequence, or on
+where the model attends. Disease-conditioned routing reproduces the clinically
+expected sequence preference in every run, yet a router-free model shows the
+same preference under intervention, identifying the pattern as a property of the
+benchmark's annotation structure rather than of routing. Anatomically correct
+graph topology does not outperform a degree-preserving random shuffle. These are
+bounds rather than absences: the paired intervals constrain the three mechanisms
+to at most $1.22\%$, $1.55\%$ and $1.05\%$ of baseline performance.
+
+Attribution analysis supplies a mechanism for that pattern. A plain
+single-sequence encoder already concentrates $2.4$ times the chance share of its
+evidence on the annotated lesion, so the localisation these priors were
+introduced to supply is largely accomplished before any of them is added.
+
+The contributions are therefore a verified multi-sequence grading system, a
+controlled ablation protocol in which three analyses that initially produced
+positive conclusions were overturned by their own controls, and evidence that
+anatomical structural priors do not pay at this data scale together with a
+measured explanation of why.
+
+\vspace{0.5em}
+\noindent\textbf{Keywords:} lumbar spinal stenosis, magnetic resonance imaging,
+ordinal classification, graph neural networks, self-supervised learning,
+ablation study, negative results.
 
 \tableofcontents
 
@@ -174,15 +229,10 @@ data appears in this document or in the repository that produces it.
 \cleardoublepage
 \pagenumbering{arabic}
 
-% Chapter 1 does not exist yet. The counter is advanced so that the next
-% \chapter is numbered 2, which is what the prose of both chapters assumes:
-% seven hard-coded "Chapter~2"/"Chapter~3" mentions and five \ref{ch:litreview}
-% cross-references all depend on this numbering.
-%
-% WHEN chapter1.tex IS WRITTEN: uncomment its \input below and DELETE the
-% \setcounter line, or the introduction will be numbered 2 and everything after
-% it will shift by one.
-%
+% All five chapters exist and are numbered naturally. The \setcounter hack
+% that formerly advanced the chapter counter, from when Chapter 1 was unwritten,
+% has been removed -- leaving it in would number the introduction as 2 and shift
+% every later chapter and cross-reference by one.
 \input{chapter1}
 
 \input{chapter2}

@@ -384,6 +384,29 @@ under institutional transfer, specified as rung E8, was not run. Every result in
 this thesis is internal to LumbarDISC, and no claim of generalisation to another
 institution, scanner population or reference standard is made.
 
+A measurement taken after the main campaign sharpens what that absence means.
+The transfer cohort carries no annotated coordinates, so executing RQ4 requires
+localising the twenty-five targets automatically. Doing so on LumbarDISC itself,
+where the human annotation is available for comparison, costs $-0.1636$ QWK ---
+$22.9\%$ of the system's performance, on every one of nine runs. Segmentation
+identifies the five lumbar levels essentially perfectly (140 of 140 in the
+sample examined), and derived coordinates place $99$--$100\%$ of targets inside
+the model's field of view; the loss comes from the derived point sitting some
+six millimetres off centre in a sixty-millimetre crop, which the attribution
+analysis of Section~\ref{sec:disc-localise} explains, since the encoder
+concentrates its evidence near that centre. The failure is concentrated in the
+four lateral conditions, where placement must be accurate to a few millimetres;
+the central canal, sitting on the midline, loses only $-0.05$.
+
+The consequence for RQ4 is not that transfer is harder than expected. It is that
+a transfer result obtained this way would be \emph{uninterpretable}: domain
+shift and localisation error would be confounded, and the localisation term
+alone is an order of magnitude larger than any effect this thesis measures.
+Section~\ref{sec:intro-rqs} asks how much degradation is attributable to
+localisation versus grading, and Chapter~\ref{ch:methodology} provides for a
+verified-localisation control. That provision is necessary rather than
+precautionary, and this measurement is what establishes it.
+
 \emph{Single benchmark, single reference standard.} LumbarDISC labels derive
 from a reading process whose inter-reader agreement is moderate for the lateral
 compartments. Conclusions about which mechanisms help are conditional on that
@@ -442,12 +465,24 @@ testable limitation on through-plane structure. A volumetric or genuinely
 cross-plane representation is the most direct follow-up this study suggests.
 
 \emph{For transfer.} The infrastructure for RQ4 exists: the cohort is
-reconciled, reports are parsed, and the geometric machinery is verified. What
-remains is reader adjudication of conflicting reference labels, a correct
-de-identification procedure, and---the largest gap---localisation for a cohort
-that carries no annotated coordinates. Automated disc localisation is the
-enabling step, and it is a separate piece of work rather than an extension of
-this one.
+reconciled, reports are parsed, and the geometric machinery is verified against
+independent annotations. What remains is reader adjudication of conflicting
+reference labels, a correct de-identification procedure, and---the largest
+gap---localisation for a cohort that carries no annotated coordinates.
+
+That last gap is now quantified rather than merely named. Segmentation plus a
+per-condition constant offset is not sufficient: it costs $22.9\%$ of grading
+performance, concentrated in the lateral compartments. Three routes remain, in
+increasing cost. A human confirms placement, which is viable for a review
+interface and is what the accompanying system design assumes. A per-patient
+rather than per-condition offset is learned, conditioning on something like
+vertebral width, which would test whether the residual error is anatomical
+variation rather than noise. Or a detector is trained directly on the
+$48{,}657$ annotated coordinates LumbarDISC already provides, which is the most
+promising and is a separate piece of work rather than an extension of this one.
+
+Until one of those exists, any RQ4 result must be reported alongside a
+verified-localisation arm, or it cannot be attributed.
 
 % ===========================================================================
 \section{Conclusion}
