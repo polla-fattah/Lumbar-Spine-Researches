@@ -1,0 +1,52 @@
+\chapter{Introduction and Clinical Background}
+\label{ch:introduction}
+
+\section{Clinical Background of Lumbar Spine Disease}
+Lumbar spine degenerative disc disease and spinal canal stenosis represent leading causes of chronic low back pain, lower extremity radiculopathy, and functional disability worldwide. The lumbar spine consists of five movable vertebral bodies ($L1$ through $L5$) separated by intervertebral discs and articulating posteriorly via paired facet joints.
+
+Magnetic Resonance Imaging (MRI) is the undisputed non-invasive gold standard diagnostic modality for evaluating lumbar degenerative pathology. MRI provides high-contrast visualization of multi-planar soft tissue structures, enabling radiologists to evaluate:
+\begin{enumerate}
+    \item \textbf{Intervertebral Disc Herniation Morphology:} Ranging from circumferential disc bulge to focal protrusion and free-fragment extrusion.
+    \item \textbf{Central Spinal Canal Stenosis:} Narrowing of the main dural sac space containing cauda equina nerve roots.
+    \item \textbf{Neural Foraminal Narrowing:} Stenosis of the lateral exit canals accommodating individual spinal nerve roots.
+    \item \textbf{Posterior Element Pathology:} Facet joint arthrosis, ligamentum flavum hypertrophy, and marginal osteophytosis.
+\end{enumerate}
+
+\section{The Clinical Data Challenge: Unstructured Narrative Reports}
+In major regional teaching hospitals across the Middle East---such as Rizgary Teaching Hospital in Erbil, Kurdistan Region of Iraq---radiologists document MRI findings in free-text narrative English radiology reports.
+
+While narrative prose allows radiologists flexible expression, free-text reporting creates a major clinical informatics bottleneck:
+\begin{itemize}
+    \item \textbf{Information Lock:} Critical diagnostic findings (such as severe $L4$--$L5$ canal stenosis or $L5$--$S1$ foraminal compression) are buried within narrative sentences.
+    \item \textbf{Lack of Interoperability:} Unstructured text cannot be directly queried by hospital electronic health record (EHR) systems or epidemiological auditing tools.
+    \item \textbf{Manual Bottleneck:} Conducting hospital-wide quality audits or research studies requires clinicians to manually read hundreds of individual text documents.
+\end{itemize}
+
+\section{Research Gap and Clinical Scope Guardrails}
+\subsection{The Research Gap}
+While commercial biomedical Natural Language Processing (NLP) tools exist for document-level classification, very few open systems address \textbf{level-resolved clinical relation extraction} under local Middle Eastern reporting variations. Specifically, an automated pipeline must accurately bind pathology findings to exact spinal levels ($L1$--$L2$ through $L5$--$S1$) while resolving negations (\textit{"no spinal canal stenosis"}) and multi-level list structures (\textit{"L4-5 and L5-S1 show circumferential bulges"}).
+
+\subsection{Mandatory Clinical Scope Guardrails}
+To ensure scientific integrity, this research strictly adheres to three supervisory framing rules:
+\begin{enumerate}
+    \item \textbf{Retrospective Referral Cohort Framing:} The hospital dataset represents a \textbf{symptomatic tertiary-hospital referral cohort}, not a general population prevalence survey. Observed finding rates reflect hospital referral patterns.
+    \item \textbf{Standardized Terminology:} Age metrics are reported strictly as \textbf{"Age at Imaging"}, never \textit{"Age of Onset"}, as the dataset records when the MRI was performed.
+    \item \textbf{Contextualized Literature Positioning:} The thesis explicitly avoids overbroad claims such as \textit{"the first study in Iraq or Kurdistan"}, citing established regional literature \cite{akreyi2012mri, saeed2019pattern} while focusing on the specific relation extraction contribution.
+\end{enumerate}
+
+\section{Research Objectives}
+This master's thesis investigates three core research objectives:
+\begin{enumerate}
+    \item \textbf{Rule-Based Baseline Development:} Design and implement a deterministic, rule-based Regex relation extraction engine (\texttt{msc3\_regex\_extractor.py}) tailored to local reporting syntax and level-binding patterns.
+    \item \textbf{Open-Weight LLM Benchmarking:} Benchmark privacy-preserving, open-weight instruction-tuned Large Language Models (e.g. Llama 3 8B \cite{meta2024llama}, BioMistral 7B \cite{labrak2024biomistral}) using constrained zero-shot and few-shot JSON prompt templates.
+    \item \textbf{Quantitative Performance \& Error Evaluation:} Evaluate extraction accuracy, level-binding precision, negation resolution, and computational efficiency against an audited reference standard across 975 lumbar level observations.
+\end{enumerate}
+
+\section{Thesis Structure}
+The remainder of this thesis is organized as follows:
+\begin{itemize}
+    \item \textbf{Chapter \ref{ch:literature_review} (Literature Review):} Reviews classical biomedical NLP systems, recent Vision-Language Models, and privacy-preserving open-weight LLMs.
+    \item \textbf{Chapter \ref{ch:methodology} (Methodology):} Details the annotation guidelines, Regex parser design, LLM JSON prompt engineering, and evaluation protocols.
+    \item \textbf{Chapter \ref{ch:results} (Results):} Presents comparative extraction accuracy metrics (Precision, Recall, F1, Level-Binding Accuracy) and detailed radiological error analyses.
+    \item \textbf{Chapter \ref{ch:discussion} (Discussion \& Conclusion):} Discusses clinical deployment on hospital infrastructure, study limitations, and future research directions.
+\end{itemize}

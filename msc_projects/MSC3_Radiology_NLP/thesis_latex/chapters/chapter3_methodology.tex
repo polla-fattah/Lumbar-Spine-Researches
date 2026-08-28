@@ -1,0 +1,36 @@
+\chapter{Methodology and System Architecture}
+\label{ch:methodology}
+
+\section{Overview of Extraction Architecture}
+This chapter details the design, implementation, and evaluation framework for extracting level-resolved findings from narrative radiology reports. The system architecture consists of three modular components:
+\begin{enumerate}
+    \item \textbf{Narrative Corpus Ingestion:} Processing 195 narrative \texttt{.docx} reports from Rizgary Teaching Hospital.
+    \item \textbf{Extraction Engines:} Deterministic Rule-Based Regex Parser (\texttt{msc3\_regex\_extractor.py}) and Open-Weight LLM JSON Pipeline (\texttt{msc3\_llm\_extractor.py}).
+    \item \textbf{Evaluation Engine:} Quantitative precision, recall, F1, and level-binding error evaluation (\texttt{msc3\_evaluate\_nlp.py}).
+\end{enumerate}
+
+\section{Reference Annotation Guidelines \& Ground Truth}
+To construct an auditable reference standard, 195 narrative reports were extracted and structured across five lumbar levels ($L1$--$L2$, $L2$--$L3$, $L3$--$L4$, $L4$--$L5$, $L5$--$S1$), yielding a total of \textbf{975 level-resolved ground-truth observations}.
+
+Target findings include: Disc Bulge, Disc Protrusion, Disc Extrusion, Central Canal Stenosis, Facet Joint Arthrosis, Ligamentum Flavum Hypertrophy, and Osteophytes.
+
+\section{Rule-Based Regex Extraction Engine Design}
+The deterministic Rule-Based Regex Extractor executes in four sequential stages:
+
+\subsection{Stage 1: Document Parsing \& Text Normalization}
+The engine utilizes Python's standard \texttt{zipfile} and \texttt{xml.etree.ElementTree} modules to read \texttt{word/document.xml} directly from \texttt{.docx} files. Whitespace and non-standard punctuation are normalized.
+
+\subsection{Stage 2: Sentence Segmentation \& Level Binding}
+Reports are segmented into sentence blocks. Each sentence is scanned for level-matching patterns using regex aliases ($L1$--$L2$ through $L5$--$S1$).
+
+\subsection{Stage 3: Negation \& Context Scoping}
+Within each level-matched sentence, a scope-bound negation check is performed for trigger phrases (\textit{"no"}, \textit{"normal"}, \textit{"without"}, \textit{"unremarkable"}). If a negation trigger is present, findings within that sentence block are assigned a $0$ status.
+
+\subsection{Stage 4: Multi-Level List Expansion}
+When a sentence references multiple levels (e.g., \textit{"L4-5 and L5-S1 discs show bulge"}), the extracted finding is expanded to all referenced levels simultaneously.
+
+\section{Open-Weight LLM Prompt Engineering}
+To evaluate generative relation extraction, structured JSON prompt templates were designed for local open-weight instruction models (Llama 3 8B, BioMistral 7B). Both \textbf{Zero-Shot} and \textbf{Few-Shot (3-Shot)} in-context learning configurations were implemented to evaluate schema adherence and extraction accuracy.
+
+\section{Evaluation Protocol}
+The evaluation script compares extracted outputs from both engines against the audited ground-truth reference matrix (\texttt{elaf\_audited\_cohort\_matrix.csv}). Precision, Recall, Macro F1-Score, Negation Accuracy, and Level-Binding Accuracy are calculated across all 975 level observations.

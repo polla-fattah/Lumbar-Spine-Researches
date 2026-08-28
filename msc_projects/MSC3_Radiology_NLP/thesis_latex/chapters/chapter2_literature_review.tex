@@ -1,0 +1,47 @@
+\chapter{Literature Review and Related Work}
+\label{ch:literature_review}
+
+\section{Clinical Radiology Report Structuring}
+Automated structuring of radiology reports has been a central focus of medical informatics for over three decades. Early systems relied on rule-based regular expressions and medical vocabularies to identify diagnostic concepts.
+
+Key foundational frameworks include:
+\begin{itemize}
+    \item \textbf{NegEx / ConText Algorithm:} Developed by Harkema et al. \cite{harkema2009context}, NegEx utilizes trigger terms preceding or following clinical concepts to determine negation (\textit{"no evidence of"}, \textit{"rules out"}), uncertainty (\textit{"possible"}), and historical context.
+    \item \textbf{cTaKES \& MetaMap:} Clinical Text Analysis and Knowledge Extraction System \cite{savova2010mayo} and NCBI MetaMap provide named entity recognition (NER) for unified medical concepts but require substantial domain tuning for level-specific anatomical relation extraction.
+\end{itemize}
+
+\section{Level-Resolved Anatomical Relation Extraction}
+While document-level classification determines whether a report contains \textit{any} mention of stenosis, lumbar MRI evaluation requires \textbf{level-resolved relation extraction}---binding specific pathological findings to exact spinal levels ($L1$--$L2$ through $L5$--$S1$).
+
+In English radiology reports, findings are frequently expressed using multi-level list structures:
+\begin{quote}
+    \textit{"L4-5 and L5-S1 intervertebral discs show circumferential bulge with pressure on corresponding exiting nerve roots."}
+\end{quote}
+Naive sentence-window NLP systems often fail on such structures, assigning the bulge finding only to the first mentioned level ($L4$--$L5$) and ignoring the second ($L5$--$S1$). Robust relation extraction must implement list-expansion logic to distribute findings correctly across all referenced anatomical levels.
+
+\section{Open-Weight Large Language Models in Healthcare}
+The emergence of Large Language Models (LLMs) has transformed clinical text processing. While proprietary APIs demonstrate impressive zero-shot medical extraction capabilities, their deployment in clinical hospital environments is restricted by stringent \textbf{data privacy and governance regulations}.
+
+Transmitting patient radiology reports to external cloud endpoints violates patient confidentiality regulations unless strict business associate agreements (BAAs) and anonymization pipelines are established. Open-weight instruction-tuned LLMs---such as \textbf{Llama 3 8B} \cite{meta2024llama} and \textbf{BioMistral 7B} \cite{labrak2024biomistral}---can be deployed locally on hospital hardware behind the institutional firewall, guaranteeing 100\% data privacy while providing state-of-the-art generative extraction capabilities.
+
+\section{Evaluation Metrics for Clinical Relation Extraction}
+To evaluate clinical text extraction systems rigorously, standard information retrieval and classification metrics are employed:
+\begin{enumerate}
+    \item \textbf{Precision ($P$):} Proportion of extracted positive findings that are correct:
+    \begin{equation}
+        P = \frac{TP}{TP + FP}
+    \end{equation}
+    \item \textbf{Recall ($R$):} Proportion of true clinical findings correctly extracted by the model:
+    \begin{equation}
+        R = \frac{TP}{TP + FN}
+    \end{equation}
+    \item \textbf{F1-Score ($F_1$):} Harmonic mean of Precision and Recall:
+    \begin{equation}
+        F_1 = 2 \times \frac{P \times R}{P + R}
+    \end{equation}
+    \item \textbf{Exact Level-Binding Accuracy:} Percentage of lumbar levels where all findings are correctly extracted without level-assignment errors.
+    \item \textbf{Negation Resolution Rate:} Accuracy in distinguishing true pathological presence from negated control phrases (\textit{"No canal stenosis"}).
+\end{enumerate}
+
+\section{Summary \& Position of the Thesis}
+The literature indicates that while cloud-based proprietary LLMs are widely benchmarked, \textbf{locally deployable, privacy-preserving open-weight LLMs} and \textbf{optimized deterministic regex parsers} remain the most practical solutions for resource-constrained teaching hospitals. This thesis establishes the first comparative benchmark of these approaches on a Middle Eastern tertiary-hospital lumbar MRI report dataset.

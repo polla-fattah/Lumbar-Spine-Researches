@@ -1,0 +1,24 @@
+\chapter{Discussion, On-Premise Deployment, Limitations, and Conclusion}
+\label{ch:discussion}
+
+\section{Discussion of Primary Empirical Findings}
+This thesis presented a comparative evaluation of a \textbf{Rule-Based Regex Extraction Engine} and \textbf{Open-Weight Large Language Models} for level-resolved clinical relation extraction from narrative lumbar MRI reports at Rizgary Teaching Hospital.
+
+Key empirical insights include:
+\begin{enumerate}
+    \item \textbf{Challenges of Narrative Phrase Variance:} The rule-based Regex engine achieved an empirical F1-score of \textbf{0.133} (0.298 for disc bulge, 0.197 for canal stenosis). While regex parsing provides high execution speed, narrative phrase variance and non-standard level range descriptions present significant recall bottlenecks.
+    \item \textbf{Generative Extraction via Open LLMs:} Open-weight instruction models (Llama 3 8B) demonstrated structured extraction capability without transmitting patient data to external cloud APIs, establishing an on-premise foundation for hospital text processing.
+\end{enumerate}
+
+\section{On-Premise Privacy-Preserving Clinical Deployment}
+A core contribution of this research is establishing an architecture for \textbf{on-premise, privacy-preserving clinical NLP deployment}. By containerizing extraction scripts and running open-weight LLMs locally on hospital hardware, the system operates \textbf{offline behind the institutional firewall}, reducing data disclosure risks associated with cloud providers.
+
+\section{Limitations}
+\begin{enumerate}
+    \item \textbf{Single-Center Reporting Style:} The dataset is derived from Rizgary Teaching Hospital in Erbil. Reporting syntax may vary across different regional hospital systems.
+    \item \textbf{Anatomical Noun Conflation:} The initial regex schema conflated general foraminal stenosis with central canal stenosis, highlighting the need for dependency-tree relation parsing.
+    \item \textbf{Binary Schema Scope:} The extraction schema categorizes findings as present/absent. Future extensions should incorporate multi-grade ordinal severity scales.
+\end{enumerate}
+
+\section{Conclusion}
+This master's thesis established a reproducible empirical benchmark for level-resolved lumbar MRI report extraction. The open-source pipeline provides a foundational baseline for clinical archive structuring and research data extraction in regional Middle Eastern teaching hospitals.
