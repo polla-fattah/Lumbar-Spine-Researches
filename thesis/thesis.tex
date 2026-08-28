@@ -65,6 +65,12 @@
 \usepackage{longtable}
 \usepackage{array}
 \usepackage{graphicx}
+% docmute discards the chapter preambles, so the \graphicspath declared in
+% chapter3.tex and chapter4.tex does NOT reach this build. It has to be
+% repeated here or every \includegraphics in the full thesis fails while the
+% standalone chapters keep working -- exactly the asymmetry this wrapper exists
+% to catch.
+\graphicspath{{../data/reports/figures/}{../data/reports/roi_qc/}{../data/reports/roi_qc_failure/}}
 \usepackage{thesisstyle}   % shared TikZ figure styles; see thesisstyle.sty
 \usepackage[hidelinks]{hyperref}
 

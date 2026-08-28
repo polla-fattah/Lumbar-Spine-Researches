@@ -1,6 +1,6 @@
 {
-  "generated": "2026-08-27T05:43:27",
-  "git_commit": "2ee746704590656fda777f19f241de01a90b00b3",
+  "generated": "2026-08-29T01:31:28",
+  "git_commit": "b0f795e4d590d7578cba416c5f88fb23dc0fa778",
   "git_dirty": true,
   "python": "3.14.2",
   "platform": "Windows-11-10.0.26200-SP0",
@@ -14,14 +14,15 @@
   "index_sha256_16": "9316f2877b380ca9",
   "split_sha256_16": "2b01dd9143a91bea",
   "args": {
-    "n_studies": 60,
+    "n_studies": 12,
+    "studies": "2388577668",
     "seed": 20260827,
     "fov_mm": 100.0,
     "radius_mm": 10.0,
-    "levels": "all",
-    "outdir": null,
+    "levels": "L4-L5",
+    "outdir": "data/reports/roi_qc_failure",
     "rsna_dir": null,
     "validate_only": false,
-    "partition": "test"
+    "partition": "dev"
   }
 }

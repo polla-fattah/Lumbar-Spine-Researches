@@ -32,6 +32,12 @@
 \usepackage{longtable}
 \usepackage{array}
 \usepackage{graphicx}
+% Figures are read from where they are GENERATED, not from a copy inside
+% thesis/. A copy would drift the moment a figure is regenerated, and the
+% provenance record beside the originals would then describe a different image
+% than the one printed. Paths are relative to thesis/, so they resolve
+% identically whether this chapter is built standalone or through thesis.tex.
+\graphicspath{{../data/reports/figures/}{../data/reports/roi_qc/}{../data/reports/roi_qc_failure/}}
 \usepackage{thesisstyle}   % shared TikZ figure styles; see thesisstyle.sty
 \usepackage[hidelinks]{hyperref}
 
@@ -1092,6 +1098,10 @@ crop boundary and corresponding axial slices. The inspection records:
 
 The purpose is not to manually curate the full dataset but to detect systematic
 geometry errors before they propagate into model training.
+
+The executed inspection, the review sheets it produced and its inclusion and
+exclusion outcome are reported in Section~\ref{sec:results-roiqc}, since they are
+findings rather than protocol.
 
 % ===========================================================================
 \section{Baseline Representation and Sequence Encoders}

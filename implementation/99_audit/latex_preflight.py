@@ -57,10 +57,17 @@ E = re.escape
 
 # arguments whose contents are filenames, labels or literal text, where an
 # underscore is legitimate and must not be flagged
+#
+# graphicspath is here with a nested-brace body because its argument is a LIST
+# of brace groups -- \graphicspath{{a/}{b/}} -- so the flat \{[^}]*\} used for
+# the others stops at the first closing brace and leaves the rest of the line
+# exposed. Its contents are directory names that graphicx only ever uses for
+# file lookup and never typesets, so underscores in them are legitimate.
 LITERAL_ARGS = re.compile(
     E(BS) + r'(?:addbibresource|input|include|includegraphics|label|ref|autoref'
     r'|cite[a-zA-Z]*|texttt|verb|path|url|href|bibliography)'
-    r'(?:\[[^\]]*\])?\{[^}]*\}')
+    r'(?:\[[^\]]*\])?\{[^}]*\}'
+    r'|' + E(BS) + r'graphicspath\s*\{(?:[^{}]|\{[^{}]*\})*\}')
 MATH = re.compile(r'\$[^$]*\$')
 # Display maths too. Chapter 3 is largely equations, and their
 # subscripts are legitimate underscores; masking only inline $...$

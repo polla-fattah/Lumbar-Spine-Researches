@@ -254,6 +254,10 @@ def main():
     ap = argparse.ArgumentParser(
         description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--n_studies", type=int, default=12)
+    ap.add_argument("--studies", default=None,
+                    help="render these study IDs instead of sampling; used to "
+                         "render named failure cases from "
+                         "geometry_exclusion_candidates.csv")
     ap.add_argument("--seed", type=int, default=20260827,
                     help="sampling seed; fixed so the QC subset is reproducible "
                          "and cannot be reselected after seeing a result")
@@ -319,8 +323,22 @@ def main():
     # researcher will actually have.
     rng = np.random.default_rng(args.seed)
     studies = sorted(keep)
-    pick = rng.choice(studies, size=min(args.n_studies, len(studies)),
-                      replace=False)
+    if args.studies:
+        # Named studies, for the failure cases the random sample is unlikely to
+        # contain. A QC figure showing only successes is advertising, so the
+        # thesis needs a specific poor case by ID -- and naming it is what makes
+        # that figure reproducible rather than a lucky draw. Refuse silently
+        # dropping an ID: a figure of the wrong study is worse than an error.
+        want = [int(s) for s in args.studies.replace(",", " ").split()]
+        unknown = [s for s in want if s not in keep]
+        if unknown:
+            raise SystemExit(
+                "--studies: not in partition '{}': {}".format(
+                    args.partition, unknown))
+        pick = want
+    else:
+        pick = rng.choice(studies, size=min(args.n_studies, len(studies)),
+                          replace=False)
     have = set(idx.study_id.unique())
     missing = [int(s) for s in pick if s not in have]
     pick = [int(s) for s in pick if s in have]
