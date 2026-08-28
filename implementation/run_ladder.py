@@ -336,7 +336,13 @@ def main():
     ap.add_argument("--profile", choices=list(PROFILES), default="quick")
     ap.add_argument("--only", type=str, default=None,
                     help="comma-separated tags to run, e.g. E6,E6_shuffled")
-    ap.add_argument("--force", action="store_true", help="re-run completed runs")
+    ap.add_argument("--force", action="store_true",
+                    help="re-run completed ladder runs. Does NOT redo ACSSL "
+                         "pretraining: that representation is shared by every "
+                         "E4 seed, and E4-vs-E3 is meant to hold it fixed.")
+    ap.add_argument("--repretrain_acssl", action="store_true",
+                    help="discard the ACSSL checkpoint and pretrain again, "
+                         "even if its fingerprint matches")
     ap.add_argument("--analyse_only", action="store_true",
                     help="skip training, just rebuild the tables from existing runs")
     ap.add_argument("--n_boot", type=int, default=1000)
@@ -390,7 +396,7 @@ def main():
             bb = prof.get("backbone") or (
                 "smallcnn" if prof["mode"] == "smoke" else "resnet18")
             reuse, why = False, ""
-            if os.path.exists(ck) and not args.force:
+            if os.path.exists(ck) and not args.repretrain_acssl:
                 try:
                     import torch as _t
                     pc = (_t.load(ck, map_location="cpu", weights_only=False)
@@ -419,7 +425,7 @@ def main():
             if reuse:
                 print("  ACSSL encoders already present, reusing {}".format(
                     os.path.relpath(ck, PROJECT_ROOT)))
-            elif os.path.exists(ck) and not args.force:
+            elif os.path.exists(ck) and not args.repretrain_acssl:
                 print("  ACSSL encoders present but stale, re-pretraining: {}"
                       .format(why))
             if not reuse:
