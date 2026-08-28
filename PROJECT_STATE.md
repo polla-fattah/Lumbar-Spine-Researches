@@ -131,9 +131,19 @@ mid-campaign would break every remaining run.
   `thesis/chapter4/localisation_feasibility.md`. TotalSpineSeg identified 140 of
   140 levels correctly across 28 RSNA test studies, and a per-condition constant
   offset derives all 25 targets from the 5 disc centroids with 5.5-6.8 mm
-  scatter, placing 99-100% inside the model's 60 mm crop. Not yet measured on
-  Kurdish protocols, and containment is not centring: the decisive test is to
-  rebuild the cache from derived coordinates and measure the actual QWK cost.
+  scatter, placing 99-100% inside the model's 60 mm crop.
+
+  **But the decisive test was then run and it reversed that verdict.** Grading
+  on derived coordinates costs **-0.1636 QWK, 22.9% of performance**, on all
+  nine runs -- roughly nine times what the entire thesis contributes. The canal
+  survives (-0.05) and every lateral condition collapses (-0.14 to -0.25),
+  because a 6 mm error is harmless in the midline and disqualifying off it. See
+  `thesis/chapter4/derived_coordinate_cost.md`.
+
+  Consequence for RQ4: running transfer on derived coordinates would confound
+  domain shift with a localisation error an order of magnitude larger than any
+  effect the thesis measures. Chapter 3's verified-localisation control is
+  therefore necessary, not precautionary.
 
 **Two de-identification scripts exist and only one is broken.** Corrected
 2026-08-27; the earlier entry here named the wrong file.

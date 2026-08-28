@@ -1,5 +1,14 @@
 # Automated localisation: feasibility measured against RSNA
 
+> **SUPERSEDED IN PART, 2026-08-28.** The verdict below --- that a per-condition
+> constant offset is sufficient --- was based on whether derived coordinates keep
+> the target inside the model's crop. Direct measurement in
+> `derived_coordinate_cost.md` shows that grading on those coordinates costs
+> **-0.1636 QWK, 22.9% of performance**, concentrated in the four lateral
+> conditions. Containment is not centring. The level-identification result
+> (140/140) and the measured offsets below stand; the feasibility verdict does
+> not.
+
 Run 2026-08-28. Scripts: `implementation/compare_totalspineseg.py`,
 `implementation/derive_target_offsets.py`.
 Outputs: `data/reports/totalspineseg_vs_rsna.csv`, `data/reports/target_offsets{,_summary}.csv`.
@@ -50,9 +59,13 @@ observations:
 | right subarticular | 139 | $+8.0,\ -22.5,\ +0.8$ | 5.5 mm | 99% |
 | right foraminal | 140 | $+18.2,\ -19.3,\ +7.9$ | 6.8 mm | 100% |
 
-**A per-condition constant offset is sufficient.** Every condition holds its
-scatter between 5.5 and 6.8 mm, and 99--100% of derived coordinates place the
-target inside the 60 mm crop the model is given.
+Every condition holds its scatter between 5.5 and 6.8 mm, and 99--100% of
+derived coordinates place the target inside the 60 mm crop the model is given.
+
+That was read at the time as "a per-condition constant offset is sufficient".
+It is not: see `derived_coordinate_cost.md`. Placing the structure inside the
+crop is necessary but not sufficient, because the encoder concentrates its
+evidence near the centre.
 
 The offsets are anatomically coherent, which is the check that matters most:
 
