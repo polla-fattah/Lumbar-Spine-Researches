@@ -151,10 +151,25 @@ class ACSSLModel(nn.Module):
     distributions into the same space by itself, which is the encoder's job.
     """
 
-    def __init__(self, backbone="resnet18", dim=256, proj_out=128):
+    def __init__(self, backbone="resnet18", dim=256, proj_out=128,
+                 pretrained=True):
         super().__init__()
+        # WHICH INITIALISATION THE PRETEXT TASK STARTS FROM IS NOT A DETAIL.
+        #
+        # SequenceEncoder defaults to pretrained=False. This constructor used
+        # to accept that default while the supervised ladder built its encoders
+        # with pretrained=True, and load_acssl replaces every one of the 366
+        # encoder tensors. E4 was therefore
+        #     random -> ACSSL -> supervised
+        # compared against E3's
+        #     ImageNet -> supervised,
+        # which is not the comparison RQ2 asks for and which handicaps ACSSL.
+        #
+        # The default is now ImageNet, matching the ladder, and the choice is
+        # recorded in the checkpoint fingerprint so the two cannot be mixed.
         self.encoders = nn.ModuleList(
-            [SequenceEncoder(backbone, dim) for _ in range(N_MODALITIES)])
+            [SequenceEncoder(backbone, dim, pretrained=pretrained)
+             for _ in range(N_MODALITIES)])
         self.projectors = nn.ModuleList(
             [ACSSLProjector(dim, dim, proj_out) for _ in range(N_MODALITIES)])
 
@@ -261,6 +276,14 @@ def main() -> int:
     ap.add_argument("--amp", dest="amp", action="store_true", default=True)
     ap.add_argument("--no_amp", dest="amp", action="store_false")
     ap.add_argument("--out", type=str, default=None)
+    ap.add_argument("--pretrained_backbone", dest="pretrained_backbone",
+                    action="store_true", default=True,
+                    help="start ACSSL from ImageNet weights, matching the "
+                         "supervised ladder; this is what RQ2 asks about")
+    ap.add_argument("--random_backbone", dest="pretrained_backbone",
+                    action="store_false",
+                    help="start ACSSL from random weights. Retained only to "
+                         "reproduce the original confounded run.")
     args = ap.parse_args()
 
     torch.manual_seed(args.seed)
@@ -292,7 +315,11 @@ def main() -> int:
                        drop_last=True, **lkw)
     ld_va = DataLoader(ds_va, batch_size=ctx.batch_size, **lkw)
 
-    model = ACSSLModel(args.backbone, args.dim, args.proj_out).to(ctx.device)
+    model = ACSSLModel(args.backbone, args.dim, args.proj_out,
+                       pretrained=args.pretrained_backbone).to(ctx.device)
+    print("  backbone init: {}".format(
+        "ImageNet (matches the supervised ladder)" if args.pretrained_backbone
+        else "RANDOM -- reproduces the original confounded run"))
     args._amp = Amp(args.amp, str(ctx.device))
     print("  model       : {:.2f}M parameters".format(
         sum(p.numel() for p in model.parameters()) / 1e6))
@@ -346,6 +373,7 @@ def main() -> int:
             "backbone": args.backbone, "dim": args.dim,
             "proj_out": args.proj_out, "temperature": args.temperature,
             "epochs": ctx.epochs, "mode": ctx.mode, "seed": args.seed,
+            "pretrained_backbone": bool(args.pretrained_backbone),
             "split_seed": SPLIT_SEED,
             "split_sha256": meta.get("split_sha256") if meta else None,
         },

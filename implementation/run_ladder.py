@@ -395,8 +395,15 @@ def main():
                     import torch as _t
                     pc = (_t.load(ck, map_location="cpu", weights_only=False)
                           .get("pretrain_config") or {})
+                    # pretrained_backbone is part of the fingerprint because a
+                    # checkpoint pretrained from random weights and one
+                    # pretrained from ImageNet are different experiments. The
+                    # original campaign silently inherited a random-init
+                    # checkpoint into an ImageNet-init ladder, which made E4 vs
+                    # E3 a comparison RQ2 never asked for. A checkpoint lacking
+                    # the field predates the fix and is treated as random.
                     want = {"backbone": bb, "epochs": prof["epochs"],
-                            "mode": prof["mode"]}
+                            "mode": prof["mode"], "pretrained_backbone": True}
                     diff = {k: (pc.get(k), v) for k, v in want.items()
                             if pc.get(k) != v}
                     if not pc:

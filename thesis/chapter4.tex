@@ -72,7 +72,7 @@ follow.
   \item \textbf{There is a mechanism for the second statement, not merely a
   p-value.} Gradient-weighted class activation mapping shows that the
   convolutional encoder already concentrates $2.4\times$ the chance share of its
-  attention on the annotated lesion before any structural prior is added. The
+  attention on the annotated target before any structural prior is added. The
   localisation problem the priors were designed to assist is largely solved
   upstream of them.
 \end{enumerate}
@@ -466,11 +466,20 @@ into a measurement.
 Table~\ref{tab:bounds} gives, for each comparison that did not separate, the far
 edge of its 95\% interval: the largest effect still compatible with the data.
 
+These are \emph{confidence} bounds and are deliberately not called equivalence
+bounds. A formal equivalence test requires a smallest effect of interest to be
+specified in advance and tested against, for example by two one-sided tests.
+No such margin was pre-specified here, and choosing one now, with the results
+already seen, would be post hoc. The bounds below therefore say what the data
+are compatible with; they do not assert equivalence to zero.
+
 \begin{table}[htbp]
 \centering
-\caption{Equivalence bounds for the comparisons that did not separate. Each
-figure is the largest effect compatible with the 95\% interval, expressed in QWK
-and as a percentage of the E0 baseline of $0.7270$.}
+\caption{Upper compatibility bounds for the comparisons that did not
+separate. Each figure is the far edge of the 95\% confidence interval: the
+largest effect still compatible with the data, in QWK and as a percentage
+of the E0 baseline of $0.7270$. These are confidence bounds, not the
+outcome of an equivalence procedure.}
 \label{tab:bounds}
 \begin{tabular}{lrr}
 \toprule

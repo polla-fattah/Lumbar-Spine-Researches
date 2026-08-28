@@ -68,7 +68,7 @@ Proposed:
 
 3. **Evidence that anatomical structural priors do not improve grading at this
    data scale, and a mechanism for why.** Grad-CAM shows the convolutional
-   encoder already concentrates 2.4x above chance on the annotated lesion before
+   encoder already concentrates 2.4x above chance on the annotated target before
    any prior is added, leaving the priors little to contribute. Controlled input
    ablation shows the routing gate tracks the dataset's annotation structure
    rather than creating any causal dependence.

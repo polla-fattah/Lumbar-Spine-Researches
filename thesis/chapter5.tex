@@ -54,7 +54,8 @@ and produced no benefit from having learned them. Relational typing helped;
 the anatomical identity of the relations did not.
 
 The evidence for those statements is stronger than a set of failures to reject.
-Each unsupported mechanism is \emph{bounded}: anatomical topology contributes at
+Each unsupported mechanism carries an upper confidence bound rather than a bare
+null: anatomical topology contributes at
 most $1.05\%$ of baseline performance over a degree-preserving shuffle,
 cross-sequence self-supervision at most $1.22\%$, and disease-conditioned routing
 at most $1.55\%$. And the campaign was extended from three seeds to seven
@@ -93,7 +94,7 @@ Section~\ref{sec:results-attribution} tests that premise directly and finds it
 largely unmet.
 
 Every trained configuration concentrates between $2.3$ and $2.9$ times the
-chance share of its attention on the annotated lesion. Decisively, E0---a plain
+chance share of its attention on the annotated target. Decisively, E0---a plain
 single-sequence convolutional network with no routing, no self-supervision and
 no graph---already reaches $0.490$ against an untrained floor of $0.204$ and a
 uniform expectation of $0.197$. The localisation the priors were designed to
@@ -367,7 +368,7 @@ of training seeds required to detect it: three for the full system and for the
 ordinal head, seven for typed edges, but $205$ for anatomical topology and $545$
 for cross-sequence self-supervision. Those components are not merely unproven
 here; effects of the size observed are not establishable at any plausible scale,
-and the equivalence bounds show they would carry no clinical meaning if they
+and the upper confidence bounds show they would carry no clinical meaning if they
 were.
 
 The word \emph{underpowered} should nevertheless be used carefully in this

@@ -88,7 +88,8 @@ class AMOGNet(nn.Module):
     """Assembles exactly the components the requested rung calls for."""
 
     def __init__(self, stage: str, backbone="resnet18", dim=256,
-                 shuffled=False, ungated=False, seed=0, pretrained=True):
+                 shuffled=False, ungated=False, seed=0, pretrained=True,
+                 force_ordinal=None):
         super().__init__()
         self.stage = stage
         self.dim = dim
@@ -96,7 +97,13 @@ class AMOGNet(nn.Module):
         self.use_multiseq = stage in MULTISEQ_STAGES
         self.use_router = stage in ROUTER_STAGES
         self.use_graph = stage in GRAPH_STAGES
-        self.use_ordinal = stage == "E7"
+        # The head is normally implied by the stage, but E7 bundles TWO
+        # interventions -- an ordinal head and a cost-sensitive objective -- and
+        # their joint effect cannot be attributed without separating them.
+        # `force_ordinal` lets the head be chosen independently of the stage so
+        # that a categorical-head-plus-cost variant can be run.
+        self.use_ordinal = (stage == "E7") if force_ordinal is None \
+            else bool(force_ordinal)
 
         n_enc = N_MODALITIES if self.use_multiseq else 1
         # ImageNet initialisation. Chapter 3 sec:method-backbone-control treats
@@ -474,6 +481,13 @@ def main():
     ap.add_argument("--p_drop", type=float, default=0.2)
     ap.add_argument("--balance_weight", type=float, default=0.01)
     ap.add_argument("--cost_weight", type=float, default=0.0)
+    ap.add_argument("--force_ordinal", dest="force_ordinal",
+                    action="store_true", default=None,
+                    help="use the ordinal head regardless of stage")
+    ap.add_argument("--no_ordinal", dest="force_ordinal",
+                    action="store_false",
+                    help="use the categorical head even at E7, so the "
+                         "cost-sensitive objective can be tested on its own")
     # Chapter 3 sec:method-optimiser: warm-up + cosine decay, or a plateau
     # scheduler. The chapter requires the thesis to REPORT the schedule, so it
     # is an explicit flag and is written into the run's result JSON.
@@ -552,6 +566,13 @@ def main():
     tag = (stage + ("_shuffled" if args.shuffled else "")
            + ("_ungated" if args.ungated else "")
            + ("_LABELSHUF" if args.shuffle_labels else ""))
+    # E7 variants that isolate its two interventions get their own tags, so
+    # they never overwrite the combined run.
+    if stage == "E7":
+        if args.force_ordinal is False:
+            tag += "_costonly"
+        elif args.cost_weight == 0:
+            tag += "_ordonly"
     print("Stage {}  backbone {}  seed {}".format(tag, backbone, args.seed))
     if args.shuffled:
         print("  CONTROL: edges permuted, node and edge counts preserved.")
@@ -578,7 +599,8 @@ def main():
     train_loader, val_loader, test_loader = dl(train_ds, True), dl(val_ds, False), dl(test_ds, False)
 
     model = AMOGNet(stage, backbone, args.dim, args.shuffled, args.ungated,
-                    args.seed, pretrained=args.pretrained).to(ctx.device)
+                    args.seed, pretrained=args.pretrained,
+                    force_ordinal=args.force_ordinal).to(ctx.device)
     if args.channels_last and str(ctx.device).startswith("cuda"):
         model = model.to(memory_format=torch.channels_last)
     n_params = sum(p.numel() for p in model.parameters())

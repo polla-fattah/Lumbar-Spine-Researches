@@ -5,7 +5,7 @@ Output: `data/reports/chapter4_effect_sizes.csv`.
 
 The campaign driver produces the ladder table and the pre-specified comparisons.
 This adds four things a results chapter needs and those do not supply: effect
-sizes, equivalence bounds for the nulls, power recomputed at seven seeds, and
+sizes, upper compatibility bounds for the nulls, power recomputed at seven seeds, and
 the clinical error structure.
 
 ## 1. What the seven-seed campaign changed
@@ -63,7 +63,7 @@ Routing moved from 3,467 seeds to 52, and cross-sequence SSL from 216 to 545.
 The ordering is stable; the individual figures should be read as
 order-of-magnitude guidance, not precise requirements.
 
-## 3. Equivalence bounds: what the nulls actually establish
+## 3. Upper compatibility bounds: what the nulls actually establish
 
 "p > 0.05" says only that an effect was not detected, which is the weakest form
 of a null and invites the reader to assume the study was too small. The paired
@@ -73,7 +73,7 @@ nothing" into "any effect is smaller than X", which is a result.
 Each figure below is the far edge of the 95% interval -- the largest effect
 still compatible with the data -- against an E0 baseline of 0.7270 QWK.
 
-| Comparison | Effect is at most | As % of baseline |
+| Comparison | Upper 95% bound | As % of baseline |
 | :-- | --: | --: |
 | Gated residual | 0.0064 | **0.89%** |
 | Anatomical topology vs shuffle | 0.0076 | **1.05%** |
@@ -165,8 +165,10 @@ evidence the calibration half of that question is not answered affirmatively.
   head both crossing correction at seven seeds.
 - Effect sizes that separate cleanly into two groups with nothing in between,
   which is evidence against "underpowered" as a blanket explanation.
-- Bounds rather than absences for the nulls: every unsupported mechanism is
-  constrained below 1.6% of baseline.
+- Confidence bounds rather than absences for the nulls: every unsupported
+  mechanism is constrained below 1.6% of baseline. These are not equivalence
+  bounds -- no smallest effect of interest was pre-specified, so no
+  equivalence procedure was run.
 - A clinical error result: distant and Severe-to-Normal errors both fall by
   roughly a third from baseline to full system.
 - An honest calibration finding that runs against the system: agreement improves
