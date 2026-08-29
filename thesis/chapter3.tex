@@ -1534,8 +1534,10 @@ The sampling probabilities are tuned so that the model sees enough complete
 studies to learn complementary fusion while also receiving substantial exposure
 to incomplete inputs. Each available sequence was dropped independently with
 probability $0.2$ during training on the rungs that use it (E3 onward), and never
-at evaluation. The remaining detail is \torecord{final modality-
-dropout schedule selected on validation data}.
+at evaluation. That probability was fixed for the whole campaign rather than
+tuned per rung, so modality dropout is held constant everywhere it appears and
+cannot differ between the arms of any comparison that includes it. No schedule
+was annealed and no per-sequence probability was used.
 
 No external test case is artificially repaired by copying another sequence into
 a missing slot. The model's purpose is to remain functional under genuine

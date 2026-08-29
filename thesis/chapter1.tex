@@ -425,11 +425,16 @@ strong matched baselines, while preserving local evidence and respecting the
 uncertainty of the clinical reference standard.
 \end{quote}
 
-\laterinsert{If implementation reveals a previously unrecognised but reproducible
-problem that materially changes the framing---for example a systematic DICOM
-geometry failure mode across a substantial cohort---add a short factual paragraph
-here and document the protocol amendment. Do not add a new problem merely because a
-proposed contribution underperformed.}
+This protocol anticipated that implementation might reveal a previously
+unrecognised but reproducible problem, and required that such a finding be
+recorded here rather than absorbed silently. It did. Verification of the DICOM
+correspondence found a reproducible failure mode affecting a minority of studies,
+in which the axial acquisition does not cover the annotated level at all, so a
+projected point lands tens of millimetres away in unrelated anatomy. Nine studies
+fail on every projection tested. The check, its distribution and the affected
+studies are reported in Section~\ref{sec:results-roiqc}. It is recorded because
+it is a property of the data that any similar pipeline will encounter, not
+because a proposed contribution underperformed.
 
 % ===========================================================================
 \section{Research Gap and Novelty Boundary}
@@ -1015,9 +1020,15 @@ different research problem and is excluded from the primary scope.
 
 Model development uses the public LumbarDISC benchmark and, where permitted, SPIDER
 for anatomical localisation or segmentation support. The locally held labelled
-competition subset contains approximately 1,975 studies at the protocol stage;
-\torecord{final public development, validation and held-out counts after quality
-control}. The local project inventory currently identifies 299 narrative reports
+competition subset contained approximately 1,975 studies at the protocol stage.
+After quality control --- retaining studies for which all three required
+sequences could be located and the DICOM geometry needed for anatomically
+corresponding crops was recoverable --- the executed cohort is $1{,}974$ studies
+carrying $48{,}657$ annotated targets, partitioned at patient level into
+$1{,}381$ training, $296$ validation and $297$ held-out test studies. The test
+partition contributes the $7{,}310$ scored targets on which every result in
+Chapter~\ref{ch:results} is computed. The partition is written once and reloaded
+by every run. The local project inventory currently identifies 299 narrative reports
 and 294 candidate matched multi-sequence cases, while a wider raw DICOM inventory
 contains additional studies. These numbers are not presented as the final cohort
 until one-to-one reconciliation is complete:
