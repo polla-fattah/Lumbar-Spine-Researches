@@ -523,6 +523,63 @@ self-supervision from $216$ to $545$. The ordering is stable and the two groups
 are unchanged, but individual requirements should be read as order-of-magnitude
 guidance rather than as precise targets.
 
+\subsection{Statistical Detectability Is Not Clinical Significance}
+\label{sec:results-practical}
+
+The three comparisons that survive correction are statistically detectable. This
+subsection states plainly what they are worth in practice, because a
+kappa difference of $+0.0093$ carries no intuitive meaning and a reader left to
+work it out unaided is entitled to assume more than the number supports.
+
+Table~\ref{tab:practical} counts, over the actual test predictions, how many of
+the $7{,}310$ graded targets change between consecutive rungs and how many of
+those changes are improvements rather than churn.
+
+\begin{table}[htbp]
+  \centering
+  \caption{Predictions changed between rungs on the frozen test partition,
+  averaged over seven seeds. \enquote{Fixed} counts targets the upper rung grades
+  correctly and the lower does not; \enquote{broken} counts the reverse. Counted
+  from the saved predictions by \texttt{implementation/make\_figures.py}.}
+  \label{tab:practical}
+  \input{../data/reports/figures/table_practical_significance}
+\end{table}
+
+The churn column carries the message. Typed heterogeneous edges --- the
+architectural contribution that survives correction --- rewrite roughly $790$ of
+$7{,}310$ predictions, about $11\%$, and are right about $13$ more of them than
+the homogeneous graph. That is one additional correct target for every
+twenty-four patients, where each patient contributes twenty-five graded targets.
+The complete system against the single-sequence baseline nets $42$ targets, or
+one per seven patients.
+
+Two reference points fix the scale. First, the reported inter-reader agreement
+for these conditions ranges from $\kappa = 0.49$ for subarticular stenosis to
+$\kappa = 0.73$ for the central canal, so the disagreement between two qualified
+readers spans roughly $0.24$ in kappa. The complete system's advantage over the
+baseline, $+0.0177$, is about $7\%$ of that span; typed edges alone are about
+$4\%$. Second, and more directly, no radiologist reading these studies would
+encounter a difference of one target in seven patients as a change in the
+quality of the report.
+
+The one difference with a plausible clinical reading is the asymmetric error.
+Severe targets graded Normal/Mild fall from $22$ of $398$ at E0 to $15$ at E7,
+affecting five fewer patients of the $297$ in the partition. Missing a severe
+stenosis is the error that withholds treatment, so the direction is the right
+one --- but it is five patients, and it is produced by the cost matrix, which is
+a choice of loss function rather than any of the three anatomical mechanisms
+this thesis set out to test.
+
+\paragraph{How these results should be read.} The effects reported in this
+chapter are statistically detectable and clinically negligible. The thesis does
+not claim that the proposed architecture improves lumbar stenosis grading to a
+degree that would alter practice, and no result here supports such a claim. What
+the chapter establishes is the evaluation: a ladder in which each mechanism is
+tested against a control matched in capacity, and in which most of the proposed
+mechanisms are shown to contribute nothing measurable. That finding does not
+depend on the size of the gain, and it is the contribution that survives the
+observation made in this subsection.
+
 \subsection{What the Nulls Establish}
 \label{sec:results-equivalence}
 
