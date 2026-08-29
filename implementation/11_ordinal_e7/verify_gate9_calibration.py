@@ -13,7 +13,7 @@ if hasattr(sys.stdout, "reconfigure"):
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 from amog_models import (
-    OrdinalCORNHead, clinical_cost_matrix, expected_cost_loss,
+    CumulativeOrdinalHead, clinical_cost_matrix, expected_cost_loss,
     TemperatureScaler
 )
 
@@ -23,12 +23,12 @@ def main():
     print("  Phase 13 & Gate 9: Ordinal Loss & Calibration Compliance Audit")
     print("=" * 65)
 
-    head = OrdinalCORNHead(dim=64, n_classes=3)
+    head = CumulativeOrdinalHead(dim=64, n_classes=3)
     dummy_feats = torch.zeros(4, 64)
     dummy_targets = torch.tensor([0, 1, 2, 1])
 
     logits = head(dummy_feats)
-    assert logits.shape == (4, 2), f"Expected CORAL/CORN 2 threshold cuts for 3 classes, got {logits.shape}"
+    assert logits.shape == (4, 2), f"Expected 2 cumulative-link threshold cuts for 3 classes, got {logits.shape}"
 
     loss = head.loss(logits, dummy_targets)
     assert not torch.isnan(loss), "Ordinal loss returned NaN!"
@@ -38,7 +38,7 @@ def main():
     assert c_mat[2, 0] > c_mat[2, 1], f"Clinical cost asymmetry violated: C(Severe->Normal)={c_mat[2,0]} <= C(Severe->Mod)={c_mat[2,1]}"
 
     print("Auditing Ordinal Loss & Calibration Engine:")
-    print("  - CORN Consistent Rank Logits (K-1 thresholds): VERIFIED")
+    print("  - cumulative-link ordinal head (K-1 thresholds): VERIFIED")
     print(f"  - Asymmetric Clinical Cost Matrix (C[2,0]={c_mat[2,0]:.1f} > C[2,1]={c_mat[2,1]:.1f}): VERIFIED")
     print("  - Post-Hoc Temperature Scaling Optimizer: VERIFIED")
     print("\n[PASS] Gate 9 Verified: Ordinal Loss & Calibration Engine Certified!")

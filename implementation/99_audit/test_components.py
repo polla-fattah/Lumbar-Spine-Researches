@@ -22,7 +22,7 @@ import torch.nn.functional as F
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 from amog_models import (  # noqa: E402
-    OrdinalCORNHead, clinical_cost_matrix, expected_cost_loss, build_edges,
+    CumulativeOrdinalHead, clinical_cost_matrix, expected_cost_loss, build_edges,
     DiseaseConditionedRouter, apply_modality_dropout, info_nce,
     TemperatureScaler, N_TARGETS, N_LEVELS, N_CONDITIONS, node_id,
     BILATERAL_PAIRS,
@@ -45,7 +45,7 @@ print("-" * 70)
 
 torch.manual_seed(0)
 logits = torch.randn(500, 2)
-probs = OrdinalCORNHead.to_probs(logits)
+probs = CumulativeOrdinalHead.to_probs(logits)
 
 check("probabilities sum to 1",
       bool(torch.allclose(probs.sum(1), torch.ones(500), atol=1e-5)),
@@ -55,7 +55,7 @@ check("probabilities are non-negative", bool((probs >= 0).all()))
 # Ordering: P(y>0) must be >= P(y>1). Feed a violating pair and confirm the
 # cummin repairs it rather than emitting a negative probability.
 bad = torch.tensor([[-3.0, 3.0]])          # sigmoid: 0.047 then 0.953 -- violates
-bad_p = OrdinalCORNHead.to_probs(bad)
+bad_p = CumulativeOrdinalHead.to_probs(bad)
 check("ordering violation cannot produce a negative probability",
       bool((bad_p >= 0).all()),
       f"got {bad_p.tolist()}")
@@ -71,7 +71,7 @@ check("cumulative->categorical matches an independent derivation",
 
 # A confident logit pattern must decode to the right class.
 for y, lg in [(0, [-8.0, -8.0]), (1, [8.0, -8.0]), (2, [8.0, 8.0])]:
-    pred = int(OrdinalCORNHead.to_probs(torch.tensor([lg])).argmax())
+    pred = int(CumulativeOrdinalHead.to_probs(torch.tensor([lg])).argmax())
     check(f"logits {lg} decode to grade {y}", pred == y, f"decoded {pred}")
 
 # The loss is CORAL/cumulative-link (independent binary CE), NOT CORN
@@ -81,8 +81,9 @@ lg = torch.randn(3, 2)
 t = torch.stack([(y > k).float() for k in range(2)], dim=-1)
 expected_coral = F.binary_cross_entropy_with_logits(lg, t)
 check("loss is the cumulative-link (CORAL-style) objective",
-      bool(torch.allclose(OrdinalCORNHead.loss(lg, y), expected_coral)),
-      "class is named CORN but implements independent binary CE")
+      bool(torch.allclose(CumulativeOrdinalHead.loss(lg, y), expected_coral)),
+      "the head must implement independent binary CE per threshold, not the "
+      "chained conditional probabilities of CORN")
 
 # --------------------------------------------------------------------------- #
 print("\n2. Clinical cost matrix -- Chapter 3 sec:method-cost")
@@ -610,11 +611,11 @@ check("both uncalibrated and calibrated test ECE are reported",
 # The ordinal head emits K-1 cumulative logits, so a categorical cross-entropy
 # fit raises "Target 2 is out of bounds". Calibration must be head-aware.
 _z = torch.randn(400, 2) * 3.0
-_p0 = OrdinalCORNHead.to_probs(_z)
+_p0 = CumulativeOrdinalHead.to_probs(_z)
 _y = torch.multinomial(_p0, 1).squeeze(1)
 _ts = TemperatureScaler()
 try:
-    _T = _ts.fit_probs(_z, _y, OrdinalCORNHead.to_probs)
+    _T = _ts.fit_probs(_z, _y, CumulativeOrdinalHead.to_probs)
     check("temperature scaling works on the ordinal head's cumulative logits",
           np.isfinite(_T) and _T > 0, f"T={_T}")
 except Exception as _e:
@@ -623,7 +624,7 @@ except Exception as _e:
 
 # Fitting must not make validation NLL worse -- T=1 is always available.
 _nll = lambda T: float(F.nll_loss(
-    OrdinalCORNHead.to_probs(_z / T).clamp(min=1e-12).log(), _y))
+    CumulativeOrdinalHead.to_probs(_z / T).clamp(min=1e-12).log(), _y))
 check("the fitted temperature does not increase validation NLL",
       _nll(_T) <= _nll(1.0) + 1e-4, f"{_nll(1.0):.4f} -> {_nll(_T):.4f}")
 

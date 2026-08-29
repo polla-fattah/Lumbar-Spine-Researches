@@ -11,17 +11,17 @@ import torch.nn as nn
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 from amog_models import (
-    OrdinalCORNHead, clinical_cost_matrix, expected_cost_loss,
+    CumulativeOrdinalHead, clinical_cost_matrix, expected_cost_loss,
     TemperatureScaler, N_CLASSES
 )
 
 
 class AMOGOrdinalCalibrationEngine(nn.Module):
-    """Real Ordinal Classification (CORN) and Probability Calibration module."""
+    """Cumulative-link ordinal classification and probability calibration."""
 
     def __init__(self, dim: int = 256, n_classes: int = N_CLASSES, cost_weight: float = 0.5):
         super().__init__()
-        self.head = OrdinalCORNHead(dim=dim, n_classes=n_classes)
+        self.head = CumulativeOrdinalHead(dim=dim, n_classes=n_classes)
         self.scaler = TemperatureScaler()
         self.cost_weight = cost_weight
         self.register_buffer("cost_matrix", clinical_cost_matrix(device="cpu"))

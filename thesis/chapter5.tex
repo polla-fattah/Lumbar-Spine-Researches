@@ -49,7 +49,8 @@ The complete system improves on a single-sequence baseline by $+0.0177$ QWK
 for multiple comparisons. That margin is statistically detectable and clinically
 negligible: it amounts to $42$ additional correct gradings out of $7{,}310$, one
 per seven patients, against an inter-reader span of roughly $0.24$ in kappa
-(Section~ef{sec:results-practical}). The accuracy is not the contribution. But the components credited with that improvement in
+(Section~
+ef{sec:results-practical}). The accuracy is not the contribution. But the components credited with that improvement in
 the original design are not the components responsible for it. Anatomically
 aligned self-supervision produced no measurable benefit on any of three axes,
 and continued to produce none after an initialisation confound that handicapped
@@ -206,6 +207,62 @@ has essentially no statistical power and none is claimed. And Lurie's cohort is
 not LumbarDISC; the comparison is indicative rather than a matched analysis.
 
 % ===========================================================================
+\section{What Was Planned, What Was Run, and What It Supports}
+\label{sec:disc-completion}
+
+Each research question was specified in Chapter~\ref{ch:methodology} with a set
+of evidence, and in every case only part of that set was executed. A verdict on
+its own conceals that, so Table~\ref{tab:rqmatrix} separates the plan, the
+execution and the conclusion. No question receives a bare yes or no, because for
+none of them would that be honest.
+
+\begin{table}[htbp]
+  \centering\small
+  \caption{Research question completion. \enquote{Executed} refers to the
+  evidence Chapter~\ref{ch:methodology} specified for that question, not to
+  whether some experiment was run.}
+  \label{tab:rqmatrix}
+  \begin{tabular}{@{}lp{4.3cm}cp{5.0cm}@{}}
+    \toprule
+    RQ & Planned evidence & Executed & Verdict \\
+    \midrule
+    RQ1 & independent baseline, ordered-level Transformer, homogeneous graph,
+    typed graph, topology control & Partial &
+    Typed edges help ($+0.0093$, 7/7). Anatomical topology does not beat a
+    degree-preserving shuffle. The Transformer comparator was not built, so
+    \enquote{graph beats sequence model} is untested. \\
+    \addlinespace
+    RQ2 & full-label accuracy, label efficiency, pretraining comparators,
+    transfer & Partial &
+    Negative on all three axes executed, after correcting an initialisation
+    confound. Label efficiency and transfer were not run, so the rejection is
+    scoped to internal grading and robustness. \\
+    \addlinespace
+    RQ3 & missing-sequence robustness, corruption, learned allocation &
+    Partial &
+    The allocation pattern replicates on every run, but a router-free model
+    reproduces it under intervention, so it belongs to the dataset rather than
+    to routing. No accuracy benefit. Corruption was not run. \\
+    \addlinespace
+    RQ4 & zero-shot external transfer, adaptation & No &
+    Unanswered. The external cohort exists and is characterised, and
+    Section~\ref{sec:disc-limits} states why it cannot answer the question
+    as specified. \\
+    \addlinespace
+    RQ5 & asymmetric error, calibration, selective prediction & Partial &
+    The cost-sensitive ordinal objective is the largest and most reliably
+    reproduced effect in the study, and does not buy it with over-grading.
+    Selective prediction was not evaluated. \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+Two entries deserve emphasis because they bound what the thesis may claim. RQ4
+was not executed at all, so nothing here speaks to institutional transfer. RQ1's
+comparison against a sequence model was not built, so the graph is shown to
+beat a homogeneous graph and an unstructured baseline, not to beat the obvious
+alternative architecture for ordered levels.
+
 \section{The Components Individually}
 \label{sec:disc-components}
 
@@ -370,11 +427,17 @@ them changed a conclusion here.
 \emph{Statistical power.} The study is underpowered for single-component effects
 of the size observed. Table~\ref{tab:power} converts each effect into the number
 of training seeds required to detect it: three for the full system and for the
-ordinal head, seven for typed edges, but $205$ for anatomical topology and $545$
-for cross-sequence self-supervision. Those components are not merely unproven
-here; effects of the size observed are not establishable at any plausible scale,
-and the upper confidence bounds show they would carry no clinical meaning if they
-were.
+ordinal head, seven for typed edges, but $205$ for anatomical topology and $134$
+for cross-sequence self-supervision.
+
+That table describes this sample rather than the mechanisms. Both the effect and
+the variance entering each figure are estimated from seven seeds, so each
+requirement inherits their uncertainty and none of them licenses the conclusion
+that a component does nothing. The defensible reading is narrower: the observed
+effects are small relative to the observed between-seed variance, a conventional
+experiment would need implausibly many training runs to establish effects of this
+apparent magnitude, and the upper confidence bounds indicate that such effects
+would carry no clinical meaning even if they were established.
 
 The word \emph{underpowered} should nevertheless be used carefully in this
 chapter. The campaign was extended from three seeds to seven specifically to

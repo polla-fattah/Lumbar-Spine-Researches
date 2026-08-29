@@ -54,7 +54,7 @@ LADDER_STAGES = [
     {"stage": "E6", "name": "E6: Heterogeneous RGCN + Gated Residual Update", "extra_args": []},
     {"stage": "E6", "name": "E6_shuffled: Permuted Topology Control", "extra_args": ["--shuffled"]},
     {"stage": "E6", "name": "E6_ungated: Ungated Message-Passing Control", "extra_args": ["--ungated"]},
-    {"stage": "E7", "name": "E7: Ordinal CORN Head + Asymmetric Clinical Cost", "extra_args": ["--cost_weight", "0.5"]},
+    {"stage": "E7", "name": "E7: Cumulative-Link Ordinal Head + Asymmetric Clinical Cost", "extra_args": ["--cost_weight", "0.5"]},
 ]
 
 # Track B and Gate Verification Stages

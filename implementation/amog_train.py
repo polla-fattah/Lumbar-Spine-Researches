@@ -56,7 +56,7 @@ from amog_modes import (  # noqa: E402
 from amog_models import (  # noqa: E402
     SequenceEncoder, FixedFusion, DiseaseConditionedRouter, apply_modality_dropout,
     ACSSLProjector, info_nce, HomogeneousGNN, HeterogeneousRGCN, build_edges,
-    OrdinalCORNHead, clinical_cost_matrix, expected_cost_loss, TemperatureScaler,
+    CumulativeOrdinalHead, clinical_cost_matrix, expected_cost_loss, TemperatureScaler,
     MODALITIES, N_MODALITIES, N_TARGETS,
 )
 from amog_datasets import (  # noqa: E402
@@ -84,6 +84,12 @@ DROPOUT_STAGES = {"E3", "E4", "E5", "E6", "E7"}
 
 
 # --------------------------------------------------------------------------- #
+# The cost weight the ladder's E7 uses (run_ladder.py: --cost_weight 0.5).
+# Named so the tagging logic can tell the canonical run from a sensitivity
+# sweep instead of hardcoding 0.5 in two places that could drift apart.
+E7_COST_WEIGHT = 0.5
+
+
 class AMOGNet(nn.Module):
     """Assembles exactly the components the requested rung calls for."""
 
@@ -133,7 +139,7 @@ class AMOGNet(nn.Module):
             head_in = dim
 
         if self.use_ordinal:
-            self.head = OrdinalCORNHead(head_in, N_CLASSES)
+            self.head = CumulativeOrdinalHead(head_in, N_CLASSES)
         else:
             self.head = nn.Linear(head_in, N_CLASSES)
 
@@ -453,14 +459,14 @@ def probs_from_logits(model, logits, temperature: float = 1.0):
     """
     z = logits / max(temperature, 1e-6)
     if model.use_ordinal:
-        return OrdinalCORNHead.to_probs(z)
+        return CumulativeOrdinalHead.to_probs(z)
     return torch.softmax(z, dim=1)
 
 
 def _loss_and_probs(model, logits, y, cost, args):
     if model.use_ordinal:
-        loss = OrdinalCORNHead.loss(logits, y)
-        p = OrdinalCORNHead.to_probs(logits)
+        loss = CumulativeOrdinalHead.loss(logits, y)
+        p = CumulativeOrdinalHead.to_probs(logits)
         if cost is not None and args.cost_weight > 0:
             loss = loss + args.cost_weight * expected_cost_loss(p, y, cost)
     else:
@@ -580,6 +586,11 @@ def main():
             tag += "_costonly"
         elif args.cost_weight == 0:
             tag += "_ordonly"
+        elif args.cost_weight != E7_COST_WEIGHT:
+            # Sensitivity sweep. Without this branch every cost weight except 0
+            # tags as plain "E7" and overwrites the canonical run, so the sweep
+            # would destroy the result it is meant to test the robustness of.
+            tag += "_cw" + ("%g" % args.cost_weight).replace(".", "p")
     print("Stage {}  backbone {}  seed {}".format(tag, backbone, args.seed))
     if args.shuffled:
         print("  CONTROL: edges permuted, node and edge counts preserved.")
@@ -761,7 +772,7 @@ def main():
         # head-aware: E7 emits cumulative logits, the other rungs emit class
         # logits, and one scalar must mean the same thing for both
         temperature = scaler.fit_probs(
-            vlog, vy, lambda z: OrdinalCORNHead.to_probs(z) if model.use_ordinal
+            vlog, vy, lambda z: CumulativeOrdinalHead.to_probs(z) if model.use_ordinal
             else torch.softmax(z, dim=1))
         v_before = compute_metrics(
             vy.numpy(),

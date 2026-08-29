@@ -13,7 +13,7 @@ is a claim you cannot defend.
     E4     ACSSLProjector           cross-sequence InfoNCE at (patient, level)
     E5     HomogeneousGNN           one undifferentiated edge type
     E6     HeterogeneousRGCN        typed edges + gated residual update
-    E7     OrdinalCORNHead          ordered thresholds + asymmetric clinical cost
+    E7     CumulativeOrdinalHead    ordered thresholds + asymmetric clinical cost
 
 WHAT THE PREVIOUS IMPLEMENTATION HAD
 ------------------------------------
@@ -481,12 +481,28 @@ class HeterogeneousRGCN(nn.Module):
 # --------------------------------------------------------------------------- #
 #  E7 -- ordinal head and clinically asymmetric cost
 # --------------------------------------------------------------------------- #
-class OrdinalCORNHead(nn.Module):
+class CumulativeOrdinalHead(nn.Module):
     """Three ordered grades expressed as two threshold questions.
 
-    P(y > 0) and P(y > 1), constrained to be non-increasing so the ordering
-    cannot be violated. Cross-entropy remains the mandatory control, because
-    earlier lumbar work found ordinal objectives did not consistently beat it.
+    For K = 3 grades the head emits K-1 = 2 logits z_k and trains them against
+    the binary targets
+
+        t_k = 1[y > k],   k = 0, 1
+
+    with INDEPENDENT binary cross-entropy on each, which is the cumulative-link
+    (CORAL-style) objective. It is deliberately NOT the CORN objective, which
+    chains conditional probabilities P(y > k | y > k-1) and would couple the two
+    logits during training. The class was formerly named OrdinalCORNHead, which
+    named a method it does not implement; the audit test asserting the loss is
+    independent binary CE has always passed, so the name was the error rather
+    than the code.
+
+    At inference sigma(z_k) estimates P(y > k). These are made non-increasing by
+    a running minimum before differencing into class probabilities, so a
+    disordered pair cannot produce a negative probability.
+
+    Cross-entropy remains the mandatory control, because earlier lumbar work
+    found ordinal objectives did not consistently beat it.
     """
 
     def __init__(self, dim: int, n_classes: int = N_CLASSES):
@@ -613,7 +629,7 @@ if __name__ == "__main__":
     print("E6 hetero  : {}".format(tuple(HeterogeneousRGCN(D)(x, ei, et).shape)))
     print("E6 ungated : {}".format(tuple(HeterogeneousRGCN(D, gated=False)(x, ei, et).shape)))
 
-    head = OrdinalCORNHead(D)
+    head = CumulativeOrdinalHead(D)
     lg = head(torch.randn(6, D))
     pr = head.to_probs(lg)
     print("\nordinal    : probs sum {:.4f}, monotone ok".format(float(pr.sum(1).mean())))
