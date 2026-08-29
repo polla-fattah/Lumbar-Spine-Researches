@@ -1,2399 +1,709 @@
-I reviewed the current thesis argument, Chapters 1–5, the live implementation path, the audit/testing code, the statistical machinery, the DICOM/ROI pipeline, the ACSSL/routing/graph/ordinal components, the evidence-folder documents, the recent project-state/submission documents, and the repository history showing how the current implementation replaced the earlier defective one.
+Yes. I re-read the **current `main` branch again**, with the thesis itself as the primary object and the implementation only where it is needed to verify what Chapters 3–5 claim. The repository has changed materially since my previous review. A compiled `thesis/thesis.pdf` is now committed as well.
 
+My updated conclusion is noticeably more positive:
 
-One qualification before the detailed review: **I inspected the code and the committed experimental evidence, but I did not independently rerun the 70 GPU training runs or reconstruct the datasets in my environment.** So when I say an experiment produced a result, I mean that the repository's generated artifacts and code provenance support that result; when I identify a code problem, that is from direct source inspection.
-
-My overall conclusion remains:
-
-> **There is a real and defensible PhD here.**
+> **The thesis is now scientifically much stronger than the version I reviewed previously. Several of the most serious objections have been fixed properly rather than merely explained away.**
 >
-> But I would not consider the thesis scientifically “finished” yet. The main danger is no longer that the implementation is fake or fundamentally broken. The danger is now **overclaiming beyond the experiments actually executed**, plus several important statistical and methodological-control issues that can still be corrected before viva.
+> **I now think the doctoral core is clearly defensible.**
+>
+> I still would **not submit it unchanged today**, because there are a few important scientific inconsistencies left—particularly RQ1 interpretation, Chapter 3 versus the executed implementation, the statistical inference across seeds, and some stale/contradictory wording introduced by the very recent fixes.
 
-I would treat the following as the complete remediation plan.
-
----
-
-# 1. Overall scientific assessment
-
-| Area                           | My assessment now                                        | Viva risk                        |
-| ------------------------------ | -------------------------------------------------------- | -------------------------------- |
-| Core research question         | **Strong**                                               | Low                              |
-| Prospective hypotheses         | **Strong**                                               | Low                              |
-| Honesty about negative results | **Very strong**                                          | Low                              |
-| Literature review              | **Strong but needs final 2026 refresh**                  | Medium                           |
-| Novelty                        | **Defensible, but must be narrowed**                     | Medium                           |
-| DICOM geometry                 | **Much stronger now**                                    | Low–Medium                       |
-| Grading pipeline               | **Substantially credible**                               | Low                              |
-| RQ1 graph evidence             | **Interesting but current interpretation is too strong** | **High**                         |
-| RQ2 ACSSL                      | **Incomplete test of the stated RQ**                     | **High**                         |
-| RQ3 routing                    | **Mechanism tested partly; robustness RQ incomplete**    | **High**                         |
-| RQ4 external transfer          | **Not executed**                                         | **High but defensible**          |
-| RQ5 ordinal/cost               | **Positive result, but two mechanisms are confounded**   | **High**                         |
-| Statistical inference          | **Needs another serious pass**                           | **High**                         |
-| Test-set independence          | **Needs explicit treatment**                             | **High**                         |
-| Reproducibility                | **Much improved**                                        | Medium                           |
-| Code QA                        | **Good foundations; incomplete conformance coverage**    | Medium                           |
-| Clinical claims                | **Generally appropriately cautious**                     | Low                              |
-| Thesis/repository consistency  | **Too many stale documents**                             | Medium                           |
-| Ethics/governance              | **Placeholders remain**                                  | **High if local data discussed** |
-| Viva readiness today           | **Close, not final**                                     | —                                |
-
-The thesis's aim is scientifically well framed. It explicitly says the PhD is trying to **determine whether** anatomical relationships, cross-sequence alignment and target-conditioned evidence improve grading—not prove in advance that they must. It also pre-specifies substantial objectives for label efficiency, corruption robustness, graph controls, external transfer and uncertainty.
-
-That is one of the thesis's greatest strengths.
-
-The problem is that the final experiment does **not execute all those objectives**.
-
-That distinction needs to become the organizing principle of the final remediation.
+The good news is that the remaining problems are much more concentrated. We are no longer facing a hundred equally important things.
 
 ---
 
-# 2. The thesis's strongest scientific feature
+# 1. Several of my previous major objections have actually been fixed
 
-The strongest part is not the +0.0177 QWK.
+This is important because I do not want to repeat old criticism that is no longer valid.
 
-It is the fact that the project repeatedly discovered that an apparently positive result disappeared when a proper control was introduced.
+| Previous problem                                                          | Current status                                           |
+| ------------------------------------------------------------------------- | -------------------------------------------------------- |
+| ACSSL unfairly started from random weights while E3 used ImageNet         | **Fixed and all 7 E4 runs repeated**                     |
+| “Equivalence bounds” terminology was unjustified                          | **Fixed to confidence/compatibility bounds**             |
+| E7 changed ordinal head + cost matrix simultaneously                      | **Now decomposed experimentally**                        |
+| CORN name was technically wrong                                           | **Fixed to `CumulativeOrdinalHead`**                     |
+| Severe→Normal improvement could have been bought by overpredicting Severe | **Now checked explicitly**                               |
+| Only BH-FDR reported                                                      | **Holm sensitivity also added**                          |
+| Seed consistency not independently summarized                             | **Exact 7/7 sign test added**                            |
+| RQs presented too much like all were completed                            | **Excellent RQ completion matrix added to Chapter 5**    |
+| “Annotated lesion” overclaimed what coordinate represents                 | **Changed to annotated target**                          |
+| Practical importance of +0.009/+0.018 unclear                             | **Now quantified in actual changed/correct predictions** |
+| Thesis not compiled                                                       | **Current compiled PDF exists**                          |
 
-The repository documents, for example, that:
+Those are significant improvements.
 
-* the original shuffled graph was structurally weaker than the anatomical graph;
-* evidence masking initially leaked through LayerNorm;
-* model selection was saved but not restored;
-* the patient split originally changed with training seed;
-* E4 originally did not actually perform ACSSL;
-* E0 originally read the wrong MRI sequence for 59.5% of targets;
-* calibration was originally imported but never applied.
+The ACSSL correction is particularly important. The corrected experiment now starts from ImageNet consistently, achieves validation InfoNCE 1.0771 against chance 3.4657, and still produces only +0.0030 QWK with CI crossing zero. That converts what had been an unfair negative experiment into a much stronger negative result.
 
-Those are serious historical defects, but the current scientific value comes from **finding and correcting them rather than hiding them**.
+The E7 decomposition is also excellent scientific practice. The current 2×2 experiment shows:
 
-The viva story should therefore never be:
+* categorical, no cost: 0.7364;
+* ordinal only: 0.7407;
+* categorical + cost: 0.7332;
+* ordinal + cost: **0.7447**.
 
-> “AMOG-Net is a very successful novel architecture.”
+Neither ordinality nor the cost matrix explains the gain alone; the cost matrix alone is actually detrimental, while most of the apparent combined effect behaves like an interaction whose mechanism remains unresolved. The thesis explicitly refuses to claim that interaction as established at seven seeds.
 
-It should be closer to:
-
-> **“This thesis subjected several plausible anatomy-aware mechanisms to increasingly destructive controls. Some apparently worked until the appropriate control was introduced. The resulting contribution is a more precise account of which kinds of structure actually improve lumbar grading and which do not.”**
-
-That is a much more mature doctoral contribution.
+That is exactly the sort of result I want to see in a PhD.
 
 ---
 
-# 3. RQ1: the graph result needs an important correction
+# 2. The thesis's intellectual position is now quite good
 
-This is probably the most important new finding from my code review.
+Chapter 1 has become much better at distinguishing:
 
-The thesis currently says:
+**what was proposed**
+
+from
+
+**what was actually demonstrated.**
+
+It explicitly separates the proposed ACSSL, routing, heterogeneous graph and external-transfer contributions from the final demonstrated contributions and even includes a section called **“Proposed Contributions Not Supported.”**
+
+This is one of the strongest aspects of the thesis.
+
+It avoids the common bad practice of retrospectively rewriting the PhD so that only successful ideas appear to have been planned.
+
+The core thesis has effectively become:
+
+> We hypothesized that explicit anatomical priors would improve lumbar MRI grading. We built them, controlled them, discovered that most did not materially help, determined where the measurable gains actually came from, and identified why several apparently convincing positive conclusions disappeared when proper controls were introduced.
+
+That is absolutely a PhD-level scientific argument.
+
+In fact, I increasingly think this is **more interesting than if every proposed mechanism had simply increased accuracy by 1–2%**.
+
+---
+
+# 3. But RQ1 is now the single biggest unresolved scientific issue
+
+This remains the most important thing I would fix before viva.
+
+The thesis currently states:
 
 > **“Typing the relations carries information; the anatomical identity of the relations does not.”**
 
-That conclusion is **partly stronger than the current controls justify**.
+and Chapter 5 similarly says:
 
-The live E5 homogeneous graph uses one transformation per graph layer. E6 uses separate transformations for three edge relations, an additional self transform, and—unless using the ungated variant—a learned residual gate.
+> “Relational typing carries information; anatomical adjacency does not.”
 
-Therefore:
+The problem is that **E6 vs E5 does not yet establish that the semantic meanings of the relation types carry information**.
 
-**E6 versus E5 does not isolate “semantic knowledge carried by edge types.”**
+E5 has one homogeneous transformation.
 
-It tests a package containing:
+E6 has three separate relation-specific transformation banks plus additional graph parameterization. Therefore E6 > E5 demonstrates that **relation-specific parameterization performs better than the homogeneous graph**, but not yet that assigning one bank to “adjacent level,” another to “same-level cross-condition,” and another to “bilateral” is the reason.
 
-* relation-specific parameterization,
-* greater graph-module capacity,
-* self projections,
-* relation partitioning,
-* and possibly gating.
+The excellent news is that the missing control has now actually been implemented.
 
-The ungated control isolates the gate reasonably well.
+`build_edges(type_shuffled=True)` keeps:
 
-The shuffled-topology control is also valuable. It uses a node permutation that preserves edge count, relation counts, symmetry and the **degree sequence** while destroying correspondence between target identity and graph topology.
+* exactly the same endpoints;
+* exactly the same number of relations;
+* exactly the same relation counts;
+* exactly the same graph topology;
+* exactly the same model parameter count;
 
-That does support:
+and only destroys the anatomical meaning assigned to each relation type. The implementation even correctly shuffles undirected relation pairs rather than independently corrupting the two directions.
 
-> **Specific anatomical connectivity does not appear to matter much.**
+**This is precisely the control I asked for.**
 
-But E6 > E5 alone does **not yet prove that the meanings “adjacent level,” “same-level condition,” and “bilateral” carry useful information.**
+But it is not yet part of the results reported in Chapter 4. Chapter 4's reported campaign still contains ten configurations: E0–E7 plus endpoint-shuffled E6 and ungated E6.
 
-## The experiment I strongly recommend adding
+So this is now very simple:
 
-Add an **E6 type-shuffled control**.
+### Run the real type-shuffle experiment.
 
-Keep the **exact anatomical endpoints** unchanged but randomly permute the `edge_type` labels while preserving the number of each relation type.
+Then there are two possible—and both scientifically valuable—outcomes.
 
-Then compare:
+If anatomical E6 beats type-shuffled E6:
 
-**E6 anatomical types vs E6 random type labels.**
+> **The anatomical meanings assigned to relation types contribute information.**
 
-This is the missing test.
+If they perform the same:
 
-If anatomical type labels win, you can legitimately say:
+> **The benefit comes from relation-specific parameter banks rather than the anatomical semantics assigned to them.**
 
-> Relation semantics contribute.
+The second finding may actually be more interesting, because together with the endpoint-shuffle null it would show:
 
-If they do not, the correct conclusion becomes:
+> neither the anatomical connections nor the anatomical names of the relations explain the improvement; the R-GCN simply benefits from structured parameterization.
 
-> Relation-specific parameterization contributes, but the semantic identity assigned to those parameter groups does not.
+Until this experiment is completed, I would remove the sentence:
 
-That would actually make the thesis even more interesting.
+> “relational typing carries information”
 
-### Also add a capacity-matched homogeneous control
+and temporarily replace it with:
 
-Construct a graph with the same approximate number of graph parameters as E6 but no semantically meaningful relation types.
+> **“Relation-specific parameterization outperformed homogeneous message passing; whether the anatomical semantics of the relation types explain that gain remains under direct control testing.”**
 
-For example, multiple transform banks assigned randomly or learned without anatomical labels.
-
-Then you can distinguish:
-
-**more parameters → relation-specific parameterization → anatomical type semantics → anatomical topology.**
-
-Right now those four ideas are not completely separated.
+This is now my **#1 scientific action**.
 
 ---
 
-# 4. The shuffled-graph control should be improved further
+# 4. Chapter 3 is currently the weakest chapter—not because the methodology is bad, but because it describes more than was executed
 
-The current shuffled graph is much better than the historical version.
+Chapter 3 still reads primarily like the original **prospective protocol**.
 
-However, it preserves the **degree sequence globally**, not necessarily the degree of each semantic target.
+Its header literally still says:
 
-And because `build_edges(shuffled=True, seed=seed)` receives the **training seed**, each training seed also receives a different shuffled topology.
+> `PROTOCOL-GRADE VERSION 2 -- VIVA-HARDENED`
 
-That means an E6-shuffled seven-seed comparison contains two sources of randomness:
+and that the full experiment has not been completed.
 
-**training stochasticity + topology stochasticity.**
+The “VIVA-HARDENED” comment should simply disappear.
 
-I would change this.
+More importantly, Chapter 3 contains several methodological specifications that are **not the model that generated Chapter 4**.
 
-Use one fixed topology-control seed for the principal comparison:
+For example, it gives mathematical equations for relation-aware query/key/value attention:
 
-`topology_seed = fixed value`
+$$
+q_i,\;k_{j,r},\;v_{j,r},\;\alpha_{ijr}
+$$
 
-independent of:
+and discusses graph Transformers/GAT variants. It also promises an ordered-level Transformer comparator, edge-family ablations and isolated-lesion tests.
 
-`model_seed`.
+The live implementation instead uses a simpler R-GCN-like mean aggregation with relation-specific linear transformations.
 
-Then, as a secondary experiment, test perhaps 5–10 independently rewired graphs.
+That implementation is perfectly defensible.
 
-That gives you two questions:
+But the thesis must describe the model that produced its results.
 
-> Does the anatomical graph beat one pre-specified matched random graph?
+I would restructure Chapter 3 into two clearly distinguished layers:
 
-and
+**Pre-specified methodological programme.**
 
-> Does it beat the distribution of reasonable random graphs?
+This preserves what was originally proposed.
 
-Even better, implement degree-preserving **double-edge swaps within each relation family**, rather than only global node relabeling.
+**Executed methodology and protocol deviations.**
 
-Then the semantic node degree and relation distribution can be controlled more tightly.
+This says exactly what generated Chapter 4.
 
----
+For the graph, for example:
 
-# 5. Run the edge-family ablations Chapter 3 already promised
+> “The protocol considered relation-aware attention; the executed confirmatory architecture used a two-layer relation-specific mean-aggregation R-GCN because it provided a simpler capacity-controlled test of the target-graph hypothesis.”
 
-Chapter 3 explicitly says the full graph will be decomposed by:
+Then show the equations for the **actual R-GCN**.
 
-* removing adjacent-level relations;
-* removing same-level cross-condition relations;
-* removing bilateral relations;
-* retaining only individual families.
-
-These are scientifically valuable and currently much more important than adding another fancy model.
-
-They answer:
-
-> If typed parameterization helps, **which relation family supplies the gain?**
-
-Imagine the result turns out:
-
-* adjacent-level: nothing;
-* bilateral: nothing;
-* same-level cross-condition: +0.010.
-
-That would radically sharpen the thesis:
-
-> The model benefits from cross-condition co-occurrence within a motion segment, rather than longitudinal spinal adjacency.
-
-That is considerably more informative than “heterogeneous graph helps.”
-
-I would prioritize this very highly.
+That would solve the problem without hiding the research history.
 
 ---
 
-# 6. Run the isolated-lesion contamination experiment
+# 5. The RQ completion matrix in Chapter 5 is excellent—and the rest of the thesis should now follow it
 
-Chapter 3 explicitly anticipated a danger:
+This may be the single best addition since my previous review.
 
-> A severe lesion at one level may contaminate a visually normal neighboring level through message passing.
+Chapter 5 now states explicitly:
 
-This is an excellent question, but it needs actual evidence.
+* RQ1: **Partial**
+* RQ2: **Partial**
+* RQ3: **Partial**
+* RQ4: **No**
+* RQ5: **Partial**
 
-The graph implementation now correctly masks evidence-free nodes after every layer, which repaired one earlier information-leak pathway.
+and explains exactly which planned evidence was and was not executed.
 
-But that is not the same as demonstrating that **valid severe nodes do not improperly elevate valid neighboring normal nodes**.
+That is scientifically correct.
 
-Create a subset containing cases where:
+The problem is that Chapter 4 still contains stronger verdicts.
 
-L4–L5 = Severe
+For example, RQ2 currently concludes:
 
-while L3–L4 and L5–S1 = Normal/Mild.
+> **“Answer to RQ2. No. H1 is rejected on all three axes tested.”**
 
-Then compare E0/E5/E6 prediction shifts at the neighboring levels.
+but H1 actually included **label efficiency and cross-institutional robustness**, neither of which was executed. Chapter 4 itself immediately admits label efficiency and external transfer were not separately evaluated.
 
-Report something like:
+Therefore use the Chapter 5 wording everywhere:
 
-`P(incorrect neighbor upgrade | isolated severe lesion)`
+> **RQ2 partially answered. ACSSL shows no measurable benefit under the executed full-label internal grading, withheld-sequence and attribution experiments. Label-efficiency and external-transfer effects remain unresolved.**
 
-versus baseline.
+Similarly:
 
-That would make RQ1 much stronger clinically.
+**RQ3** should not say its robustness half is simply “no,” because corruption/quality-degradation experiments were never performed.
 
----
+**RQ5** should not receive an unqualified “yes,” because selective prediction was not tested.
 
-# 7. Implement the ordered-level Transformer baseline—or remove the claim that RQ1 answered it
-
-RQ1 explicitly asks whether the heterogeneous graph improves over:
-
-* independent heads;
-* an ordered five-level Transformer;
-* a homogeneous graph.
-
-The main live ladder contains E0, homogeneous E5 and heterogeneous E6, but not the promised ordered-level Transformer.
-
-Therefore the final thesis cannot presently say:
-
-> RQ1 is fully answered as written.
-
-Either run the ordered-level baseline or state:
-
-> **RQ1 partially answered; ordered-transformer comparison was not executed.**
-
-I recommend running it.
-
-It is likely not enormously expensive and is an important contemporary comparator given the Chai et al. 2026 anatomy-guided inter-level context work. Chai's June 2026 paper already models inter-level contextual dependence, although its outputs remain distinct level-condition predictions. ([Frontiers][1])
-
-That makes the Transformer baseline particularly important now.
+Chapter 5 has already solved this logically. The rest of the thesis just needs to be synchronized with it.
 
 ---
 
-# 8. Your graph architecture no longer exactly matches Chapter 3's mathematical formulation
+# 6. The corrected ACSSL result is now genuinely useful
 
-Chapter 3 describes node initialization as something like:
+I am much more satisfied with RQ2 scientifically than before.
 
-`[visual feature || level embedding || condition embedding]`
+The corrected experiment now demonstrates three things:
 
-and then describes relation-aware attention with query/key/value terms.
+1. anatomical cross-sequence correspondence can be learned very strongly;
+2. the pretext task succeeds better from ImageNet initialization;
+3. successful pretext learning still does not measurably improve full-supervision downstream grading.
 
-The live implementation does not do that.
+The current result is:
 
-The condition and level embeddings are used inside the **router**, but the graph receives the resulting fused visual vectors directly. `forward_graph()` constructs the condition and level indices for routing, then reshapes the fused vectors into graph nodes.
+**E4 – E3 = +0.0030 QWK**
 
-The live E6 is also an R-GCN-style mean aggregator, not the relation-aware attention equations written in Chapter 3.
+95% CI:
 
-Neither implementation is scientifically bad.
+**[-0.0038, +0.0096]**
 
-The problem is **methodological conformance**.
+4/7 seeds
 
-You have two choices.
+FDR p = 0.575.
 
-Either implement exactly what Chapter 3 describes—or rewrite Chapter 3's architecture subsection to say:
+And modality dropout gives a much larger and more consistent reduction in dependence on the annotated sequence than ACSSL.
 
-> The initial proposal considered relation-aware attention; after implementation review, the executed model used relation-specific mean aggregation for computational and control simplicity.
+That is an interesting result:
 
-Then record that as a protocol deviation.
+> **Learning anatomical correspondence and learning diagnostically useful representations are not equivalent.**
 
-Do not leave mathematical equations describing a model that did not generate Chapter 4.
+I would still run the 10/25/50/100% label-efficiency experiment eventually—especially for a paper—but I no longer consider the current ACSSL experiment methodologically compromised.
 
----
-
-# 9. RQ2 is not currently answered as written
-
-This is one of the biggest thesis-level issues.
-
-RQ2 asks whether ACSSL improves:
-
-**grading + label efficiency + transfer**
-
-against:
-
-**ImageNet + generic medical pretraining + ordinary augmentation-based SSL.**
-
-The current thesis mainly tests:
-
-**E4 ACSSL vs E3 without ACSSL at 100% labels.**
-
-It then uses missing-sequence reliance and Grad-CAM as additional probes.
-
-Those are useful experiments.
-
-They do **not** answer the full RQ2.
-
-Chapter 4 itself partly acknowledges this, saying label efficiency and external transfer were not separately evaluated.
-
-Therefore change the verdict from:
-
-> “RQ2: No.”
-
-to something like:
-
-> **“RQ2: Partially answered. ACSSL produced no detectable advantage under full-label internal grading or the executed robustness/attribution probes. Label-efficiency and external-transfer components were not executed.”**
-
-Unless you run the missing experiments.
+For the thesis itself, it is defensible **as long as the conclusion remains scoped to the experiments actually run**.
 
 ---
 
-# 10. ACSSL currently has a potentially important baseline confound
+# 7. RQ5 is now much better than before
 
-This one comes directly from the source.
+My previous major criticism was:
 
-`SequenceEncoder` defaults to:
+> You changed two things simultaneously and called the difference an ordinal/cost result.
 
-`pretrained=False`.
+That is now fixed.
 
-The normal supervised ladder initializes its encoders with ImageNet weights by default. `AMOGNet(... pretrained=True)` then trains E3.
+The decomposition demonstrates that neither component independently reproduces the joint effect.
 
-But `ACSSLModel` constructs:
+That makes the result scientifically more interesting.
 
-`SequenceEncoder(backbone, dim)`
+The thesis should describe this as:
 
-without explicitly enabling ImageNet initialization.
+> **A reproducible benefit of the combined ordinal–asymmetric objective whose component attribution remains unresolved.**
 
-Therefore ACSSL appears to pretrain **randomly initialized encoders**, which are then loaded into E4, while E3 starts from ImageNet.
+Not:
 
-That means:
+> “The ordinal head works.”
 
-> E4 vs E3 may not purely test “ImageNet + anatomical pretraining versus ImageNet.”
+Not:
 
-It may test:
+> “The cost matrix works.”
 
-> **random → ACSSL → supervised**
+And not:
 
-against
+> “The interaction is proven.”
 
-> **ImageNet → supervised**.
+The current Chapter 4 decomposition mostly gets this exactly right.
 
-That could unfairly disadvantage ACSSL.
+The additional Severe-error table is also a significant improvement. E7 slightly predicts Severe **less often**, while Severe precision increases and Severe recall also increases. Four of five secondary intervals still include zero, and the thesis appropriately says these are consistent directional evidence rather than five independent discoveries.
 
-### I consider this a major issue.
-
-Run at least:
-
-| Initialization | ACSSL | Supervised grading |
-| -------------- | ----- | ------------------ |
-| Random         | No    | Yes                |
-| Random         | Yes   | Yes                |
-| ImageNet       | No    | Yes                |
-| ImageNet       | Yes   | Yes                |
-
-The cleanest test of the incremental contribution is:
-
-**ImageNet + ACSSL vs ImageNet only.**
-
-If ACSSL still does nothing, the negative finding becomes much stronger.
+Good science.
 
 ---
 
-# 11. Run the ACSSL label-efficiency experiment
+# 8. There are some stale statements that now directly contradict the newly corrected experiments
 
-Chapter 3 already defines an excellent experiment:
+These are small individually but dangerous in a viva because an examiner may notice them.
 
-**10%, 25%, 50%, 100% labels.**
+The most obvious one is the power section.
 
-This is probably the most likely setting where SSL would help.
+The table says:
 
-A representation-learning method can be useless at 100% labels while being very valuable at 10%.
+* combined E7 objective: **3 seeds required**
+* full system: **3**
+* typed graph: **7**
 
-Therefore the current conclusion:
+but the next prose says:
 
-> “ACSSL does not help.”
+> **“Two effects are detectable with a single seed and a third with seven.”**
 
-may be too broad.
+That is now simply wrong.
 
-Run perhaps 3 seeds initially for:
+Change it to:
 
-* ImageNet;
-* ImageNet + ACSSL.
+> “Two effects are estimated to require approximately three seeds and the third approximately seven under the observed effect sizes and variances.”
 
-at:
+There are other stale remnants:
 
-10 / 25 / 50 / 100%.
+Chapter 4's seven-seed extension discussion still refers to cross-sequence SSL moving to **+0.0020**, whereas the corrected ImageNet experiment is now **+0.0030**.
 
-If you have computational capacity, add:
+Parts of the RQ3 discussion still use the earlier three-seed ablation figures even though RQ2 now reports the corrected seven-seed ACSSL robustness analysis.
 
-* random initialization;
-* ordinary SSL.
+The practical-significance discussion says the Severe-error improvement is:
 
-Plot QWK versus fraction of labels.
+> “produced by the cost matrix”
 
-This one experiment could either rescue a genuine contribution or make the negative result much stronger.
+but the new E7 decomposition shows **the cost matrix alone makes QWK worse**.
 
----
+That sentence should now say:
 
-# 12. ACSSL should use deterministic validation pairs
+> **“associated with the combined ordinal and asymmetric objective.”**
 
-The pair dataset randomly selects two available modalities on every access.
-
-That is reasonable during training.
-
-But it also means the validation objective can change which modality pair it evaluates across epochs.
-
-For model selection, I would make validation deterministic.
-
-Either:
-
-* enumerate every valid modality pair; or
-* generate a fixed validation pair manifest once.
-
-Otherwise a small change in validation InfoNCE may partly reflect which pairs happened to be sampled.
+These are exactly the kinds of inconsistencies that appear after rapid good-faith improvements. One final automated and human synchronization pass is needed.
 
 ---
 
-# 13. Implement multi-positive ACSSL or revise Chapter 3
+# 9. I still want one stronger statistical analysis
 
-Chapter 3 says that when more than one valid positive exists, the objective may include the **set of positives** rather than choosing one arbitrarily. It also proposes comparing ordinary InfoNCE against an alternative that reduces the false-negative problem.
+The statistics are much better than the original analysis.
 
-The current implementation selects one random pair from the available modalities.
+The thesis correctly realized that a patient-only bootstrap on one trained model can give absurdly confident but contradictory results across seeds, so it now applies the same patient resample across the seven trained models and averages their effects.
 
-Again, two options:
+However, the implementation still keeps the **seven training seeds fixed** while bootstrapping patients. Training stochasticity is reported separately as `sd_between_seeds`; the seeds themselves are not resampled.
 
-run a multi-positive variant,
+Therefore the current CI is best interpreted as:
 
-or state transparently:
+> uncertainty due to patient sampling for the mean effect across these seven observed training runs.
 
-> The executed ACSSL implementation sampled one cross-sequence positive pair per anatomical site.
+It is not a complete population interval over hypothetical retraining.
 
-Do not leave methodology implying a stronger implementation.
+I would add one final robust analysis:
 
----
+**Hierarchical bootstrap**
 
-# 14. Repeat ACSSL pretraining across several seeds
+resample training-seed pairs
 
-The current project deliberately pretrains ACSSL once and reuses the same representation for all downstream E4 seeds. The reasoning is understandable: otherwise downstream training seed and pretraining seed become confounded.
+*
 
-But the current design also means:
+resample patients
 
-> the uncertainty reported for ACSSL does **not include SSL pretraining stochasticity**.
+within each bootstrap replicate.
 
-A strong solution is a nested experiment.
+And for the p-value, use a proper **patient-clustered paired randomization/permutation test** rather than relying only on the ordinary bootstrap tail proportion.
 
-For example:
+Then keep the excellent exact 7/7 sign test as a third complementary view.
 
-3 ACSSL pretraining seeds × 3 supervised seeds.
+You would then have three distinct pieces of evidence:
 
-Then estimate variance attributable to:
+> patient-level paired randomization;
 
-* representation pretraining;
-* downstream optimization.
+> hierarchical patient × training-seed uncertainty;
 
-You do not need 7×7.
+> seed-sign consistency.
 
-Even 3×3 would substantially improve RQ2.
-
----
-
-# 15. RQ3 is only partially answered
-
-RQ3 asks whether the router remains robust to:
-
-**missing sequences AND quality-degraded sequences.**
-
-The current controlled input ablation is good. It explicitly removes modalities and compares the routed model against E1, correctly discovering that the same condition-specific dependency exists without a router.
-
-That is a good scientific result.
-
-But the **corrupted modality** portion is not really executed.
-
-Chapter 3 promised motion-like corruption, increased noise, bias fields, truncation and slice loss, with measurements of both prediction degradation and changes in gate allocation.
-
-Therefore RQ3 should currently be:
-
-> **Mechanism demonstrated; benefit under missing sequences not demonstrated; quality-degradation robustness not tested.**
-
-Not simply “mechanism yes, benefit no.”
+That would make the statistical defense considerably harder to attack.
 
 ---
 
-# 16. The router's “quality-aware” input is not presently quality-aware
+# 10. The three-to-seven-seed extension must remain explicitly described as adaptive
 
-The router has a `quality` input.
+Chapter 4 openly says the experiment was expanded from three seeds to seven **after seeing the three-seed analysis and near-threshold results**.
 
-But when no quality is supplied, the code substitutes a vector of ones.
+I am glad this is disclosed.
 
-The normal model forward path does not pass measured motion, truncation, spacing, SNR or coverage quality values.
+But statistically it means the seven-seed experiment is not identical to a completely pre-fixed seven-seed confirmatory design.
 
-So, functionally, the current thesis has:
+I would avoid treating the final p-values as pristine preregistered confirmatory evidence.
 
-**image + condition + level routing**
+The strongest solution, if computation permits, would be a small **locked replication campaign** on new seeds after all current methodology is frozen.
 
-not a demonstrated:
+You would not have to repeat everything.
 
-**quality-aware router**.
+The most useful replication would be:
 
-Change the terminology unless you implement real quality features.
+E0,
 
----
+E5,
 
-# 17. Add the routing baselines Chapter 3 promised
+E6,
 
-Chapter 3 lists:
+E6 type-shuffle,
 
-1. fixed concatenation,
-2. equal averaging,
-3. ordinary cross-attention,
-4. disease-conditioned routing,
-5. routing + modality dropout.
-
-The actual E1 path hardcodes `FixedFusion(mode="mean")`, although the class itself supports concatenation.
-
-There is no main-ladder cross-attention comparison.
-
-Run them.
-
-This is important because an examiner may say:
-
-> “Your router failed to beat a very simple mean. But does it beat a strong learned fusion baseline?”
-
-You need that answer.
-
----
-
-# 18. RQ5's positive result currently combines two interventions
-
-The E7 rung simultaneously changes:
-
-**categorical → ordinal head**
-
-and
-
-**ordinary objective → asymmetric cost-sensitive objective.**
-
-So the +0.0082 QWK is a joint effect.
-
-The thesis already suspects that the clinical cost matrix may explain more of the improvement than ordinality.
-
-But that has not been isolated.
-
-### Add three variants
-
-E7a:
-**ordinal only**, `cost_weight=0`.
-
-E7b:
-**categorical softmax + clinical cost term**.
-
-E7c:
-**ordinal + clinical cost**, current E7.
-
-Then compare all against E6.
-
-This will tell you whether the gain comes from:
-
-* ordinal representation;
-* asymmetric clinical cost;
-* their interaction.
-
-This is a **very high-value experiment**.
-
----
-
-# 19. Rename `OrdinalCORNHead`
-
-Your own audit test correctly notes that the loss is **not CORN**.
-
-It is an independent cumulative binary threshold objective, closer to a CORAL/cumulative-link style formulation.
-
-Yet the class is called:
-
-`OrdinalCORNHead`.
-
-That is unnecessary viva ammunition.
-
-Rename it to something neutral and accurate such as:
-
-`CumulativeOrdinalHead`
-
-or
-
-`OrdinalThresholdHead`.
-
-Then describe the exact binary targets mathematically.
-
----
-
-# 20. Quantify ordinal monotonicity violations before `cummin`
-
-The head independently predicts:
-
-`P(y>0)` and `P(y>1)`.
-
-These are not constrained during training.
-
-At inference the code applies `torch.cummin` to repair violations.
-
-That is legitimate engineering, but scientifically you should know how often the repair is doing work.
-
-Report:
-
-> percentage of predictions for which `P(y>1) > P(y>0)` before correction.
-
-If almost zero, excellent.
-
-If 10–20%, then the post-processing itself is materially affecting predictions.
-
-Also compare E7 performance with and without monotonic correction.
-
----
-
-# 21. Perform cost-matrix sensitivity analysis
-
-Current defaults include:
-
-Severe→Normal = 4
-
-Severe→Moderate = 2
-
-Moderate→Normal = 1.5
-
-etc.
-
-Those values are plausible but not clinically derived utilities.
-
-Do not let the viva turn into:
-
-> “Why exactly is missing severe disease four times worse?”
-
-Either obtain radiologist/expert justification or call them **relative training penalties**, not clinical utility values.
-
-Then run sensitivity:
-
-`cost_weight = 0, 0.25, 0.5, 1.0`
-
-and perhaps several `c20/c21` ratios.
-
-If the effect survives reasonable ranges, the finding is much stronger.
-
----
-
-# 22. Report the opposite severe error explicitly
-
-Chapter 3 correctly says a cost-sensitive objective is acceptable only if it does not simply predict Severe more often.
-
-Current Chapter 4 emphasizes:
-
-**Severe → Normal/Mild**.
-
-Add:
-
-**Normal/Mild → Severe**
-
-and:
-
-**Moderate → Severe**
-
-with patient-clustered uncertainty.
-
-Also report Severe precision alongside Severe recall.
-
-That will show the reduction in under-grading is not bought through indiscriminate over-grading.
-
----
-
-# 23. RQ5's uncertainty/selective-prediction half is incomplete
-
-RQ5 does not merely ask whether ordinal error improves.
-
-It asks whether:
-
-> calibrated uncertainty can support selective prediction.
-
-The current results show temperature scaling, but no full risk–coverage/abstention experiment.
-
-Chapter 3 promised risk–coverage curves, and also discusses MC dropout, ensembles and conformal analysis.
-
-You do not need to implement all of those.
-
-But to answer the actual RQ5, I would at minimum produce:
-
-**confidence/entropy versus correctness**
-
-and a:
-
-**risk–coverage curve**.
-
-For example:
-
-* retain 100% cases → error X;
-* retain 90% most confident → error Y;
-* retain 80% → error Z.
-
-Then ask whether Severe errors are preferentially rejected.
-
-Without that, RQ5 should be labelled **partially answered**.
-
----
-
-# 24. The statistics need a significant revision
-
-This is one of my strongest recommendations.
-
-Your patient-level bootstrap idea is correct.
-
-But the implementation generates bootstrap p-values as:
-
-`2 × min(proportion(diff <= 0), proportion(diff >= 0))`
-
-from the ordinary bootstrap distribution.
-
-That is not the cleanest or most defensible null-hypothesis test.
-
-Use bootstrap for **confidence intervals**.
-
-Use a **paired randomization/permutation test** for significance.
-
-For each patient, swap model A and B's entire set of predictions with probability 0.5, preserving all 25 correlated targets, then recompute ΔQWK.
-
-That creates a proper paired null distribution.
-
----
-
-# 25. Incorporate training-seed uncertainty into the primary interval
-
-The current across-seed bootstrap holds the seven trained seeds fixed, resamples patients, computes the difference for each seed and averages them.
-
-It separately reports between-seed SD.
-
-That is better than the original single-seed analysis, but the CI itself principally represents **patient-sampling uncertainty conditional on these trained models**.
-
-It does not fully propagate optimization stochasticity.
-
-Use a hierarchical bootstrap:
-
-1. sample training seeds with replacement;
-2. sample patients with replacement;
-3. use the same sampled patients across the sampled seed pairs;
-4. compute mean paired ΔQWK.
-
-Report:
-
-* patient-only interval;
-* seed-only distribution;
-* hierarchical interval.
-
-With only seven seeds, don't pretend this perfectly estimates the population of training runs, but it is better than excluding that source of uncertainty.
-
----
-
-# 26. Add a simple exact sign test for the 7/7 results
-
-When all seven paired seed differences have the same sign, this is useful descriptive evidence.
-
-Under a 50/50 sign null, a two-sided exact sign test for 7/7 is:
-
-**p = 0.015625.**
-
-It should not replace the patient-level analysis.
-
-But it answers:
-
-> “Is the result dependent on one lucky training run?”
-
-For E7 vs E0, E6 vs E5 and E7 vs E6, this is a useful complementary statistic.
-
----
-
-# 27. Do not call the current null intervals “equivalence bounds”
-
-This was in my previous answer and remains important.
-
-Chapter 4 calls them “equivalence bounds” and says, for example, anatomy contributes “at most” 1.05%.
-
-Unless you formally pre-specify a smallest effect of interest and perform an equivalence procedure such as TOST, that terminology is too strong.
-
-Rename the section:
-
-**“Confidence bounds on effects compatible with the data”**
-
-or:
-
-**“Upper compatibility bounds for unsupported effects.”**
-
-If you truly want equivalence testing, define a clinically/scientifically meaningful margin, for example ±0.01 QWK, justify it independently, and perform the appropriate analysis.
-
-But because you have already seen the results, clearly call any new margin **post hoc** unless it existed beforehand.
-
----
-
-# 28. Tone down the inter-reader “ceiling” argument
-
-This is another issue from my previous answer.
-
-The thesis compares model QWK with literature inter-reader κ around 0.49–0.73.
-
-Those are not necessarily:
-
-* the same kappa statistic;
-* the same population;
-* the same label process;
-* the same adjudication regime.
-
-Your Chapter 5 itself acknowledges the metrics are not directly comparable.
-
-Therefore avoid:
-
-> “The model cannot improve beyond reader reliability.”
-
-and avoid:
-
-> “Effects below 1.5% are below what the reference standard can adjudicate.”
-
-Use:
-
-> **“Known inter-reader variability limits how strongly small model differences should be interpreted against this reference standard.”**
-
-That is scientifically safe.
-
----
-
-# 29. Do not use the observed-seed power table as proof
-
-The table estimating that one mechanism would need 205 seeds and another 545 is interesting.
-
-But it is based on effect and variance estimates from only seven seeds.
-
-The thesis already partially acknowledges that these are order-of-magnitude estimates.
-
-Make that even clearer.
-
-Do not argue:
-
-> “545 seeds would be required, therefore ACSSL definitely does nothing.”
-
-Say:
-
-> “The observed effect is small relative to the observed between-seed variance; a conventional experiment would require implausibly many runs to establish an effect of this apparent magnitude.”
-
-That's defensible.
-
----
-
-# 30. The seven-seed extension introduces adaptive-analysis concerns
-
-This is subtle but important.
-
-The project originally ran three seeds.
-
-After seeing two comparisons close to the corrected threshold, the campaign was extended to seven.
-
-The thesis admirably **discloses** this.
-
-But statistically, the number of training runs was increased after examining interim results.
-
-That is not identical to a fixed seven-seed confirmatory experiment.
-
-Therefore don't oversell the final p-values as though seven seeds were entirely pre-specified.
-
-### Strongest solution
-
-Run an additional **locked replication campaign**.
-
-Before running anything:
-
-freeze:
-
-* model definitions;
-* comparisons;
-* statistics;
-* seed numbers;
-* no more architecture changes.
-
-Then run, for example:
-
-seeds 49–55
-
-for only the principal configurations.
-
-You do not need another 70 runs.
-
-Perhaps:
-
-E0
-
-E5
-
-E6
-
-E6 type-shuffle
-
-E7 ordinal-only
-
-E7 cost-only
+E6 or E7 ordinal-only/cost-only as relevant,
 
 E7 combined.
 
-This would provide a clean replication after the methodology is frozen.
+Even another 5–7 new fixed seeds for the major surviving claims would turn a possible viva criticism into a strength.
+
+I don't consider this essential for PhD survival, but it would elevate the work.
 
 ---
 
-# 31. An even stronger solution: create a truly untouched final internal holdout
+# 11. The practical-significance section is a very good addition
 
-This is optional but scientifically powerful.
+I strongly approve of this.
 
-The current “test” partition has been inspected many times during debugging, campaign extension, attribution analysis and model comparison.
+The thesis now says, plainly, that the effects are **statistically detectable and clinically negligible**.
 
-It has never been used for gradient training, which is important.
+It reports that the full system produces only approximately **42 additional correct target gradings out of 7,310**, roughly one net additional correct target per seven patients.
 
-But it has influenced human decisions.
+This honesty substantially increases credibility.
 
-That makes “pristine confirmatory test set” a stronger claim than I would use.
+However, I would remove one part:
 
-If resources permit, create a new final confirmatory split **before any further model results are examined**.
+the abstract currently describes the system improvement as roughly **7% of the span between two human readers**.
 
-Because existing train/validation patients have already been used to train prior models, you must retrain new models with that new holdout excluded.
+The main body correctly acknowledges that the reader kappas come from different populations and potentially different statistics.
 
-This is costly.
+That means the 7% numerical comparison looks more precise than its evidential basis permits.
 
-It is not absolutely necessary for the viva if you transparently describe the existing test set as fixed internal evaluation rather than a one-time untouched test.
+I would say in the abstract simply:
 
-But a fresh replication would dramatically strengthen the thesis.
+> “The magnitude is small relative to reported variability in human lumbar stenosis grading.”
 
----
-
-# 32. Reconcile the FDR family with what Chapter 3 actually specified
-
-Chapter 3 declares a limited set of primary comparison families.
-
-`run_ladder.py` ultimately analyzes more contrasts and applies formal testing to both QWK and macro-F1.
-
-That is not necessarily wrong; indeed, correcting over a larger family can be more conservative.
-
-But the final thesis must explain:
-
-> What exactly constituted the confirmatory family?
-
-I recommend:
-
-**Primary endpoint: QWK.**
-
-Then identify a fixed list of primary contrasts.
-
-Treat macro-F1 and all subgroup comparisons as secondary/supporting.
-
-Also provide a sensitivity table showing both:
-
-* BH-FDR;
-* Holm correction.
-
-If conclusions survive both, excellent.
+No 7%.
 
 ---
 
-# 33. Increase the bootstrap replicates for final results
+# 12. Chapter 5's “reader ceiling” argument remains slightly too strong
 
-Chapter 3 says 2,000.
+Although it has been softened considerably, Chapter 5 still says:
 
-Parts of the runtime default to 1,000.
+> “A model trained on one reader's labels cannot be expected to exceed the agreement those readers achieve with each other.”
 
-For final thesis tables, I would use at least:
+and that very small effects lie inside the “noise” of those labels.
 
-**10,000 patient-cluster replicates.**
+That isn't necessarily true.
 
-Compute time is trivial compared with model training.
+A model trained against adjudicated or aggregate labels can sometimes exceed pairwise reader-reader agreement relative to the chosen reference.
 
-And never report:
-
-`p = 0.000`.
-
-Report:
-
-`p < 0.0001`
-
-according to the resolution of the permutation distribution.
-
----
-
-# 34. Report CIs for the clinical error improvements
-
-Don't only say:
-
-Severe→Normal 5.7% → 3.8%.
-
-Calculate paired patient-level uncertainty for the difference.
-
-Same for:
-
-* Severe recall;
-* distant-error rate;
-* Severe precision;
-* Normal→Severe.
-
-Those may become more clinically understandable than QWK.
-
----
-
-# 35. RQ4 is incomplete—but I would not force a bad experiment
-
-The original PhD explicitly includes zero-shot Rizgary transfer and a few-shot adaptation curve.
-
-They were not completed.
-
-That is the largest structural incompleteness.
-
-However, the project subsequently established an important reason why simply running the frozen grader on automatically derived local coordinates would be scientifically misleading: localization error alone produces approximately **−0.1636 QWK / 22.9% degradation**, vastly larger than the architectural differences the thesis is measuring.
-
-Chapter 5 now recognizes that such an external result would confound domain shift with localisation failure.
-
-That is a defensible reason not to manufacture an RQ4 number.
-
-### Change the thesis framing
-
-Don't say:
-
-> “RQ4 failed.”
-
-Say:
-
-> **“RQ4 remains unanswered because the available local cohort lacks target localization adequate for an identifiable grading-domain transfer experiment. A benchmark-side localization perturbation study quantified that confound and demonstrated that it exceeds the effects under study.”**
-
-That's a legitimate limitation.
-
----
-
-# 36. Add an RQ completion matrix to Chapter 5
-
-I strongly recommend a table like:
-
-| RQ  | Planned evidence                                                   | Executed? | Verdict                                                   |
-| --- | ------------------------------------------------------------------ | --------: | --------------------------------------------------------- |
-| RQ1 | independent + transformer + homo + hetero + topology controls      |   Partial | Partial                                                   |
-| RQ2 | full-label + label-efficiency + pretraining comparators + transfer |   Partial | Internal result negative                                  |
-| RQ3 | missing + corruption + learned allocation                          |   Partial | Routing mechanism yes; benefit under missing no           |
-| RQ4 | zero-shot + adaptation                                             |        No | Unanswered                                                |
-| RQ5 | asymmetric error + calibration + selective prediction              |   Partial | Error objective positive; selective prediction unresolved |
-
-This is much safer than giving every RQ a simple Yes/No.
-
----
-
-# 37. Complete the ROI reader QC
-
-The repository already has:
-
-60 studies,
-
-300 sheets,
-
-1,474 targets.
-
-The reader adjudication remains outstanding.
-
-This is precisely the sort of relatively small remaining task that is worth completing before viva.
-
-It turns:
-
-> “We generated QC sheets.”
-
-into:
-
-> “An independent reader reviewed the prespecified QC sample and X% met all criteria; Y studies were excluded for geometry failures.”
-
-Chapter 5 currently acknowledges the reader pass is outstanding.
-
-I would close this.
-
----
-
-# 38. Adjudicate the nine geometry-exclusion candidates
-
-Do not let them remain ambiguous.
-
-Have an appropriate reader determine:
-
-include / exclude / acquisition abnormality / transformation failure.
-
-Then report whether excluding them changes ACSSL.
-
-A sensitivity analysis:
-
-**all studies vs QC-clean studies**
-
-would help tremendously.
-
-If ACSSL stays null after excluding geometry failures, the negative RQ2 result becomes harder to attack.
-
----
-
-# 39. Reconsider what Grad-CAM actually demonstrates
-
-The attribution analysis is clever, but the current prose occasionally calls the central region an:
-
-**“annotated lesion.”**
-
-The annotation coordinate is not a pixel-accurate lesion segmentation.
-
-It is a target/localization point.
-
-Therefore Grad-CAM mass within a 15-mm disc demonstrates:
-
-> concentration around the **annotated target neighbourhood**.
-
-It does not prove:
-
-> the network localizes the actual pathology.
-
-This distinction matters.
-
-Rename:
-
-“lesion concentration”
-
-to:
-
-**“target-centred attribution concentration.”**
-
----
-
-# 40. Strengthen the attribution experiment
-
-Add three simple controls:
-
-**Radius sensitivity**:
-10 mm / 15 mm / 20 mm.
-
-**Spatial displacement control**:
-compare attribution mass in the true target-centred circle with circles shifted by e.g. ±20 mm.
-
-**Center-bias matched control**:
-an untrained network helps already, but also compare trained maps against randomly translated target centres.
-
-If trained models strongly prefer the correct coordinate beyond mere image-center bias, your mechanistic claim becomes considerably stronger.
-
----
-
-# 41. Keep Grad-CAM as supporting evidence, not causal evidence
-
-Chapter 3 actually states this correctly: saliency is a gross sanity check, not proof of reasoning.
-
-Keep that caution in Chapter 5.
-
-Use wording:
-
-> “consistent with the explanation that…”
-
-not:
-
-> “proves the reason is…”
-
----
-
-# 42. Fix physical slice-neighbour selection in the ROI pipeline
-
-This is a code-level issue.
-
-`decode_roi()` gets neighboring slices through:
-
-`instance_number + off`.
-
-But Chapter 3's whole geometry philosophy is that physical order comes from DICOM geometry rather than filenames or nominal numbering.
-
-`InstanceNumber` is not guaranteed to be continuous physical order.
-
-Build a per-series ordered slice list using:
-
-**ImagePositionPatient projected onto the slice normal.**
-
-Then select previous/next physical slices by ordered index.
-
-This should replace `instance_number ± 1`.
-
----
-
-# 43. Do not silently fall back to pixel crops when PixelSpacing is missing
-
-Current ROI decoding uses the physical FOV when spacing exists, but if spacing is absent it falls back to a pixel crop.
-
-That means two samples can enter the supposedly 60-mm experiment under different geometry rules.
-
-I would instead:
-
-* flag missing spacing;
-* count it;
-* exclude it from confirmatory physical-FOV analysis, or have a clearly separate fallback category.
-
-At minimum report exactly how often it occurred.
-
----
-
-# 44. Report duplicated-neighbor fallbacks
-
-If a neighbouring slice is absent or shape-mismatched, the code duplicates the center slice.
-
-That's preferable to crashing, but a 2.5D input with:
-
-`[center, center, center]`
-
-is different from a real three-slice stack.
-
-Record a per-ROI flag:
-
-* 0 genuine neighbours missing;
-* 1 missing;
-* 2 missing.
-
-Then assess whether failures are concentrated in a particular condition or severity.
-
----
-
-# 45. Consider series-level instead of per-slice intensity normalization
-
-The current normalization computes the 1st and 99th percentiles per slice.
-
-That can cause adjacent slices of the same 2.5D stack to be rescaled independently.
-
-This may introduce artificial contrast variation.
-
-Consider:
-
-* one normalization from the entire 3-slice stack;
-* or ideally one robust normalization per series/volume.
-
-Then run a small sensitivity comparison.
-
-Not necessarily a fatal issue, but worth improving.
-
----
-
-# 46. Strengthen the cache provenance
-
-The cache design is good, but it can become safer.
-
-`load_cache()` presently verifies crop dimensions but does not comprehensively verify that:
-
-* FOV;
-* radius;
-* per-condition setting;
-* source index ordering;
-* DICOM source;
-* split;
-* code version
-
-all match what the model expects.
-
-Add to metadata:
-
-* SHA256 of index CSV;
-* SHA256 of source coordinate CSV;
-* SHA256 of series-description CSV;
-* FOV;
-* radius;
-* normalization version;
-* geometry-code commit;
-* cache schema version.
-
-Then reject mismatches.
-
----
-
-# 47. Strengthen cross-sequence geometry for varying orientation
-
-`build_crosssequence_index.py` takes the orientation from the first slice of the destination series and uses that normal for the whole series.
-
-Most ordinary DICOM series should have consistent orientation.
-
-But verify this instead of assuming it.
-
-Calculate maximum within-series IOP deviation.
-
-If above tolerance:
-
-* use each slice's own plane geometry;
-* or reject the series as geometrically inconsistent.
-
----
-
-# 48. Use a physical rather than pixel margin for cross-sequence acceptance
-
-The cross-sequence projector currently uses a fixed margin such as 16 pixels to decide whether a projected point lies safely inside the image.
-
-Pixel dimensions differ across scanners.
-
-A 16-pixel margin therefore represents different physical widths.
-
-Use the intended physical FOV and PixelSpacing to determine whether the crop can be validly extracted.
-
----
-
-# 49. Audit duplicate target rows explicitly
-
-`build_target_table()` groups by patient/level/condition and takes the first label/first index.
-
-That assumes duplicates are equivalent.
-
-Before collapsing, produce a duplicate audit:
-
-* number of duplicated target keys;
-* whether labels disagree;
-* whether coordinates differ;
-* whether multiple series are involved.
-
-If conflicts exist, resolve them using a deterministic rule.
-
----
-
-# 50. Clarify the meaning of “LumbarDISC” versus the 1,974-study experimental subset
-
-The official 2026 LumbarDISC release contains **2,697 patients and 8,593 MRI series from eight institutions across six countries and five continents**. ([RSNA Publications Online][2])
-
-Your experiment uses the **1,974 cases/48,657 targets available in the competition training-label portion used by the current pipeline**.
-
-Make this explicit everywhere.
-
-Do not write:
-
-> “LumbarDISC contains 1,974 patients.”
-
-Write:
-
-> “The full LumbarDISC release contains 2,697 patients; the present experiment uses the 1,974 labelled studies available in the development/training subset used for model development.”
-
-This will avoid an examiner thinking the dataset description is factually wrong.
-
----
-
-# 51. Add a CLAIM-style participant/data flow diagram
-
-Current medical-imaging reporting recommendations strongly emphasize data source, inclusion/exclusion, preprocessing, reference standard, partitioning and reproducibility. CLAIM 2024 also specifically recommends using **“reference standard”** rather than “ground truth,” and favors “internal testing”/“external testing” over the ambiguous word “validation.” ([RSNA Publications Online][3])
-
-Add a flowchart:
-
-2,697 full dataset
-
-↓
-
-1,974 available labelled development studies
-
-↓
-
-DICOM/metadata eligibility
-
-↓
-
-ROI geometry success/failure
-
-↓
-
-1,381 training
-
-296 validation/development
-
-297 internal test
-
-↓
-
-number of scored targets.
-
-Also provide:
-
-* sex;
-* age;
-* severity;
-* sequence availability;
-* scanner/site information if available.
-
-TRIPOD+AI similarly recommends transparent reporting of model-development/evaluation data and now contains 27 main reporting items. ([BMJ][4])
-
----
-
-# 52. Do a final CLAIM 2024 checklist audit
-
-Create:
-
-`CLAIM_2024_COMPLIANCE.md`
-
-with:
-
-CLAIM item | page/section | compliant? | action.
-
-This is a very good pre-viva exercise.
-
-It will expose missing items before an examiner does.
-
----
-
-# 53. Do the same for TRIPOD+AI where applicable
-
-This is not purely a clinical prediction-model study, so not every TRIPOD+AI item will apply.
-
-But use:
-
-Yes / No / N/A.
-
-This is especially helpful for:
-
-* participant flow;
-* intended use;
-* evaluation data;
-* missing data;
-* calibration;
-* model availability;
-* reproducibility.
-
----
-
-# 54. Refresh the novelty review immediately before submission
-
-Chapter 1 literally contains a placeholder saying the novelty boundary must be refreshed before submission.
-
-Do it.
-
-Chai et al. 2026 is already extremely close conceptually: anatomy-guided localization, multisequence inputs and inter-level context on LumbarDISC. ([Frontiers][1])
-
-Baur's graph work is different—it represents the 3D disc surface and grades Pfirrmann degeneration, not target relations across the spine. ([PubMed][5])
-
-My current spot-check did **not** surface an identical published heterogeneous graph whose nodes are all 25 level-condition-laterality grading targets.
-
-But do not rely on my spot-check alone.
-
-Run final searches in:
-
-Scopus
-
-PubMed
-
-Web of Science if available
-
-IEEE Xplore
-
-Google Scholar
-
-for 2025–August 2026.
-
-Then add a short table:
-
-prior work | graph/context unit | target | multisequence | laterality | how this thesis differs.
-
----
-
-# 55. Do not oversell “first”
-
-Prefer:
-
-> “No study identified in the final structured search…”
-
-rather than:
-
-> “This is the first ever…”
-
-unless you can prove it.
-
----
-
-# 56. The thesis should explicitly separate three kinds of novelty
-
-I would organize originality as:
-
-**Methodological novelty**
-
-Target-level heterogeneous representation and controlled anatomical-prior testing.
-
-**Empirical novelty**
-
-Evidence that relation-specific graph modeling may help while specific anatomical topology does not.
-
-**Scientific/methodological finding**
-
-Several plausible anatomy-aware mechanisms do not produce measurable benefits under strong controls, with evidence for why.
-
-That is more defensible than trying to make every module novel.
-
----
-
-# 57. Rephrase Contribution D1
-
-“Verified anatomy-aware multi-sequence grading system” may slightly overstate what was verified.
-
-It is verified **internally on the labelled benchmark subset under supplied/geometry-derived localization**.
-
-I'd phrase:
-
-> **A reproducible internally tested multi-sequence grading pipeline under controlled target localization.**
-
-Do not suggest autonomous end-to-end clinical diagnosis.
-
----
-
-# 58. Rephrase Contribution D2's “capacity-matched” wording
-
-The thesis says every mechanism is tested against a capacity-matched control.
-
-That is not completely true for E6 versus E5 because the heterogeneous graph has additional relation-specific parameterization.
+And the Lurie values are not measured on the LumbarDISC reference process.
 
 Use:
 
-> **“mechanism-focused controls designed to reduce capacity and topology confounding”**
+> **“Known reader variability limits the strength with which small improvements against a retrospective radiological reference standard should be interpreted; it does not define a numerical performance ceiling for this model.”**
 
-unless you add the parameter-matched graph control I recommended.
-
----
-
-# 59. Rephrase D3
-
-Current D3 is conceptually strong.
-
-But use:
-
-> “did not improve grading **under the executed LumbarDISC setting and architecture**”
-
-instead of a broad:
-
-> “anatomical priors do not improve grading.”
-
-You have one dataset family, one backbone family, one ROI representation and one task.
-
-Negative findings should be scoped accordingly.
+I would actually remove the word **ceiling** from the subsection title.
 
 ---
 
-# 60. Remove or soften “the encoder already localizes the lesion”
+# 13. RQ3 still claims “quality-aware” routing when the live model is not quality-aware in a meaningful sense
 
-Use:
+The implementation supports a quality scalar, but when no quality is passed it inserts **ones**.
 
-> **“The encoder already concentrates evidence around the supplied target coordinate.”**
+And the normal model construction simply instantiates `DiseaseConditionedRouter(dim)` without supplying measured motion, truncation or signal quality during the main forward path.
 
-That's exactly what the current experiment supports.
+So the executed thesis has:
 
-Then say this **may reduce the marginal value of additional structural priors**.
+> target-conditioned, feature-conditioned routing with explicit availability masking.
 
----
+It has **not** established:
 
-# 61. Be careful with “clinical significance”
+> measured quality-aware routing.
 
-The system measures agreement with an imaging reference standard.
+Therefore everywhere the thesis says “quality-aware routing” as an executed method should either be changed or marked as an unexecuted part of the original RQ3 programme.
 
-It does not measure:
-
-* symptoms;
-* surgery;
-* outcomes;
-* reporting speed;
-* radiologist assistance;
-* patient benefit.
-
-Chapter 5 already acknowledges this.
-
-Maintain that boundary everywhere.
+The Chapter 5 completion matrix already says corruption was not run, which helps considerably.
 
 ---
 
-# 62. Finish the ethics placeholders
+# 14. The title is becoming increasingly mismatched to what the thesis actually discovered
 
-Chapter 3 still contains institutional fields such as:
+Current title:
 
-* IRB/hospital approval number;
-* consent waiver/basis;
-* external processing permission.
+> **Disease-Adaptive Heterogeneous Graph Learning with Anatomically Aligned Multi-Sequence MRI Representations for Lumbar Degenerative Disease**
 
-These cannot remain in a submitted thesis.
+This sounds as though the PhD's final contribution is:
 
-Either fill them with verified facts or state explicitly that the local cohort was **not used for any result requiring ethical approval** and remove prospective claims that would imply otherwise, according to the institution's rules.
+* disease-adaptive graph learning;
+* anatomically aligned representations.
 
----
+But the final thesis argues that:
 
-# 63. Verify the public repository has never contained PHI in its Git history
+* ACSSL does not help under the executed tests;
+* routing does not add measurable benefit;
+* anatomical topology does not help;
+* even graph **semantic typing** remains under direct control testing.
 
-`.gitignore` protecting data today is not enough.
+So I would seriously consider a title closer to the actual scientific contribution.
 
-Run history-level checks.
+For example:
 
-Search all commits for:
-
-* PatientName;
-* PatientID;
-* BirthDate;
-* accession numbers;
-* local filenames;
-* DICOM;
-* report text.
-
-Use a secret/data-history scan.
-
-If any patient data were historically committed, simply deleting the current file is insufficient.
-
-You would need proper history rewriting and incident handling.
-
----
-
-# 64. Harden local DICOM de-identification before any RQ4 publication
-
-The project has already discovered why `PatientID` alone is unsafe.
-
-The improved tool is much better, but the project state also notes UIDs are not yet remapped and structured-report objects exist.
-
-Before publication/deployment, use a recognized DICOM confidentiality profile/tool and independently audit:
-
-* public/private tags;
-* UIDs;
-* accession numbers;
-* dates;
-* structured reports;
-* burned-in pixels.
-
-The pixel-based burned-in-text check is useful, but should remain one component of the audit, not the entire de-identification claim.
-
----
-
-# 65. Fix the live integrity checker versus legacy-code contradiction
-
-This is a repository-engineering issue.
-
-`SUPERSEDED.md` correctly says the old numbered scripts are retained as historical evidence.
-
-But `verify_integrity.py` scans essentially the whole implementation tree—including historical scripts containing deliberately fabricated old results.
-
-Meanwhile the runtime banner says real results are citable only if that checker passes.
-
-Those two ideas conflict.
-
-Create an explicit machine-readable:
-
-`LIVE_PIPELINE_MANIFEST.json`
-
-listing the current citable files.
-
-Make:
-
-`verify_live_pipeline.py`
-
-audit only those.
-
-Keep the historical audit separately.
-
-Then you can truthfully state:
-
-> Live scientific implementation: clean.
-
-> Historical superseded implementation: intentionally preserved and fails legacy-integrity checks.
-
----
-
-# 66. Move superseded code into a clearly marked legacy directory
-
-Not delete.
-
-Preserve history.
-
-But reorganize:
-
-`implementation/legacy_non_citable/`
-
-with a large README:
-
-> NOT PART OF THESIS RESULTS.
-
-The current `SUPERSEDED.md` is already good evidence, but examiners should not have to infer which of 67 Python files produced Chapter 4.
-
----
-
-# 67. Update the test report
-
-`component_verification.md` still reports:
-
-**93 passed / 3 failed**
-
-and says augmentation is missing.
-
-But later code and project state say:
-
-**113 tests passing**
-
-and augmentation now exists.
-
-Regenerate it.
-
-Do not let the repository contain an old report that appears to contradict the thesis.
-
----
-
-# 68. Update `protocol_decisions.md`
-
-It still lists:
-
-> Training augmentation: none implemented.
-
-That is stale; `amog_augment.py` now contains a substantial implementation.
-
-It also calls various experiments open that have since happened.
-
-Update or archive it with:
-
-> superseded on DATE by PROJECT_STATE.md.
-
----
-
-# 69. Update the Chapter 4 evidence README
-
-It still says:
-
-> “Nothing in this folder is a confirmatory thesis result yet” and “full E0–E7 campaign has not been run.”
-
-That is plainly stale.
-
-Fix immediately.
-
----
-
-# 70. Update `SUBMISSION_PLAN.md`
-
-It says the thesis has never compiled and compilation is blocked.
-
-Recent repository history says the thesis was later compiled twice to resolve references.
-
-Synchronize it.
-
----
-
-# 71. Update `viva_defence.md`
-
-The earlier viva narrative still contains three-seed numbers and says the seven-seed campaign is in progress.
-
-Regenerate every number directly from current CSV/JSON outputs.
-
-Never manually copy them.
-
----
-
-# 72. Fix stale Chapter 4 numbers
-
-I have seen different versions in current thesis material such as:
-
-Severe recall 62.7 → 65.0
-
-versus later seven-seed table values around:
-
-61.1 → 63.1.
-
-This appears to be document synchronization, not a model problem.
-
-But it must be fixed.
-
-Generate **every table and inline number** from the same locked results file.
-
-I would write a script:
-
-`validate_thesis_numbers.py`
-
-that searches expected LaTeX values against the canonical CSV.
-
-If one number differs, CI fails.
-
----
-
-# 73. Fix malformed prospective/past-tense residue in Chapter 3
-
-There are still awkward passages created during conversion from prospective protocol to executed methodology.
-
-For example, around the training protocol there is wording like:
-
-> “No final hyperparameter value is fabricated in this protocol chapter; each is Every rung…”
-
-That needs human editing.
-
-Read Chapter 3 from beginning to end as prose, not source code.
-
----
-
-# 74. Remove remaining `[TO CONFIRM]`, `[TO RECORD]` and `[LATER INTEGRATION]` markers
-
-The novelty refresh marker in Chapter 1 still exists.
-
-Ethics placeholders remain.
-
-Before final submission run an automated search for:
-
-`TO CONFIRM`
-
-`TO RECORD`
-
-`LATER INTEGRATION`
-
-`TODO`
-
-`FIXME`
-
-`PLACEHOLDER`
-
-`3-SEED`
-
-`campaign is running`
-
-`not yet run`
-
-and manually resolve every occurrence.
-
----
-
-# 75. Remove “VIVA-HARDENED” from final source comments
-
-This isn't a scientific problem.
-
-But the repository is public.
-
-A final thesis file carrying comments such as:
-
-`PROTOCOL-GRADE VERSION -- VIVA-HARDENED`
-
-can look as though the document was rhetorically engineered around anticipated examination.
-
-Use neutral source comments.
-
----
-
-# 76. Document AI assistance explicitly
-
-This is particularly important because the Git history itself records many commits with:
-
-`Co-Authored-By: Claude Opus 5`.
-
-Do **not** attempt to hide this.
-
-Check the awarding institution's current policy and include whatever declaration is required.
-
-I would prepare an AI-assistance statement saying, accurately:
-
-* where AI tools assisted code drafting;
-* where they assisted review/testing;
-* where they assisted prose;
-* who verified outputs;
-* that scientific decisions and final responsibility remain with the researchers;
-* that all reported numerical results trace to executable artifacts rather than generated prose.
-
-Also ensure Selar can personally explain every central piece of code.
-
-A viva examiner may ask.
-
----
-
-# 77. Create a Chapter-3-to-code traceability matrix
-
-This was already recommended in the original QA plan and remains one of the best things you can do.
-
-Columns:
-
-| Chapter 3 commitment   | Implemented in  | Test   | Evidence             | Status       |
-| ---------------------- | --------------- | ------ | -------------------- | ------------ |
-| fixed patient split    | `rsna_data.py`  | test X | split hash           | COMPLETE     |
-| ACSSL same-level pair  | `amog_acssl.py` | test X | pretraining JSON     | COMPLETE     |
-| ACSSL label efficiency | —               | —      | —                    | NOT EXECUTED |
-| corruption routing     | —               | —      | —                    | NOT EXECUTED |
-| ordered Transformer    | —               | —      | —                    | NOT EXECUTED |
-| type-shuffle           | —               | —      | —                    | RECOMMENDED  |
-| external transfer      | —               | —      | localization blocker | NOT EXECUTED |
-
-This table may be the single best defensive artifact for the viva.
-
----
-
-# 78. Create a proper methodology-deviation log
-
-For every deviation record:
-
-original specification;
-
-executed method;
-
-date changed;
-
-reason;
-
-whether public test results had already been inspected;
-
-effect on interpretation.
-
-This matters because some changes were made after seeing intermediate results.
-
-Transparency is your protection.
-
----
-
-# 79. Expand run fingerprints
-
-Current `run_config` records stage, backbone, dimension, epochs, mode, augmentation boolean, pretraining, cache name, shuffled/ungated, cost weight and ACSSL presence.
-
-It should also contain:
-
-* LR;
-* scheduler;
-* warmup;
-* batch size;
-* modality-drop probability;
-* balance-loss weight;
-* all augmentation values;
-* AMP mode;
-* deterministic mode;
-* calibration;
-* split hash;
-* annotation-cache hash;
-* cross-sequence-cache hash;
-* ACSSL checkpoint hash;
-* graph topology seed/hash;
-* cost matrix;
-* source commit hash;
-* dirty repository status.
-
-Then stale-run reuse becomes much safer.
-
----
-
-# 80. Record exact model/environment dependency lock
-
-Chapter 3 lists Python/PyTorch/CUDA versions.
-
-Add one reproducible environment artifact:
-
-`environment.yml`
+> **Structured Multi-Sequence Learning for Lumbar MRI Grading: A Controlled Evaluation of Anatomical Priors**
 
 or
 
-`requirements-lock.txt`
+> **Evaluating Anatomical Priors in Multi-Sequence Lumbar MRI Severity Grading**
 
-or container definition.
+or slightly more descriptive:
 
-For the final result, capture:
+> **Controlled Evaluation of Anatomical Self-Supervision, Sequence Routing and Relational Graph Learning for Lumbar MRI Grading**
 
-PyTorch
+I like the first one best.
 
-torchvision
-
-CUDA
-
-cuDNN
-
-NumPy
-
-pandas
-
-pydicom
-
-OpenCV
-
-scipy
-
-scikit-learn.
-
-The TotalSpineSeg work already demonstrated how fragile medical-imaging dependency versions can be.
+It remains accurate whether individual hypotheses succeed or fail.
 
 ---
 
-# 81. Run at least one deterministic/full-precision sensitivity experiment
+# 15. Chapter 2 is now strong, but one sentence is undermined by the thesis's own best finding
 
-Chapter 3 promises that reduced precision will be checked.
+Chapter 2 says, essentially:
 
-Run one central comparison, perhaps:
+> **“Detection has, in short, largely been solved; grading has not.”**
 
-E0 and E7
+But the thesis's own derived-coordinate experiment later shows that a relatively small localization displacement can destroy **22.9% of QWK**, especially for lateral targets.
 
-under:
+So the more accurate literature synthesis is:
 
-BF16 default
+> **“Coarse vertebral/disc-level identification has reached very high accuracy in several controlled datasets; precise target localization remains consequential for downstream grading.”**
 
-versus FP32/deterministic.
-
-You are not trying to reproduce weights exactly.
-
-You are asking whether the scientific conclusion changes.
+That actually makes the literature review stronger because it foreshadows one of the thesis's most important observations.
 
 ---
 
-# 82. Report parameter counts by component, not only model total
+# 16. The localization result has become one of the strongest pieces of science in the entire thesis
 
-This will help defend the graph capacity issue.
+Chapter 5 now explains that automatic/derived coordinates cause:
 
-For each rung report:
+**−0.1636 QWK**
 
-encoder parameters;
+or:
 
-fusion/router;
+**22.9% performance loss**,
 
-graph;
+while the complete architecture contributes only:
 
-head;
+**+0.0177**.
 
-total.
+That's approximately an order-of-magnitude difference.
 
-Then an examiner can see whether +0.0093 QWK came with substantial additional parameterization.
+And the failure is structured:
 
----
+central canal relatively robust;
 
-# 83. Add computational-efficiency reporting only if accurate
+lateral compartments collapse.
 
-Chapter 3 promises VRAM, training time, etc.
+This is much more scientifically consequential than many of the architectural comparisons.
 
-If all runs were on the same RTX 5090 under the same setup, report:
+I would elevate this visually and conceptually.
 
-training time per seed;
+It should appear in:
 
-inference time per study;
+* Abstract limitation;
+* Chapter 4 as its own substantial result, not merely RQ4 blocking infrastructure;
+* Chapter 5;
+* viva presentation.
 
-parameter count;
+It demonstrates a profound point:
 
-peak VRAM.
+> **Upstream localization validity can dominate downstream architectural refinement.**
 
-Do not compare historical runs made under different hardware/software conditions.
-
----
-
-# 84. Do not count the number of automated tests as scientific proof
-
-“113 tests pass” is useful engineering evidence.
-
-But don't present it as:
-
-> therefore the model is scientifically valid.
-
-Several tests are static source-string checks, while others are genuine behavioral tests.
-
-Describe them appropriately:
-
-> **113 software/conformance checks cover specified implementation properties.**
-
-Then separately present experimental validation.
+This may also become one of the strongest standalone papers from the thesis.
 
 ---
 
-# 85. Convert core tests to pytest and add mutation tests
+# 17. The ROI QC still needs the human reader pass
 
-Some current tests are very good.
+The quantitative DICOM correspondence work is strong:
 
-Some merely detect that a symbol or text exists in source code.
+9,542 cross-annotation projections;
 
-For each central scientific guarantee, create behavioral tests:
+93.6% within one slice;
 
-* fixed split;
-* ACSSL transfer;
-* graph edge use;
-* masking;
-* calibration fitted on validation;
-* cost matrix;
-* modality removal;
-* cache provenance.
+median offset 0 mm;
 
-Then deliberately break each property and ensure the test fails.
+90th percentile 4 mm.
 
-This was the original QA philosophy and should be completed.
+There are also 300 review sheets covering 60 test studies and 1,474 targets.
 
----
+But Chapter 4 explicitly says the reader checklist remains outstanding.
 
-# 86. Add a tiny real-DICOM integration fixture
+I would complete this before viva.
 
-Not patient-identifiable.
-
-Use de-identified/public DICOM from the RSNA dataset, perhaps one or two studies.
-
-CI should be able to run:
-
-DICOM → geometry → ROI → multi-sequence target → model forward → metric.
-
-That bridges the gap between unit tests and the full dataset.
+It is relatively inexpensive compared with everything already done and closes one of the few remaining “you promised this and didn't do it” items that can actually be completed without months of new modeling.
 
 ---
 
-# 87. Update the terminology to CLAIM conventions
+# 18. RQ4 is still incomplete—but it is now much more defensible than before
 
-CLAIM 2024 specifically recommends:
+I would **not** force RQ4 through a scientifically invalid experiment merely to make every RQ green.
 
-**reference standard**
+Chapter 5 correctly explains that applying the grading system to Rizgary without adequate localization would make domain shift and localization error inseparable, with localization alone approximately nine times larger than the architectural effect.
 
-instead of:
+That is a scientifically respectable reason not to report a misleading external-validation number.
 
-**ground truth**,
+The RQ matrix calling RQ4 **“No — Unanswered”** is exactly right.
 
-and:
-
-**internal testing / external testing**
-
-instead of ambiguous uses of:
-
-**validation**. ([RSNA Publications Online][3])
-
-Your thesis already often uses “reference standard.”
-
-Make it consistent.
+I would keep it that way for this thesis unless the clinical work becomes genuinely ready.
 
 ---
 
-# 88. Clearly distinguish model validation data from model evaluation data
+# 19. There are still administrative placeholders that absolutely must disappear
 
-Currently “validation” means the set used to choose checkpoints.
+The current master thesis still contains placeholders for:
 
-Good.
+* candidate name;
+* awarding institution;
+* degree.
 
-Then call the 297-patient set:
+Chapter 1 also still contains:
 
-**internal test set** or **internal evaluation set**.
+* final public count `\torecord`;
+* final Rizgary case-flow count;
+* ethics approval;
+* consent/waiver basis;
+* permitted computing environment.
 
-Call Rizgary, if eventually used:
+Those cannot remain in a viva/submission version.
 
-**external test set**.
-
-That will prevent terminology confusion.
-
----
-
-# 89. Add a limitations subsection specifically about annotation-coordinate dependence
-
-This is important.
-
-The model receives a crop centered around reference coordinates.
-
-Therefore the primary thesis is **grading given target localization**, not end-to-end autonomous disease discovery.
-
-Say that prominently.
-
-This is not a weakness if framed correctly.
-
-In fact the −0.1636 localization experiment proves why isolating grading is scientifically necessary.
+They are not scientific defects, but they make the thesis visibly unfinished.
 
 ---
 
-# 90. Do not compare directly with Kaggle leaderboard performance
+# 20. The public repository itself still contains stale state documents
 
-The evidence-folder README already correctly warns against it.
+This doesn't invalidate the thesis, but I would clean it before an examiner is given the repository.
 
-Maintain that.
+For example, `thesis/chapter4/README.md` still says:
 
-Leaderboard models solve a somewhat different end-to-end challenge/evaluation setup.
+> **“Nothing in this folder is a confirmatory thesis result yet”**
 
----
+and says the E0–E7 campaign has not been run.
 
-# 91. Consider a second backbone replication
+`PROJECT_STATE.md` similarly still says the seven-seed campaign is “running now,” quotes older numbers and says no LaTeX toolchain exists.
 
-The whole scientific result currently depends heavily on one final backbone setting, apparently ResNet18.
+Yet the current thesis contains the finished seven-seed campaign and a compiled PDF.
 
-You do not need another full 70-run campaign.
+Either update these files or put a large banner at the top:
 
-But run key comparisons with one second strong backbone such as:
+> **SUPERSEDED — historical project state as of DATE. Current authoritative state is …**
 
-ResNet50
-
-or ConvNeXt-Tiny.
-
-Maybe 3 seeds:
-
-E0
-
-E6
-
-E7.
-
-If the central pattern survives, you can say:
-
-> not unique to a single encoder.
-
-This would be an excellent strengthening experiment.
+This matters because an examiner browsing the repo may reasonably ask which version is true.
 
 ---
 
-# 92. Consider a volumetric/through-plane foraminal experiment only as future work
+# Updated chapter-by-chapter assessment
 
-The current finding that foraminal grading behaves differently is interesting.
+| Chapter                     | Current assessment                             | Main action                                                                              |
+| --------------------------- | ---------------------------------------------- | ---------------------------------------------------------------------------------------- |
+| **Ch. 1 Introduction**      | **Strong, ~8/10**                              | Narrow graph-semantic claim; partial RQ wording; remove placeholders                     |
+| **Ch. 2 Literature Review** | **Strong, ~8.5/10**                            | Refine localization claim; final novelty refresh                                         |
+| **Ch. 3 Methodology**       | **Main remaining weakness, ~6.5/10**           | Separate planned protocol from actual executed methodology; match live R-GCN/router/head |
+| **Ch. 4 Results**           | **Scientifically strong, ~8/10**               | Run type-shuffle; fix stale values/prose; strengthen seed inference                      |
+| **Ch. 5 Discussion**        | **Strong and impressively candid, ~8/10**      | Soften reader ceiling; don't claim relation semantics before control                     |
+| **Whole thesis**            | **Defensible PhD, not quite submission-final** | Concentrated cleanup rather than redesign                                                |
 
-Chapter 5 hypothesizes that through-plane representation may be the cause.
-
-Do not turn that into another giant pre-viva project.
-
-Keep it clearly as a testable future hypothesis unless you have abundant time.
-
----
-
-# 93. Keep predictive localization as a separate paper
-
-I agree with the repository's current decision.
-
-Trying to build a new direct detector now risks turning a nearly defensible PhD into an unfinished one.
-
-For the thesis, the localization-failure measurement is enough to justify RQ4's limitation.
+The RQ completion matrix in Chapter 5 is currently perhaps the cleanest statement of what the thesis really achieved. I would make Chapters 1, 3 and 4 conform to **that matrix**, rather than making Chapter 5 continually apologize for claims made earlier.
 
 ---
 
-# 94. If possible, use the new 2026 public foraminal dataset as future external evidence
+# What I would do now, in exact priority
 
-A 2026 Scientific Data resource has 500 patients with lumbar foraminal stenosis localization/severity annotations. ([GitHub][6])
-
-Its task and sequences are not identical to LumbarDISC, so it is not a drop-in RQ4 replacement.
-
-But it may be useful for future:
-
-* localization;
-* foraminal transfer;
-* laterality robustness.
-
-Mention it in future work after checking licensing/task compatibility.
-
----
-
-# 95. Update the abstract to reflect partial RQs
-
-The abstract is currently scientifically attractive, but I would ensure it does not imply that all five planned questions were completed.
-
-Add one concise limitation such as:
-
-> “External institutional transfer was not estimated because the local cohort lacked sufficiently accurate target localization; benchmark-side experiments showed that automatic coordinate derivation would introduce a substantially larger confound than the architectural effects under study.”
-
-That's much stronger than hiding RQ4.
+1. **Run E6 type-shuffle on real data.** This determines what RQ1 can actually claim.
+2. **Do one complete thesis synchronization pass** after the ACSSL and E7 re-runs: every number, every “ordinal head” phrase, every RQ verdict.
+3. **Rewrite Chapter 3 around the executed methodology**, preserving the original protocol separately.
+4. **Add stronger patient × seed inference**, preferably hierarchical bootstrap + patient-clustered randomization.
+5. **Decide how to handle the adaptive 3→7 seed extension**; a locked replication would be excellent.
+6. **Complete the ROI reader QC.**
+7. **Soften the inter-reader ceiling argument.**
+8. **Remove quality-aware/corruption claims from executed RQ3 unless actually tested.**
+9. **Fill every administrative/ethics placeholder.**
+10. **Archive/update stale repository status files.**
+11. Strongly consider **retitling the thesis** to reflect a controlled evaluation rather than a successful architecture.
+12. Final novelty check against the newest 2026 literature immediately before submission.
 
 ---
 
-# 96. Make Chapter 5 conclusion narrower but stronger
+# My updated viva verdict
 
-I would aim for something like:
+This is significantly better than when I first reviewed it.
 
-> **Within the LumbarDISC grading setting under controlled target localization, relation-specific graph modeling and a cost-sensitive ordinal objective improved agreement, while explicit anatomical topology, anatomical cross-sequence self-supervision and disease-conditioned routing did not provide reproducible incremental benefits under the executed tests. Target-centred attribution suggests that a strong local encoder already extracts much of the spatial information the anatomical priors were intended to provide. External transport remains unresolved because localization error could not be separated adequately from domain shift.**
+Previously I said:
 
-That is a very defensible PhD conclusion.
+> scientifically defensible, but not yet ready for a hostile viva unchanged.
 
----
+Now I would say:
 
-# 97. Prepare a “what changed after protocol” viva slide
+> **The thesis has a clearly defensible doctoral contribution, and I would no longer be worried that the science itself is fundamentally insufficient for a PhD.**
 
-The examiner may ask:
+The major remaining risk is **not lack of work**.
 
-> “Was all of this planned in advance?”
+There is more than enough work.
 
-Do not answer vaguely.
+The remaining risk is that the **text occasionally claims a little more than the experiments establish**, especially because recent corrections have moved faster than all five chapters could be synchronized.
 
-Show:
+If the type-shuffle experiment is completed, Chapter 3 is made faithful to the actual implementation, the statistics get one final robust pass, and the textual inconsistencies/placeholders are removed, **I would be comfortable sending this to viva**.
 
-**Prospectively fixed**
-
-RQ1–RQ5
-
-H1–H6
-
-patient independence
-
-shuffled graph idea
-
-negative result policy.
-
-Then:
-
-**Changed after implementation**
-
-ROI geometry
-
-fixed epoch schedule
-
-specific RGCN implementation
-
-additional controls
-
-seed extension.
-
-Then explain why each changed.
-
-Transparency beats pretending nothing evolved.
-
----
-
-# 98. Prepare a “failed hypotheses” viva slide
-
-Show:
-
-| Proposed mechanism  | Result                                      | Correct interpretation                     |
-| ------------------- | ------------------------------------------- | ------------------------------------------ |
-| anatomical topology | unsupported                                 | relation endpoints not beneficial          |
-| ACSSL               | unsupported under executed tests            | pretext learned, downstream benefit absent |
-| adaptive routing    | gate learns pattern, no incremental benefit | allocation ≠ causal dependence             |
-| typed graph         | positive vs homogeneous                     | needs semantic-type control                |
-| cost/ordinal output | positive                                    | needs decomposition                        |
-
-This turns a potentially hostile line into the centerpiece of the defence.
-
----
-
-# 99. Make Selar able to explain five pieces of code at whiteboard level
-
-I would expect a technical examiner to ask how these work:
-
-**DICOM mapping**
-
-pixel → patient coordinates → target series.
-
-**ACSSL**
-
-what exactly is the positive pair and InfoNCE denominator?
-
-**Router**
-
-what makes unavailable modality weight exactly zero?
-
-**RGCN**
-
-how are messages aggregated and what does edge type do?
-
-**Ordinal/cost head**
-
-what are the two logits and how is expected cost calculated?
-
-If Selar cannot explain those without opening the repository, the quality of the code will not save the viva.
-
----
-
-# 100. Final priority order
-
-If you cannot do everything, I would work in this order:
-
-| Priority  | Work                                                                                               |
-| --------- | -------------------------------------------------------------------------------------------------- |
-| **P0.1**  | Fix statistical inference: permutation tests + hierarchical seed/patient uncertainty               |
-| **P0.2**  | Graph type-shuffle + capacity-matched control                                                      |
-| **P0.3**  | Separate ordinal effect from cost-sensitive effect                                                 |
-| **P0.4**  | Fix ACSSL ImageNet/random initialization confound                                                  |
-| **P0.5**  | Correct RQ1–RQ5 verdicts to partial/full based on executed evidence                                |
-| **P0.6**  | Finish independent ROI reader QC                                                                   |
-| **P0.7**  | Synchronize every thesis/evidence/status document and number                                       |
-| **P0.8**  | Resolve ethics/novelty/placeholders                                                                |
-| **P0.9**  | Explicitly disclose adaptive seven-seed extension/test-set reuse                                   |
-| **P0.10** | Freeze a final analysis protocol before any more results                                           |
-| **P1.1**  | Run ACSSL label-efficiency 10/25/50/100                                                            |
-| **P1.2**  | Run routing corruption/quality experiment                                                          |
-| **P1.3**  | Add concat + cross-attention fusion baselines                                                      |
-| **P1.4**  | Run graph edge-family ablations                                                                    |
-| **P1.5**  | Run isolated-lesion contamination stress test                                                      |
-| **P1.6**  | Add ordered-level Transformer baseline                                                             |
-| **P1.7**  | Run RQ5 risk–coverage/selective prediction                                                         |
-| **P1.8**  | Add second-backbone replication                                                                    |
-| **P1.9**  | Improve DICOM physical neighboring-slice selection/cache validation                                |
-| **P2**    | New localization model, full Rizgary RQ4, PEFT curve, multi-centre transfer, clinical reader study |
-
----
-
-# My revised viva verdict
-
-After this deeper inspection, I would phrase my assessment slightly differently from before.
-
-**The PhD's intellectual core is defensible now.**
-
-What is **not yet defensible is claiming that the complete prospective methodology in Chapters 1–3 has been executed.** It hasn't. The repository itself proves that several planned experiments remain absent.
-
-That is fixable.
-
-I would **not** try to “save” the thesis by forcing every missing objective into a few weeks of rushed experiments.
-
-Instead:
-
-1. correct the statistical weaknesses;
-2. run the handful of controls that materially affect the central positive claims;
-3. run the most important missing RQ2/RQ3 experiments if time permits;
-4. explicitly downgrade unexecuted portions to **partially answered/unanswered**;
-5. make Chapter 3 describe the method that actually produced Chapter 4;
-6. synchronize the repository so there is one authoritative scientific state.
-
-If you complete the **P0 group**, I would be reasonably comfortable letting Selar walk into the viva.
-
-If you additionally complete most of **P1**, I think the thesis moves from merely “defensible despite incompleteness” toward a **quite strong methodological PhD**, because its most interesting contribution becomes not a marginal +0.0177 improvement but a controlled experimental dissection of which anatomical assumptions survive rigorous testing.
-
-The two experiments I would personally start with **first** are the **graph edge-type shuffle/capacity control** and the **E7 ordinal-vs-cost decomposition**. They are relatively contained and directly determine whether two of the thesis's strongest positive conclusions are correctly interpreted.
-
-[1]: https://www.frontiersin.org/journals/medicine/articles/10.3389/fmed.2026.1848548/full?utm_source=chatgpt.com "Frontiers | Anatomy-guided context-aware deep learning for lumbar degenerative disease grading and burden-aware risk assessment on MRI"
-[2]: https://pubs.rsna.org/doi/10.1148/ryai.250480?utm_source=chatgpt.com "The RSNA Lumbar Degenerative Imaging Spine Classification (LumbarDISC) Dataset | Radiology: Artificial Intelligence"
-[3]: https://pubs.rsna.org/doi/10.1148/ryai.240300?utm_source=chatgpt.com "Checklist for Artificial Intelligence in Medical Imaging (CLAIM): 2024 Update | Radiology: Artificial Intelligence"
-[4]: https://www.bmj.com/content/385/bmj-2023-078378?utm_source=chatgpt.com "TRIPOD+AI statement: updated guidance for reporting clinical prediction models that use regression or machine learning methods | The BMJ"
-[5]: https://pubmed.ncbi.nlm.nih.gov/39266913/?utm_source=chatgpt.com "Automated Three-Dimensional Imaging and Pfirrmann Classification of Intervertebral Disc Using a Graphical Neural Network in Sagittal Magnetic Resonance Imaging of the Lumbar Spine."
-[6]: https://github.com/AISSLab2025/LSS-MRI-AISSLab-Dataset?utm_source=chatgpt.com "GitHub - AISSLab2025/LSS-MRI-AISSLab-Dataset: LSS MRI AISSLab: IRB-approved sagittal lumbar spine MRI of 500 patients (8,500 slices) with 3,885 L1–S1 foraminal stenosis boxes. Right/left labels, Normal–Severe (Mild most, Severe rare). Includes expert masks and DICOM/PNG for research. · GitHub"
+And the recent fixes actually reinforce our earlier publication discussion: I now see **two clearly strong papers already emerging—the graph/control paper and the localization/geometry paper—with ACSSL potentially becoming a third only after the label-efficiency experiment.** The E7 work is scientifically valuable, but the new decomposition makes me even more convinced it belongs as an important finding within a broader paper rather than being stretched into a separate thin publication.

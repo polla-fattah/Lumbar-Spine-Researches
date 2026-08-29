@@ -313,9 +313,12 @@ The methodology's caution was correct and load-bearing.
 
 What robustness the system does exhibit under missing sequences comes from
 modality dropout, which reduces reliance on the annotated sequence by
-$-0.0588$ on every seed. That is a standard regulariser, disclaimed in
-Section~\ref{sec:intro-contrib-supporting} as not original, and it outperforms
-the mechanism designed for the purpose.
+$-0.0758 \pm 0.0375$ on every one of seven seeds, against $-0.0061 \pm 0.0405$
+on 4/7 for the anatomically aligned self-supervision intended to produce that
+property --- roughly twelve times the effect. That is a standard regulariser,
+disclaimed in Section~\ref{sec:intro-contrib-supporting} as not original, and it
+outperforms the mechanism designed for the purpose by more than an order of
+magnitude.
 
 \subsection{Relational Structure (RQ1)}
 
