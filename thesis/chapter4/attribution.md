@@ -40,7 +40,7 @@ centre-biased whatever it learned:
 | E1 multi-sequence | 0.578 +- 0.073 | +0.374 |
 | E2 + router | 0.580 +- 0.063 | +0.376 |
 | E3 + modality dropout | 0.515 +- 0.071 | +0.311 |
-| E4 + ACSSL | 0.462 +- 0.027 | +0.258 |
+| E4 + ACSSL | 0.529 +- 0.063 | +0.325 |
 
 Every trained model puts 2.3-2.9x the chance share of its attention on the
 annotated centre. **Even E0 -- a plain single-sequence CNN with no routing, no
@@ -64,9 +64,23 @@ consistently -- the only step in the ladder that improves attention on all three
 seeds. It does **not** improve accuracy: E1 vs E0 is -0.0055 QWK. The extra
 sequences sharpen *where* the model looks without improving *what it concludes*.
 
-The router adds nothing further (0.580 vs 0.578). ACSSL makes attention slightly
-worse and is the only step below E0, which agrees with the input ablation, where
-ACSSL also failed to reduce dependence on any single sequence. Both probes put
+The router adds nothing further (0.580 vs 0.578). ACSSL leaves attention
+essentially unchanged: 0.529 against E3's 0.515, a difference of +0.069x chance
+with a between-seed spread of 0.410, on 2/3 seeds.
+
+> **Corrected 2026-08-29.** This paragraph previously read that ACSSL "makes
+> attention slightly worse and is the only step below E0". That was an artefact
+> of an initialisation confound: the pretext model built its encoders from
+> random weights while the ladder initialises from ImageNet, so E4 was
+> random -> ACSSL -> supervised measured against E3's ImageNet -> supervised.
+> After re-pretraining and re-running all seven seeds from ImageNet, E4
+> concentrates 2.69x chance, ABOVE E0's 2.48x. The claim is withdrawn. The
+> conclusion it supported is unchanged -- ACSSL confers no measurable benefit on
+> attention -- but it now rests on a null rather than on a reversal.
+
+The input ablation agrees, and does so on seven seeds rather than three: ACSSL
+changes reliance on the annotated sequence by -0.0061 +- 0.0405 on 4/7, while
+ordinary modality dropout changes it by -0.0758 +- 0.0375 on 7/7. Both probes put
 Contribution I in the same place.
 
 ## A probe artefact that had to be fixed first

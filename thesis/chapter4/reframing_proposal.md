@@ -1,5 +1,26 @@
 # Reframing proposal: what to change in Chapters 1-3, and what not to
 
+> **SUPERSEDED FOR NUMBERS — 2026-08-29. The argument stands; every figure below
+> is stale.**
+>
+> This document was written against the 3-seed campaign. The 7-seed campaign
+> changed two verdicts, and the ACSSL initialisation confound was subsequently
+> found and corrected, which changed E4 again. Do not quote any number from this
+> file. The current figures are in `data/reports/chapter4_effect_sizes.csv` and
+> in Chapter 4 itself.
+>
+> Specifically wrong here: typed edges are +0.0093 (7/7) not +0.0123 (3/3);
+> ACSSL is +0.0030 (4/7) not +0.0051 (2/3); anatomical topology is +0.0020 (4/7)
+> not +0.0051 (2/3); routing is +0.0053 (5/7) not +0.0010 (1/3), and the claim
+> that ACSSL attention is "the only step below E0" is **withdrawn** — it was an
+> artefact of the confound, and E4 in fact sits above E0. The step-decomposition
+> table near the end of this file is 3-seed and its shape no longer holds: at
+> seven seeds the ladder does not sit below baseline for six of seven rungs.
+>
+> What survives unchanged is the reasoning: which reframings are legitimate,
+> which would be HARKing, and why the evaluation protocol is the contribution
+> worth selling.
+
 Written 2026-08-27, after the 3-seed campaign, the input ablation and the
 attribution study. Addressed to the question "can we go back and tweak the
 earlier chapters to save the day".

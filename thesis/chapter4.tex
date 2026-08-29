@@ -66,8 +66,8 @@ follow.
 
   \item \textbf{Most of the proposed mechanisms do not account for that gain.}
   Anatomically aligned self-supervision (RQ2) and disease-conditioned routing
-  (RQ3) produce effects of $+0.0020$ and $+0.0053$ QWK, bounded by the paired
-  intervals at $1.22\%$ and $1.55\%$ of baseline performance respectively.
+  (RQ3) produce effects of $+0.0030$ and $+0.0053$ QWK, bounded by the paired
+  intervals at $1.32\%$ and $1.55\%$ of baseline performance respectively.
   Relational structure (RQ1) helps, but the anatomical content of that structure
   does not: a typed graph beats a homogeneous one on every seed, while an
   anatomically correct topology does not beat a degree-preserving random shuffle
@@ -323,7 +323,7 @@ E0 single sequence          & $0.7270 \pm 0.0108$ & $0.693 \pm 0.009$ & 69.2\% \
 E1 multi-sequence           & $0.7246 \pm 0.0075$ & $0.694 \pm 0.004$ & 68.9\% \\
 E2 + disease routing        & $0.7298 \pm 0.0123$ & $0.701 \pm 0.009$ & 69.6\% \\
 E3 + modality dropout       & $0.7273 \pm 0.0125$ & $0.700 \pm 0.009$ & 70.1\% \\
-E4 + ACSSL                  & $0.7293 \pm 0.0109$ & $0.697 \pm 0.008$ & 69.3\% \\
+E4 + ACSSL                  & $0.7303 \pm 0.0030$ & $0.697 \pm 0.008$ & 68.3\% \\
 E5 + homogeneous graph      & $0.7272 \pm 0.0091$ & $0.698 \pm 0.008$ & 69.1\% \\
 E6 + typed graph            & $0.7364 \pm 0.0073$ & $0.706 \pm 0.010$ & 70.7\% \\
 \quad E6 shuffled edges     & $0.7344 \pm 0.0052$ & $0.704 \pm 0.007$ & 69.9\% \\
@@ -443,11 +443,11 @@ E6 vs E5 & typed edges (RQ1) & $+0.0093$ & $[+0.0027, +0.0156]$ & 7/7 & $\mathbf
 E7 vs E6 & ordinal head (RQ5) & $+0.0082$ & $[+0.0025, +0.0143]$ & 7/7 & $\mathbf{0.009}$ & \textbf{yes} \\
 \midrule
 E2 vs E1 & routing (RQ3) & $+0.0053$ & $[-0.0002, +0.0112]$ & 5/7 & $0.131$ & no \\
-E4 vs E3 & ACSSL (RQ2) & $+0.0020$ & $[-0.0043, +0.0089]$ & 4/7 & $0.688$ & no \\
-E6 vs E6\_shuf & anatomy (RQ1) & $+0.0020$ & $[-0.0038, +0.0076]$ & 4/7 & $0.688$ & no \\
+E4 vs E3 & ACSSL (RQ2) & $+0.0030$ & $[-0.0038, +0.0096]$ & 4/7 & $0.575$ & no \\
+E6 vs E6\_shuf & anatomy (RQ1) & $+0.0020$ & $[-0.0038, +0.0076]$ & 4/7 & $0.671$ & no \\
 E6 vs E6\_ung & gating & $+0.0014$ & $[-0.0041, +0.0064]$ & 3/7 & $0.713$ & no \\
 E5 vs E0 & message passing & $+0.0002$ & $[-0.0073, +0.0074]$ & 5/7 & $0.967$ & no \\
-E3 vs E2 & modality dropout & $-0.0026$ & $[-0.0091, +0.0034]$ & 4/7 & $0.627$ & no \\
+E3 vs E2 & modality dropout & $-0.0026$ & $[-0.0091, +0.0034]$ & 4/7 & $0.575$ & no \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -621,7 +621,7 @@ E0 single sequence & 61.1\% & 5.7\% & 0.526\% \\
 E1 multi-sequence & 61.1\% & 4.9\% & 0.500\% \\
 E2 + disease routing & 60.7\% & 4.7\% & 0.414\% \\
 E3 + modality dropout & 61.4\% & 4.6\% & 0.420\% \\
-E4 + ACSSL & 58.8\% & 4.0\% & 0.453\% \\
+E4 + ACSSL & 59.1\% & 4.8\% & 0.401\% \\
 E5 + homogeneous graph & 59.0\% & 4.1\% & 0.389\% \\
 E6 + typed graph & 62.9\% & 4.1\% & 0.375\% \\
 \quad E6 shuffled edges & 59.3\% & 3.7\% & 0.330\% \\
@@ -667,7 +667,7 @@ E0 single sequence & $0.0293$ & $\mathbf{0.0130}$ & $1.161$ \\
 E1 multi-sequence & $0.0214$ & $0.0129$ & $1.131$ \\
 E2 + disease routing & $0.0428$ & $0.0168$ & $1.601$ \\
 E3 + modality dropout & $0.0326$ & $0.0145$ & $1.200$ \\
-E4 + ACSSL & $0.0266$ & $0.0110$ & $1.187$ \\
+E4 + ACSSL & $0.0194$ & $\mathbf{0.0101}$ & $1.136$ \\
 E5 + homogeneous graph & $0.1024$ & $0.0397$ & $2.019$ \\
 E6 + typed graph & $0.0426$ & $0.0209$ & $1.422$ \\
 E7 + ordinal, cost-sensitive & $0.0508$ & $0.0245$ & $1.306$ \\
@@ -759,39 +759,71 @@ contributes nothing.
 correspondence improve grading, label efficiency and transfer?}
 \end{quote}
 
+\paragraph{A confound was found in this comparison and corrected before the
+results below were produced.} The pretext model built its encoders from randomly
+initialised weights while the supervised ladder initialises from ImageNet, and
+loading the pretrained encoders replaces every encoder tensor. E4 was therefore
+\emph{random $\rightarrow$ ACSSL $\rightarrow$ supervised} measured against E3's
+\emph{ImageNet $\rightarrow$ supervised}, which confounds the pretext task with
+the initialisation it starts from and handicaps the arm under test. Pretraining
+and all seven E4 runs were repeated from ImageNet initialisation. The confounded
+artefacts are retained rather than discarded, and the episode is recorded in
+Section~\ref{sec:results-threats}. All figures in this section come from the
+corrected runs.
+
 Pretraining itself succeeded as an optimisation: validation InfoNCE reached
-$1.5162$ against a chance value of $3.4657$, so the encoders demonstrably learned
-to match corresponding anatomy across sequences. The question is whether that
+$1.0771$ against a chance value of $3.4657$. Correct initialisation made the
+pretext task substantially easier to solve --- from random weights the same
+schedule reached only $1.5162$ --- so the encoders demonstrably learned to match
+corresponding anatomy across sequences. The question is whether that
 representation is worth anything downstream. Three independent probes say it is
 not.
 
-\emph{Accuracy.} E4 against E3 is $+0.0020$ QWK ($[-0.0043, +0.0089]$, 4/7
-seeds, $p_{\mathrm{FDR}} = 0.688$, $d = 0.12$), with any benefit bounded at
-$1.22\%$ of baseline. The seven-seed extension moved this comparison
-\emph{away} from significance, not toward it: at three seeds it stood at
-$+0.0051$ on 2/3 seeds.
+\emph{Accuracy.} E4 against E3 is $+0.0030$ QWK ($[-0.0038, +0.0096]$, 4/7
+seeds, $p_{\mathrm{FDR}} = 0.575$, $d = 0.24$), with any benefit bounded at
+$1.32\%$ of baseline. Distinguishing an effect this size from zero at
+conventional power would require roughly $134$ seeds. Correcting the
+initialisation moved the estimate by $+0.0010$, an order of magnitude smaller
+than the between-seed standard deviation, and changed no verdict.
 
 \emph{Cross-sequence robustness.} This is the probe on which anatomical
 self-supervision should be strongest, because a representation that has learned
 one anatomy across three acquisitions ought to lose less when one acquisition is
 withheld. Under the controlled input ablation of
-Section~\ref{sec:results-rq3-ablation}, adding ACSSL changes reliance on the
-annotated sequence by $-0.0069 \pm 0.0304$ on 2/3 seeds (this probe was run on
-seeds 42--44 only) --- indistinguishable
-from zero. By contrast, ordinary modality dropout reduces that reliance by
-$-0.0588$ on 3/3 seeds.
+Section~\ref{sec:results-rq3-ablation}, run here over all seven seeds, adding
+ACSSL changes reliance on the annotated sequence by $-0.0061 \pm 0.0405$ on 4/7
+seeds ($t = -0.40$) --- indistinguishable from zero. Ordinary modality dropout,
+a far simpler intervention, reduces that same reliance by $-0.0758 \pm 0.0375$
+on 7/7 seeds ($t = -5.34$): roughly twelve times the effect, in the same
+direction, on every seed.
+
+This comparison is worth stating plainly, because it is the sharpest result in
+the section. The mechanism ACSSL was designed to provide is delivered instead by
+an augmentation that requires no pretext task, no correspondence geometry and no
+additional training stage.
 
 \emph{Attention.} Under the attribution analysis of
-Section~\ref{sec:results-attribution}, E4 is the only configuration whose
-attention concentration falls \emph{below} the single-sequence baseline
-($-0.027$ against E0, 1/3 seeds).
+Section~\ref{sec:results-attribution}, E4 concentrates $2.69\times$ chance on
+the annotated target against E3's $2.62\times$, a difference of
+$+0.069 \pm 0.410$ on 2/3 seeds --- a spread six times the effect. ACSSL neither
+sharpens nor degrades where the model attends.
 
 \paragraph{Answer to RQ2.} No. H1 is rejected on all three axes tested. The
-pretext task is learnable and is learned; the representation it produces confers
-no measurable downstream benefit at this data scale. Label efficiency and
-external transfer were not separately evaluated
-(Section~\ref{sec:results-rq4}), so the rejection is scoped to internal grading
-and robustness.
+pretext task is learnable, is learned, and is learned better than it was before
+the initialisation was corrected; the representation it produces confers no
+measurable downstream benefit at this data scale. Label efficiency and external
+transfer were not separately evaluated (Section~\ref{sec:results-rq4}), so the
+rejection is scoped to internal grading and robustness.
+
+\paragraph{One post hoc observation, reported as such.} E4 has the lowest
+between-seed standard deviation of any rung on the ladder: $0.0030$ against
+E3's $0.0125$, a variance ratio of $F(6,6) = 17.8$, $p = 0.003$. ACSSL does not
+raise the mean but appears to make training markedly more reproducible. This was
+not part of the pre-specified comparison family, is not included in the false
+discovery rate correction, and rests on variance estimates from seven seeds,
+which are unstable. It is recorded as a direction for future work rather than as
+a result, and it would need pre-specification and its own replication before it
+could be claimed.
 
 % ===========================================================================
 \section{RQ3 --- Disease-Conditioned Modality Routing}
@@ -964,7 +996,7 @@ E0 single sequence     & $0.490 \pm 0.058$ & $+0.286$ & --- \\
 E1 multi-sequence      & $0.578 \pm 0.073$ & $+0.374$ & $+0.089$ (3/3) \\
 E2 + routing           & $0.580 \pm 0.063$ & $+0.376$ & $+0.090$ (2/3) \\
 E3 + modality dropout  & $0.515 \pm 0.071$ & $+0.311$ & $+0.026$ (2/3) \\
-E4 + ACSSL             & $0.462 \pm 0.027$ & $+0.258$ & $-0.027$ (1/3) \\
+E4 + ACSSL             & $0.529 \pm 0.063$ & $+0.325$ & $+0.040$ (2/3) \\
 \midrule
 Untrained (same architecture) & $0.204$ & --- & --- \\
 Uniform map (disc area)       & $0.197$ & --- & --- \\
@@ -1014,9 +1046,11 @@ and grading accuracy are not the same quantity, and this study can separate them
 
 \subsection{Errors Detected in the Analysis}
 
-Three analyses produced incorrect conclusions before controls were added. Each is
-recorded because each would have been reported as a positive finding, and because
-all three erred in the direction of the hypothesis under test.
+Five analyses produced incorrect conclusions before controls were added. Each is
+recorded because each would have been reported as a result, and because four of
+the five erred in the direction of the hypothesis under test. The fifth erred
+against it, which is worth separating: a defect that suppresses an effect is as
+much an error as one that manufactures it, and is less likely to be looked for.
 
 \emph{Per-seed intervals reversed sign.} Described in
 Section~\ref{sec:results-inference}. Two comparisons yielded opposite,
@@ -1034,12 +1068,47 @@ graded from axial T2. It reported that no configuration improved on E0
 ($-0.036$, 1/3 seeds). Selecting the encoder that read each target's annotated
 sequence reverses the sign to $+0.089$ on 3/3 seeds.
 
+\emph{An initialisation confound handicapped the arm under test.} The
+self-supervised pretext model constructed its encoders from randomly initialised
+weights, while every supervised rung initialises from ImageNet, and loading the
+pretrained encoders overwrites all $366$ encoder tensors. E4 was therefore
+\emph{random $\rightarrow$ ACSSL $\rightarrow$ supervised} compared against E3's
+\emph{ImageNet $\rightarrow$ supervised}: the pretext task was confounded with
+the initialisation it began from, and the comparison RQ2 asks was never the one
+performed. This is the error that ran against the hypothesis rather than with
+it, and it survived a full seven-seed campaign before being found by an external
+review of the code rather than by any check in the analysis.
+
+Pretraining and all seven E4 runs were repeated from ImageNet initialisation.
+The pretext task was solved substantially better --- validation InfoNCE $1.0771$
+against $1.5162$ from random weights --- and the downstream verdict did not
+change: $+0.0030$ against $+0.0020$ QWK, still 4/7 seeds, still far from
+significance. One subsidiary claim was nonetheless false and has been withdrawn:
+E4 was previously reported as the only configuration whose attention fell below
+the single-sequence baseline, which was an artefact of the handicap. It
+concentrates $2.69\times$ chance, above E0's $2.48\times$. The confounded
+checkpoints and results are retained rather than deleted, so the two can be
+compared.
+
+\emph{A three-seed probe produced a clean but spurious positive.} When the
+corrected E4 was first compared with E3 on the cross-sequence robustness probe,
+which had been run on seeds 42--44 only, ACSSL appeared to reduce reliance on
+the annotated sequence by $-0.0425 \pm 0.0227$ on 3/3 seeds --- about $72\%$ of
+the effect of modality dropout, in the right direction, with a plausible
+mechanism. Extending the same probe to all seven seeds gives
+$-0.0061 \pm 0.0405$ on 4/7 ($t = -0.40$). The three-seed result was noise. It
+is recorded because it was not reported as a finding only because the seeds were
+run before writing, and because it is the same failure the per-seed bootstrap
+produced earlier in this chapter, arriving by a different route.
+
 \subsection{Limitations}
 
-\emph{Seed count.} Three seeds is thin for effects of this magnitude; a
-seven-seed campaign is running. Table~\ref{tab:power} indicates that seven seeds
-will resolve typed edges but will not resolve RQ2 or RQ3, whose requirements are
-$216$ and $3{,}467$ seeds respectively.
+\emph{Seed count.} Seven seeds resolve the three comparisons that survive
+correction and do not resolve the others. Table~\ref{tab:power} gives the
+requirements: $134$ seeds for RQ2, $52$ for RQ3 and $205$ for anatomical
+topology against its shuffled control. Those are not deficiencies of the
+campaign so much as statements about the size of the effects, which is the
+finding.
 
 \emph{Single benchmark.} All results are internal to LumbarDISC. RQ4 is
 unanswered, so external validity is untested and no claim of generalisation is
@@ -1087,9 +1156,10 @@ RQ & Verdict & Basis \\
 RQ1 & Partly & Typed edges $+0.0093$, \textbf{7/7 seeds},
 $p_{\mathrm{FDR}} = 0.009$. Anatomical topology does not beat a
 degree-preserving shuffle ($+0.0020$, 4/7), bounded at $1.05\%$ of baseline. \\
-RQ2 & No & $+0.0020$, 4/7 seeds, bounded at $1.22\%$; no robustness benefit;
-attention below baseline. Rejected on three axes, and weakened by the
-seven-seed extension. \\
+RQ2 & No & $+0.0030$, 4/7 seeds, bounded at $1.32\%$. No robustness
+benefit: modality dropout reduces sequence reliance twelve times more, on 7/7
+seeds. Attention unchanged. Rejected on three axes, after correcting an
+initialisation confound that had handicapped the arm under test. \\
 RQ3 & Mechanism yes, benefit no & Allocation replicates 15/15 but a router-free
 model matches it under intervention. $+0.0053$ QWK, 5/7 seeds, bounded at
 $1.55\%$. \\

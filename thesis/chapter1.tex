@@ -924,7 +924,7 @@ cross-sequence self-supervision nor disease-conditioned routing produces a
 detectable improvement, and anatomically correct graph topology does not
 outperform a degree-preserving random shuffle. These are bounds rather than
 absences: the paired intervals constrain the three mechanisms to at most
-$1.22\%$, $1.55\%$ and $1.05\%$ of baseline performance respectively. Gradient-weighted class activation
+$1.32\%$, $1.55\%$ and $1.05\%$ of baseline performance respectively. Gradient-weighted class activation
 mapping shows why: the convolutional encoder already concentrates $2.4$ times the
 chance share of its attention on the annotated target before any prior is added.
 The localisation these priors were designed to supply is largely accomplished
@@ -936,7 +936,7 @@ upstream of them.
 Contribution~1 (anatomical cross-sequence self-supervision) is rejected on
 accuracy, on cross-sequence robustness under controlled input ablation, and on
 attention concentration. The pretext task is learnable and was learned ---
-validation InfoNCE $1.5162$ against a chance value of $3.4657$ --- but the
+validation InfoNCE $1.0771$ against a chance value of $3.4657$ --- but the
 representation confers no measurable downstream benefit.
 
 Contribution~2 (disease-conditioned routing) divides. The router does learn
