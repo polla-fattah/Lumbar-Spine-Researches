@@ -132,10 +132,23 @@ the prevalence baseline every time the number appears.
 
 Three reasons, in order of weight:
 
-1. **It is already allocated.** MSC1 (Elaf) characterises this cohort, MSC3
-   extracts findings from these reports, MSC2 depends on the same labels.
-   Pulling it into the PhD takes work from two supervised projects and
-   duplicates a third.
+1. **It depends on work already allocated, and that work is not done.** MSC1
+   (Elaf) characterises this cohort, MSC3 extracts findings from these reports,
+   MSC2 depends on the same labels.
+
+   To be precise, because an earlier version of this note got it wrong: Elaf's
+   project is **descriptive epidemiology, not modelling** — frequencies with
+   confidence intervals by level, age and sex, analysed with GEE or
+   mixed-effects logistic regression under patient-level clustering. A
+   classifier would not duplicate her work or take it from her. The two are
+   **sequential**. Her Quick Start step 6 is *"reconcile every structured field
+   to the original narrative report text"*, and one of her deliverables is an
+   *audited structured dataset* — which is exactly the label reconciliation
+   section 2 of this note says must happen first.
+
+   So a classifier is not blocked by politics; it is blocked by an input that
+   does not exist yet. The measurements in section 2 above are a useful starting
+   worklist for that reconciliation rather than a competing effort.
 2. **It is a different task.** The thesis grades *severity* of five stenosis
    conditions at supplied coordinates. This is *pathology type*. RQ4 is transfer
    of the same task, and Rizgary has neither per-target severity grades nor
