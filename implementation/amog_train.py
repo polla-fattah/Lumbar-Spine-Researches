@@ -89,7 +89,7 @@ class AMOGNet(nn.Module):
 
     def __init__(self, stage: str, backbone="resnet18", dim=256,
                  shuffled=False, ungated=False, seed=0, pretrained=True,
-                 force_ordinal=None):
+                 force_ordinal=None, type_shuffled=False):
         super().__init__()
         self.stage = stage
         self.dim = dim
@@ -120,7 +120,8 @@ class AMOGNet(nn.Module):
             self.router = DiseaseConditionedRouter(dim)
 
         if self.use_graph:
-            ei, et = build_edges(shuffled=shuffled, seed=seed)
+            ei, et = build_edges(shuffled=shuffled, seed=seed,
+                                 type_shuffled=type_shuffled)
             self.register_buffer("edge_index", ei)
             self.register_buffer("edge_type", et)
             if stage == "E5":
@@ -542,6 +543,11 @@ def main():
                          "A sound pipeline collapses to QWK ~0; anything else "
                          "means information is leaking.")
     ap.add_argument("--shuffled", action="store_true", help="E6 control")
+    ap.add_argument("--type_shuffled", action="store_true",
+                    help="E6 control: keep the anatomical edges but permute "
+                         "the relation LABELS, preserving the count of each. "
+                         "Separates anatomical semantics from having three "
+                         "weight banks.")
     ap.add_argument("--ungated", action="store_true", help="E6 ablation")
     ap.add_argument("--max_targets", type=int, default=None)
     ap.add_argument("--workers", type=int, default=None)
@@ -564,6 +570,7 @@ def main():
     backbone = args.backbone or ("smallcnn" if ctx.is_smoke else "resnet18")
 
     tag = (stage + ("_shuffled" if args.shuffled else "")
+           + ("_typeshuf" if args.type_shuffled else "")
            + ("_ungated" if args.ungated else "")
            + ("_LABELSHUF" if args.shuffle_labels else ""))
     # E7 variants that isolate its two interventions get their own tags, so
@@ -576,6 +583,9 @@ def main():
     print("Stage {}  backbone {}  seed {}".format(tag, backbone, args.seed))
     if args.shuffled:
         print("  CONTROL: edges permuted, node and edge counts preserved.")
+    if args.type_shuffled:
+        print("  CONTROL: relation labels permuted, anatomical edges and "
+              "per-type counts preserved.")
 
     train_ds, val_ds, test_ds, meta = make_datasets(ctx, stage, args)
     print("  data: train {}  val {}  test {}".format(
@@ -600,7 +610,8 @@ def main():
 
     model = AMOGNet(stage, backbone, args.dim, args.shuffled, args.ungated,
                     args.seed, pretrained=args.pretrained,
-                    force_ordinal=args.force_ordinal).to(ctx.device)
+                    force_ordinal=args.force_ordinal,
+                    type_shuffled=args.type_shuffled).to(ctx.device)
     if args.channels_last and str(ctx.device).startswith("cuda"):
         model = model.to(memory_format=torch.channels_last)
     n_params = sum(p.numel() for p in model.parameters())
@@ -804,8 +815,10 @@ def main():
                      "pretrained_backbone": bool(args.pretrained),
                      "cache": ANN_CACHE,
                      "shuffled": bool(args.shuffled),
+                     "type_shuffled": bool(args.type_shuffled),
                      "ungated": bool(args.ungated),
                      "cost_weight": args.cost_weight,
+                     "force_ordinal": args.force_ordinal,
                      "acssl": bool(acssl_info),
                  },
                  "gate_by_condition": tmet.get("gate_by_condition"),

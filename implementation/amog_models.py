@@ -256,7 +256,8 @@ def info_nce(z_a, z_b, temperature: float = 0.1):
 # --------------------------------------------------------------------------- #
 #  E5 / E6 -- the target graph
 # --------------------------------------------------------------------------- #
-def build_edges(shuffled: bool = False, seed: int = 0):
+def build_edges(shuffled: bool = False, seed: int = 0,
+                type_shuffled: bool = False):
     """Anatomical topology over the 25 targets.
 
     Returns (edge_index (2,E) long, edge_type (E,) long).
@@ -265,6 +266,36 @@ def build_edges(shuffled: bool = False, seed: int = 0):
     edges of each type, but endpoints permuted. It is not optional. If a graph
     with arbitrary topology performs as well as the anatomical one, the study has
     shown that extra message-passing capacity helps -- not that anatomy matters.
+
+    `type_shuffled=True` produces a DIFFERENT control, answering a question the
+    endpoint shuffle cannot. E6 beats the homogeneous graph E5 (+0.0093 QWK,
+    7/7 seeds), which is the one architectural claim that survives correction.
+    But "typed edges help" has two possible meanings:
+
+        (a) the three relations carry distinct ANATOMICAL SEMANTICS -- adjacency,
+            cross-condition, bilateral -- and the model exploits that meaning; or
+        (b) the model merely benefits from having three separate weight banks
+            instead of one, and which edges land in which bank is irrelevant.
+
+    E5 cannot separate these, because it differs from E6 in both respects at
+    once. This control keeps the edge_index EXACTLY as the anatomical graph and
+    permutes only the type labels, preserving the count of each type. The RGCN
+    therefore has the identical number of relations, the identical number of
+    edges in each relation, and the identical topology; the only thing destroyed
+    is the correspondence between a relation's parameters and its anatomical
+    meaning. If E6 still wins, semantics contribute. If it does not, the honest
+    claim narrows to relation-specific parameterisation, which is a sharper
+    finding and is consistent with the topology null already reported.
+
+    Subtlety that makes or breaks the control: edges are emitted as DIRECTED
+    PAIRS, entries 2j and 2j+1 being the two orientations of one undirected
+    edge, and `add` gives both the same type. Permuting the directed vector
+    would let a->b become type 0 while b->a becomes type 2, which is not a
+    relabelling of a graph an RGCN can consume -- it is a broken graph, and
+    comparing E6 against a broken control would credit semantics for an
+    advantage that came from the control being malformed. That is the same trap
+    the endpoint shuffle documents below. The permutation is therefore applied
+    over undirected edges and mirrored onto both orientations.
     """
     src, dst, typ = [], [], []
 
@@ -306,6 +337,23 @@ def build_edges(shuffled: bool = False, seed: int = 0):
         g = torch.Generator().manual_seed(seed)
         perm = torch.randperm(N_TARGETS, generator=g)
         edge_index = perm[edge_index]
+
+    if type_shuffled:
+        # Permute over UNDIRECTED edges, then mirror onto both orientations, so
+        # the two directions of an edge always agree on their relation. See the
+        # docstring: shuffling the directed vector produces a malformed graph
+        # rather than a relabelled one.
+        assert bool((edge_type[0::2] == edge_type[1::2]).all()), \
+            "edge pairs disagree on type before shuffling; the 2j/2j+1 pairing " \
+            "assumption in build_edges no longer holds"
+        # Offset the generator seed so that a run with both controls enabled
+        # does not derive the type permutation from the same draw as the node
+        # permutation.
+        g = torch.Generator().manual_seed(seed + 100003)
+        und = edge_type[0::2]
+        und = und[torch.randperm(und.numel(), generator=g)]
+        edge_type = und.repeat_interleave(2)
+
     return edge_index, edge_type
 
 

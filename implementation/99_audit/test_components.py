@@ -177,6 +177,49 @@ check("control preserves the degree sequence",
       bool(torch.equal(deg_real.sort().values, deg_shuf.sort().values)),
       f"real degrees {deg_real.tolist()}\n         shuffled  {deg_shuf.tolist()}")
 
+# THE SECOND CONTROL. The endpoint shuffle asks whether anatomical TOPOLOGY
+# matters. It cannot ask whether the anatomical MEANING of the three relations
+# matters, because E6-vs-E5 changes typing and count of weight banks together.
+# The type shuffle keeps the anatomical edges exactly and permutes only the
+# labels: same topology, same number of relations, same edges per relation,
+# and no correspondence between a relation and its anatomical sense.
+ti, tt = build_edges(type_shuffled=True, seed=0)
+
+check("type control leaves the endpoints exactly as the anatomical graph",
+      bool(torch.equal(ti, ei)),
+      "the whole point is that ONLY the labels move; if endpoints change too, "
+      "this is a second topology control and answers nothing new")
+check("type control preserves per-type edge counts",
+      bool(torch.equal(torch.bincount(tt, minlength=3),
+                       torch.bincount(et, minlength=3))),
+      "the RGCN must get the same number of edges in each weight bank, or the "
+      "comparison confounds semantics with how much data each relation sees")
+check("type control actually relabels something",
+      not bool(torch.equal(tt, et)),
+      "a permutation that changes nothing is not a control")
+check("type control keeps both orientations of an edge on the same relation",
+      bool(torch.equal(tt[0::2], tt[1::2])),
+      "edges are emitted as directed pairs 2j/2j+1; permuting the DIRECTED "
+      "vector lets a->b and b->a land in different weight banks, which is a "
+      "malformed graph rather than a relabelled one")
+check("type control is reproducible for a given seed",
+      bool(torch.equal(build_edges(type_shuffled=True, seed=0)[1], tt)))
+check("type control differs between seeds",
+      not bool(torch.equal(build_edges(type_shuffled=True, seed=1)[1], tt)))
+check("type control does not disturb the degree sequence",
+      bool(torch.equal(torch.bincount(ti[0], minlength=N_TARGETS), deg_real)))
+check("the two controls compose without sharing a permutation",
+      not bool(torch.equal(
+          build_edges(shuffled=True, type_shuffled=True, seed=0)[1],
+          build_edges(shuffled=True, seed=0)[1])),
+      "enabling both must relabel as well as re-point; if the type permutation "
+      "silently no-ops when the endpoint shuffle is on, a combined run would be "
+      "reported as a double control while being only a single one")
+check("endpoint control leaves relation labels untouched",
+      bool(torch.equal(st, et)),
+      "if the endpoint shuffle also permuted types it would confound the two "
+      "controls and neither would isolate its own factor")
+
 
 # Chapter 3 sec:method-graph: h_i = 0 where e_{p,i} = 0. Masking the input once
 # is not enough, because every layer ends in a LayerNorm and LayerNorm(0) != 0.
