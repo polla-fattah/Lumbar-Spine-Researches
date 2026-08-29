@@ -227,10 +227,12 @@ none of them would that be honest.
     RQ & Planned evidence & Executed & Verdict \\
     \midrule
     RQ1 & independent baseline, ordered-level Transformer, homogeneous graph,
-    typed graph, topology control & Partial &
-    Typed edges help ($+0.0093$, 7/7). Anatomical topology does not beat a
-    degree-preserving shuffle. The Transformer comparator was not built, so
-    \enquote{graph beats sequence model} is untested. \\
+    typed graph, topology and type controls & Partial &
+    Relation-specific parameterisation helps ($+0.0093$, 7/7). Neither
+    anatomical component does: topology loses to nothing against an endpoint
+    shuffle, and relation semantics lose against a type shuffle. The
+    Transformer comparator was not built, so \enquote{graph beats sequence
+    model} is untested. \\
     \addlinespace
     RQ2 & full-label accuracy, label efficiency, pretraining comparators,
     transfer & Partial &
@@ -324,17 +326,34 @@ magnitude.
 
 RQ1 divides, and the division is the more interesting result. Typed
 heterogeneous edges improve on a homogeneous graph by $+0.0093$ QWK on every one
-of seven seeds, surviving correction at $p_{\mathrm{FDR}} = 0.009$.
-Anatomically correct topology does not improve on a degree-preserving random
-shuffle: $+0.0020$, four seeds of seven, bounded at $1.05\%$ of baseline. The control preserves node count, edge count and degree, so the two
-models are matched in capacity and differ only in \emph{which} targets are
-connected to \emph{which}.
+of seven seeds, surviving correction at $p_{\mathrm{FDR}} = 0.009$. Two matched
+controls then locate what is responsible, and neither answer is the anatomy.
 
-The conclusion is therefore narrower and sharper than H3 proposed. What the
-graph supplies is a structured parameterisation of interaction between
-targets---additional capacity, organised by relation type---rather than the
-specific adjacency of levels, compartments and bilateral pairs that motivated
-it. Relational typing carries information; anatomical adjacency does not.
+Anatomically correct topology does not improve on a degree-preserving endpoint
+shuffle: $+0.0020$, four seeds of seven, bounded at $1.05\%$ of baseline. That
+control preserves node count, edge count, per-type counts and degree, so the two
+models differ only in \emph{which} targets are connected to \emph{which}.
+Anatomically correct relation labels do not improve on a type shuffle either:
+$-0.0022$, four seeds of seven, with the point estimate favouring the control.
+That control preserves the edge set exactly and permutes only which relation
+each edge belongs to, so the two models differ only in what the three transforms
+are taken to \emph{mean}.
+
+The conclusion is therefore narrower and sharper than H3 proposed, and narrower
+than the typed-versus-homogeneous comparison alone would suggest. What the graph
+supplies is capacity allocated across three relation-specific transforms.
+Neither the adjacency of levels, compartments and bilateral pairs that motivated
+the design, nor the semantic identity assigned to each transform, is carrying
+information the model uses. A graph with the right structure and scrambled
+labels performs as well as the anatomical one; so does a graph with the right
+labels and scrambled structure.
+
+That is a result about relational architectures rather than about spines, and it
+generalises beyond this application: a heterogeneous graph can be worth its
+parameters without any of its declared semantics being load-bearing. Reporting a
+typed graph as an anatomical prior, on the strength of its advantage over a
+homogeneous one, would have been an overclaim that only these two controls could
+detect.
 
 The seven-seed extension sharpened both halves at once, which is the strongest
 form this claim could take. Typed edges went from narrowly missing correction to

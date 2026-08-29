@@ -902,7 +902,53 @@ nothing as this study measures. The benefit appears only once relations are
 typed. Message passing over an untyped graph is, on this evidence, worth
 precisely its parameter count and no more.
 
-\subsection{Anatomical Topology Does Not}
+\subsection{Nor Does the Anatomical Meaning of the Relations}
+\label{sec:results-rq1-typeshuf}
+
+\enquote{Typed edges help} admits two readings that the comparison against a
+homogeneous graph cannot separate. Either the three relations carry distinct
+anatomical meaning --- adjacency, cross-condition, bilateral --- which the model
+exploits, or the model benefits from having three weight banks rather than one
+and the assignment of edges to banks is immaterial. E5 differs from E6 in both
+respects at once.
+
+A second control separates them. It keeps the edge set exactly as the anatomical
+graph and permutes only the relation labels, preserving the number of edges of
+each type. The graph therefore has identical topology, an identical degree
+sequence, an identical parameter count and the same three relations; the only
+thing destroyed is the correspondence between a relation's parameters and its
+anatomical sense.
+
+E6 does not beat it: $-0.0022 \pm 0.0118$ on 4/7 seeds ($t = -0.49$), the point
+estimate favouring the control. Ordered by mean QWK over seven seeds:
+
+\begin{center}
+\begin{tabular}{lcc}
+\toprule
+Configuration & Relation banks & QWK \\
+\midrule
+E5 homogeneous & 1 & $0.7272$ \\
+E6 shuffled endpoints & 3 & $0.7344$ \\
+E6 anatomical & 3 & $0.7364$ \\
+E6 shuffled types & 3 & $0.7386$ \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+The step that matters is one bank to three. Every configuration with three
+relation-specific transforms performs within noise of every other, whether the
+edges are grouped anatomically, grouped arbitrarily, or joined to the wrong
+targets entirely.
+
+\textbf{This narrows what RQ1 may claim.} Relation-specific parameterisation
+contributes and survives correction. The anatomical content of that
+parameterisation --- both which targets are connected, and what each relation is
+taken to mean --- does not. The heterogeneous graph earns its place as a
+capacity-allocation mechanism rather than as an encoding of spinal anatomy, and
+the thesis says so rather than resting on the weaker statement that typed edges
+help.
+
+\subsection{Anatomical Topology Does Not Either}
 
 H3 predicted that \enquote{performance under a shuffled-edge control should
 deteriorate if the topology itself matters}. It does not deteriorate
@@ -1141,6 +1187,54 @@ for aggregate accuracy.
 
 H6 anticipated that these objectives \enquote{may reduce distant errors even if
 they do not improve aggregate macro-F1}. In the event both improved.
+
+\subsection{Sensitivity to the Cost Weight}
+\label{sec:results-rq5-sweep}
+
+The cost matrix's entries were chosen for plausibility rather than derived from
+elicited clinical utilities, so the objective's weight $\lambda$ was swept over
+$0$, $0.25$, $0.5$ and $1.0$, seven seeds each, with the ordinal head held
+fixed.
+
+\begin{center}
+\begin{tabular}{lccc}
+\toprule
+Cost weight & QWK & vs E6 & Severe$\rightarrow$Normal \\
+\midrule
+$0.00$ & $0.7407$ & $+0.0042$ (5/7) & $\mathbf{3.52\%}$ \\
+$0.25$ & $0.7370$ & $+0.0006$ (4/7) & $3.55\%$ \\
+$0.50$ & $\mathbf{0.7447}$ & $\mathbf{+0.0082}$ (7/7) & $3.80\%$ \\
+$1.00$ & $0.7451$ & $+0.0087$ (6/7) & $3.80\%$ \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+Two things follow, and the second is uncomfortable.
+
+The aggregate result is not fragile with respect to the weight, but neither is it
+a dose-response. Moving from $0.5$ to $1.0$ changes QWK by $+0.0005$
+($t = 0.19$), so the selected value is not a peak that a different choice would
+have missed. But the $0.25$ arm sits \emph{below} the no-cost arm, and $0.5$
+exceeds $0.25$ by $+0.0077$ on 6/7 seeds ($t = 3.82$). A monotone benefit in
+$\lambda$ would be easier to explain than what is observed, and no mechanism
+offered here accounts for the dip.
+
+\textbf{The cost matrix does not reduce the error it was designed to penalise.}
+Section~\ref{sec:method-cost} justifies the asymmetry by the cost of grading a
+severe stenosis as normal, weighting that confusion four times the reverse. Over
+this sweep the Severe$\rightarrow$Normal rate does not fall as $\lambda$ rises;
+it is lowest with no cost matrix at all and rises slightly with weight. Adding
+the cost matrix to the ordinal head changes it by $+0.29$ percentage points
+($[-0.61, +1.18]$, 2/7 seeds lower).
+
+None of those differences is distinguishable from zero at seven seeds, and the
+reduction relative to E6 and to the baseline is real regardless. But it is
+attributable to the ordinal head at least as much as to the cost matrix, which
+is consistent with the decomposition below and inconsistent with the mechanism
+the objective was justified by. The honest statement is that the combined
+objective improves both aggregate agreement and the clinically asymmetric error,
+and that the specific role of the cost weighting in the latter is not supported
+by the sweep.
 
 \subsection{Which of the Two Interventions Is Responsible}
 \label{sec:results-rq5-decomp}
@@ -1410,9 +1504,10 @@ rungs and is not presented as though it were.
 \toprule
 RQ & Verdict & Basis \\
 \midrule
-RQ1 & Partly & Typed edges $+0.0093$, \textbf{7/7 seeds},
-$p_{\mathrm{FDR}} = 0.009$. Anatomical topology does not beat a
-degree-preserving shuffle ($+0.0020$, 4/7), bounded at $1.05\%$ of baseline. \\
+RQ1 & Partly & Relation-specific parameterisation helps: $+0.0093$,
+\textbf{7/7 seeds}, $p_{\mathrm{FDR}} = 0.009$. Neither anatomical component
+does. Topology does not beat a degree-preserving endpoint shuffle ($+0.0020$,
+4/7); relation semantics do not beat a type shuffle ($-0.0022$, 4/7). \\
 RQ2 & No & $+0.0030$, 4/7 seeds, bounded at $1.32\%$. No robustness
 benefit: modality dropout reduces sequence reliance twelve times more, on 7/7
 seeds. Attention unchanged. Rejected on three axes, after correcting an
