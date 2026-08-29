@@ -115,3 +115,12 @@ implementation/06_baselines/results/*.pt
 implementation/05_rsna_rois/variants/*.npy
 implementation/05_rsna_rois/variants/*.log
 implementation/05_rsna_rois/variants/**/*.pt
+thesis/*.aux
+thesis/*.bbl
+thesis/*.bcf
+thesis/*.blg
+thesis/*.log
+thesis/*.out
+thesis/*.toc
+thesis/*.run.xml
+thesis/*.synctex.gz
