@@ -1744,48 +1744,39 @@ discards.
 \subsection{Relation-Aware Message Passing}
 \label{sec:method-message-passing}
 
-For layer $q$, node $i$ receives messages from neighbours $j\in\mathcal{N}(i)$.
-The formulation below combines learned attention over neighbours
-\cite{velickovic2018graph} with relation-specific projections
-\cite{schlichtkrull2018modeling}, an arrangement close to the type-dependent
-attention used for heterogeneous graphs \cite{hu2020heterogeneous}. A
-relation-aware attention formulation is
-
-\begin{align}
-\mathbf{q}_i &= W_Q\mathbf{h}^{(q)}_i,\\
-\mathbf{k}_{j,r} &= W^r_K\mathbf{h}^{(q)}_j,\\
-\mathbf{v}_{j,r} &= W^r_V\mathbf{h}^{(q)}_j,
-\end{align}
-
-with attention
-
-\begin{equation}
-\alpha_{ijr}
-=
-\mathrm{softmax}_{j,r}
-\left(
-\frac{
-\mathbf{q}_i^\top\mathbf{k}_{j,r}
-}{
-\sqrt{d}
-}
-+b_r
-\right),
-\label{eq:relational-attention}
-\end{equation}
-
-and the neighbour message is
+For layer $q$, node $i$ receives messages from neighbours
+$j\in\mathcal{N}(i)$ through relation-specific projections
+\cite{schlichtkrull2018modeling}. Each relation $r\in\mathcal{R}$ carries its
+own transform $W^{(q)}_r$, and messages are averaged over the neighbourhood:
 
 \begin{equation}
 \mathbf{m}^{(q)}_i
 =
-\sum_{(j,r)\in\mathcal{N}(i)}
-\alpha_{ijr}\mathbf{v}_{j,r},
+\frac{1}{|\mathcal{N}(i)|}
+\sum_{r\in\mathcal{R}}
+\sum_{j\in\mathcal{N}_r(i)}
+W^{(q)}_r\mathbf{h}^{(q)}_j,
 \label{eq:graph-message}
 \end{equation}
 
-with unavailable-evidence neighbours removed from the softmax by the mask
-$e_{p,j}=0$. To reduce the risk that a focal abnormality is propagated
+where the normaliser is the total in-degree of node $i$ across all relations, so
+a node is not made louder simply by participating in more edge families.
+Neighbours without visual evidence contribute nothing, because their hidden
+states are held at zero by the masking described below.
+
+\paragraph{What is deliberately absent, and why it is recorded.} Aggregation
+here is uniform over neighbours. It is \emph{not} attention-weighted: there is
+no $W_Q$, no $W_K^r$, no per-edge $\alpha_{ijr}$, and no graph-transformer
+variant. An earlier version of this protocol specified a relation-aware
+attention formulation, and a graph-transformer alternative with positional
+encodings, on the reasoning that type-dependent attention suits heterogeneous
+graphs \cite{velickovic2018graph,hu2020heterogeneous}. \textbf{Neither was
+built, and no result in this thesis comes from either.} The specification above
+is what the executed model computes, stated so that the methodology and the
+implementation cannot be read as describing different architectures. Attention
+over this graph remains an untested option, and is listed as such in the future
+work of Section~\ref{sec:disc-future} rather than presented as part of the
+method. To reduce the risk that a focal abnormality is propagated
 indiscriminately into a normal adjacent target, local evidence and relational
 evidence are combined through a learnable residual gate,
 
@@ -1799,20 +1790,24 @@ W_{\gamma}
 \right),\\
 \mathbf{h}^{(q+1)}_i
 &=
+e_{p,i}\cdot
+\mathrm{ReLU}\!\left(
 \mathrm{LN}\!\left(
-\mathbf{h}^{(q)}_i
+W^{(q)}_{\mathrm{self}}\mathbf{h}^{(q)}_i
 +
 \boldsymbol{\gamma}^{(q)}_i\odot\mathbf{m}^{(q)}_i
-\right),
+\right)\right),
 \label{eq:gated-graph-update}
 \end{align}
 
-followed by the usual feed-forward transformation. Nodes lacking visual evidence ($e_{p,i}=0$) bypass message passing and LayerNorm updates entirely, hard-masking their hidden states to zero ($\mathbf{h}^{(q+1)}_i = \mathbf{0}$) to prevent LayerNorm noise amplification and feature drift across graph layers. The gate allows a node with
+The self term is a learned transform $W^{(q)}_{\mathrm{self}}$ rather than the
+raw hidden state, so a node's own evidence is re-projected at each layer on the
+same footing as the messages it receives. Nodes lacking visual evidence ($e_{p,i}=0$) bypass message passing and LayerNorm updates entirely, hard-masking their hidden states to zero ($\mathbf{h}^{(q+1)}_i = \mathbf{0}$) to prevent LayerNorm noise amplification and feature drift across graph layers. The gate allows a node with
 strong local visual evidence to retain its own state when neighbouring messages
 are inconsistent, while still permitting relational evidence to contribute when
 it is useful. The ungated residual formulation remains a mandatory ablation;
 otherwise any gain cannot be attributed specifically to the proposed control of
-neighbour influence. Relation-specific transformations $W^r_K,W^r_V$ allow an
+neighbour influence. The relation-specific transforms $W_r$ allow an
 adjacent-level neighbour to influence a node differently from its contralateral
 counterpart. Relation-specific parameters grow linearly with the number of edge
 families, a known source of overfitting in relational graph models. With three
@@ -1820,14 +1815,14 @@ families over twenty-five nodes the risk is modest, but the basis-decomposition
 remedy \cite{schlichtkrull2018modeling} is available should the pre-specified
 topology later be widened.
 
-The exact graph transformer implementation may be replaced by a computationally
-simpler relation-aware GAT \cite{velickovic2018graph} if validation shows no
-benefit from the more complex version. Where a transformer formulation is
-retained, lumbar level identity is made explicit to the attention mechanism
-through positional encodings \cite{dwivedi2021generalization} or structural
-attention biases derived from graph distance \cite{ying2021transformers}, since
-the spine has a short, fixed path structure that such encodings represent
-naturally. The contribution is the explicit typed target graph and its
+No transformer or attention variant was implemented, so the alternatives
+canvassed at protocol stage --- positional encodings for lumbar level identity
+\cite{dwivedi2021generalization}, or structural attention biases derived from
+graph distance \cite{ying2021transformers} --- were never exercised and are not
+part of what this thesis tests. They are noted because the spine's short fixed
+path structure makes them a natural next step, not because they contributed
+anything reported here. The contribution is the explicit typed target graph and
+its
 controlled evaluation, not a requirement to use the largest graph
 architecture.
 
