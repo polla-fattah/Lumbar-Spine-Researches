@@ -366,14 +366,29 @@ targets rises from $61.1\%$ to $63.1\%$ and predictions two or more grades from
 the reference fall from $0.526\%$ to $0.344\%$. Aggregate agreement was not
 bought by trading away the errors clinicians care most about.
 
-The difference from Niemeyer et al.\ is most plausibly the cost matrix rather
-than the ordinal structure. Their comparison isolated ordinality; the objective
-tested here additionally encodes clinical asymmetry, penalising
-Severe$\rightarrow$Normal errors more heavily than the reverse. The gain appears
-where that asymmetry acts. This reading is consistent with
-Section~\ref{sec:lr-error-asymmetry}, which argues that the clinical cost of an
-error depends on its direction while standard objectives optimise a symmetric
-one.
+An earlier draft of this section attributed the difference from Niemeyer
+et al.\ to the cost matrix rather than to the ordinal structure, on the grounds
+that their comparison isolated ordinality while the objective tested here adds
+clinical asymmetry. That attribution was speculation, and the experiment that
+tests it has since been run. It does not survive.
+
+Section~\ref{sec:results-rq5-decomp} separates the two interventions. The cost
+matrix applied to a categorical head is \emph{worse} than no cost matrix at all
+($-0.0032$, 2/7 seeds), and the ordinal head alone does not reproduce the joint
+effect either ($+0.0042$, 5/7). The two main effects sum to $+0.0010$ against a
+joint effect of $+0.0082$, so almost all of it is interaction.
+
+The explanation this is consistent with, though seven seeds cannot establish it,
+is that the two components are complementary rather than additive: the cost
+matrix expresses which \emph{direction} of error is worse, and a categorical
+head with three unordered logits has no structure through which that preference
+can act, whereas the ordinal head's monotone thresholds do. On that reading the
+asymmetry of Section~\ref{sec:lr-error-asymmetry} is necessary but not
+sufficient, and needs an ordered representation to act on.
+
+What can be said without qualification is narrower: the combined objective is
+the most reliably reproduced effect in the study, and neither of its two parts
+produces that effect alone.
 
 It is worth stating plainly that the supporting component outperformed the novel
 ones, and that this is a result about where effort is best spent rather than an

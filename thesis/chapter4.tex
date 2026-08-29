@@ -1126,20 +1126,67 @@ and cost-sensitive head improves QWK by $+0.0082$ ($[+0.0025, +0.0143]$,
 $p_{\mathrm{FDR}} = 0.009$, $d = 1.97$ --- the largest standardised effect in the
 study) on 7/7
 seeds, with the smallest between-seed standard deviation of any comparison
-($0.0017$) --- so small that a single seed suffices to detect it
+($0.0042$), so that three seeds suffice to detect it
 (Table~\ref{tab:power}).
 
 The clinically material quantity moves in the intended direction. Recall on
-Severe targets rises from $62.7\%$ at E0 to $65.0\%$ at E7, and from $59.6\%$ at
-E6, the same architecture under categorical cross-entropy. The objective is
-doing what it was selected to do rather than trading distant errors for
-aggregate accuracy.
+Severe targets rises from $61.1\%$ at E0 to $63.1\%$ at E7, against $62.9\%$ at
+E6 under categorical cross-entropy, and Section~\ref{sec:results-overgrading}
+shows the improvement is not bought by predicting Severe more often. The
+objective is doing what it was selected to do rather than trading distant errors
+for aggregate accuracy.
 
 H6 anticipated that these objectives \enquote{may reduce distant errors even if
 they do not improve aggregate macro-F1}. In the event both improved.
 
-\paragraph{Answer to RQ5.} Yes. This is noted with some irony: the objective
-function, explicitly disclaimed in
+\subsection{Which of the Two Interventions Is Responsible}
+\label{sec:results-rq5-decomp}
+
+E7 changes two things at once: the head becomes ordinal, and the objective gains
+the asymmetric cost matrix. Its $+0.0082$ is therefore a joint effect, and
+attributing it requires running the two separately. Two further variants complete
+a $2 \times 2$ design over head and objective, each over the same seven seeds.
+
+\begin{table}[htbp]
+  \centering
+  \caption{Separating E7's two interventions. Every cell is the same
+  architecture, differing only in the head and whether the cost matrix is
+  applied.}
+  \label{tab:e7decomp}
+  \begin{tabular}{lcc}
+    \toprule
+     & Categorical head & Ordinal head \\
+    \midrule
+    No cost matrix & $0.7364$ (E6) & $0.7407$ \\
+    Cost matrix    & $0.7332$      & $\mathbf{0.7447}$ (E7) \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+Neither intervention reproduces the joint effect on its own. The ordinal head
+alone gives $+0.0042 \pm 0.0075$ over E6 on 5/7 seeds ($t = 1.51$). The cost
+matrix alone is \emph{negative}: $-0.0032 \pm 0.0074$ on 2/7 seeds
+($t = -1.14$). Added together the two main effects come to $+0.0010$, against a
+measured joint effect of $+0.0082$.
+
+The remainder is interaction, $+0.0072 \pm 0.0122$ on 6/7 seeds, some $87\%$ of
+the total. A reading consistent with this is that the cost matrix supplies a
+signal about the direction of error that a categorical head, whose three logits
+carry no ordering, cannot use and is mildly harmed by, while the ordinal head's
+monotone thresholds give that signal somewhere to act.
+
+\textbf{That reading is not established here.} The interaction term carries
+$t = 1.57$ on seven seeds; roughly twenty-three seeds would be required to
+resolve it, and the individual main effects would need twenty-five and
+forty-two. What the decomposition establishes is negative and still useful: the
+joint effect is real and reproduces on every seed, and \emph{neither component
+alone accounts for it}. Chapter~\ref{ch:discussion} previously suggested the
+cost matrix was the more likely source; that suggestion is withdrawn, since the
+cost matrix in isolation reduces performance.
+
+\paragraph{Answer to RQ5.} Yes, for the combined objective, with the
+attribution between its two parts unresolved. This is noted with some irony: the
+objective function, explicitly disclaimed in
 Section~\ref{sec:intro-contrib-supporting} as a supporting component and not an
 original method, is a larger and far more reliable contributor to final
 performance than two of the three proposed novel mechanisms.
