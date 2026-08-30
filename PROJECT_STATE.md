@@ -1,309 +1,166 @@
 # Project state, decisions and blockers
 
-Written 2026-08-27. This is the file to re-read first after a break. It records
-what is done, what was decided and why, what is waiting on a decision, and the
-traps that have already cost time once.
+Rewritten 2026-08-29. **Read this first after a break.** It records what is
+done, what was decided and why, what is waiting on Polla, and the traps that
+have already cost time once.
 
-Evidence for every claim lives in `thesis/chapter4/*.md`. Numbers are generated,
-not typed.
+Every number here is generated, not typed. Evidence lives in
+`thesis/chapter4/*.md` and `data/reports/`. Regenerate with
+`python implementation/make_figures.py`.
 
 ---
 
 ## 1. Where things stand
 
-**Running now:** seven-seed campaign (`run_ladder.py --profile full --seeds
-42,43,44,45,46,47,48`), log at `/tmp/ladder_7seed.log`. 40 new runs, ~22 min
-each. Skips the 30 that already exist. On completion it regenerates
-`data/reports/chapter4_{results,comparisons}.csv` and `chapter4_tables.md`
-automatically.
+**Nothing is running.** All approved experiments are complete.
 
-**Complete and committed:**
+**The thesis compiles.** 203 pages, 0 errors, 0 undefined references, five
+figures embedded. Build with `cd thesis && ./build.sh`. MiKTeX is installed at
+`%LOCALAPPDATA%\Programs\MiKTeX`.
 
-| Item | Where |
-| :-- | :-- |
-| Three-seed campaign, 30/30, 0 failures | `thesis/chapter4/ladder_results_full.md` |
-| Controlled input ablation (Ch3 promised it, was never run) | `thesis/chapter4/input_ablation.md` |
-| Grad-CAM attribution + figures | `thesis/chapter4/attribution{,_figures}.md` |
-| Chapter 4 draft | `thesis/chapter4.tex` |
-| Chapter 1 placeholders filled | `thesis/chapter1.tex` |
-| Viva defence narrative | `thesis/viva_defence.md` |
-| Reframing proposal | `thesis/chapter4/reframing_proposal.md` |
-| DICOM to NIfTI converter | `implementation/dicom_to_nifti.py` |
-| ROI quality control, whole cohort | `thesis/chapter4/roi_quality_control.md` |
-| 100 two-plane review sheets, 20 studies x 5 levels | `data/reports/roi_qc/` |
-| Chapter 5, Discussion and Conclusions | `thesis/chapter5.tex` |
-| Attribution on graph rungs E5-E7 | `thesis/chapter4/attribution_graph.md` |
-| Validated burned-in text screen | `tools/detect_burned_in_text.py` |
-| Superseded-script map | `implementation/SUPERSEDED.md` |
-| 113 behavioural tests, all passing | `implementation/99_audit/test_components.py` |
+**The campaign:** ten ladder configurations x seven seeds (42-48), plus five
+control and variant arms, all on the frozen patient-level test partition of 297
+studies and 7,310 scored targets.
 
-**Headline result:** E7 - E0 = +0.0172 QWK [+0.0064, +0.0285], every seed, the
-only pre-specified comparison surviving FDR.
+### What survives correction
 
-**Per research question:** RQ1 partly (typed edges yes, anatomical topology no),
-RQ2 no, RQ3 mechanism yes / benefit no, RQ4 not executed, RQ5 yes.
+Primary endpoint QWK, nine pre-specified contrasts, BH-FDR **and**
+Holm-Bonferroni agreeing on all nine:
 
----
+| comparison | delta | seeds | p_FDR |
+| :-- | --: | :-- | --: |
+| E7 vs E0, full system | +0.0177 | 7/7 | <0.001 |
+| E6 vs E5, relation-specific banks | +0.0093 | 7/7 | 0.009 |
+| E7 vs E6, ordinal + cost | +0.0082 | 7/7 | 0.009 |
 
-## 2. Decisions taken, with the reasoning
+Everything else is null, bounded near 1% of baseline.
 
-Recorded so they are not silently re-litigated later.
+### What the controls established
 
-**Predictive localisation is a separate paper, not a thesis chapter.**
-Chapter 3 is locked and there is under three months. It needs new methodology,
-new validation and 2-3 months of writing. It reuses this infrastructure, so it
-will be fast afterwards, and the Rizgary cohort with its reports is its natural
-external-validation partner.
+The three anatomical mechanisms the thesis proposed do not work, and each was
+killed by a matched control rather than by absence of evidence:
 
-**The thesis sells the evaluation, not three architectural components.**
-Chapter 1 already called them *proposed* contributions and already carried a
-placeholder instructing that failures be reported as negative findings. Filled
-as D1 (a verified working system), D2 (a controlled ablation protocol), D3 (the
-finding that anatomical priors do not pay at this scale, with a mechanism).
+- **RQ1 graph.** Typed edges beat a homogeneous graph on every seed. But an
+  endpoint shuffle matches them (+0.0020, 4/7) and a **type shuffle** matches
+  them too (-0.0022, 4/7, the control ahead on point estimate). Three weight
+  banks beat one; neither the anatomy of the topology nor the meaning of the
+  relations is load-bearing.
+- **RQ2 ACSSL.** Null on accuracy (+0.0030, 4/7), robustness (-0.0061, 4/7) and
+  attention. Modality dropout, a one-line augmentation, reduces sequence
+  reliance **twelve times more** (-0.0758, 7/7).
+- **RQ3 routing.** Gate pattern replicates on every run, but a router-free model
+  reproduces it under intervention, so it belongs to the dataset.
+- **RQ5 ordinal + cost.** Real (+0.0082, 7/7, largest effect in the study) but
+  **neither component works alone**: ordinal alone +0.0042 (5/7), cost alone
+  **-0.0032** (2/7). 87% is interaction, t=1.57, not established at n=7.
 
-**Hypotheses, research questions and problem statement are NOT rewritten.**
-Chapter 1 forbids it in its own words, and the git history dates every
-specification. This is also the safe option, not the risky one.
+### Effect sizes are clinically negligible, and the thesis says so
 
-**Contribution III is claimed narrowly.** "Relational typing carries
-information; anatomical adjacency does not." An external proposal advised
-claiming that beating the homogeneous graph validates anatomical topology --
-that is exactly what the degree-preserving shuffle control refutes, and it is
-the most damaging single sentence available in the defence.
-
-**Never say "viva-hardened" aloud.** It is a comment in the LaTeX source.
-Saying it announces that failure was anticipated and is being managed.
-
-**Clinical system storage: SQLite**, one file, results plus paths to rendered
-images. Images on disk, paths in the table.
-
-**Patient identity: assign fresh IDs**, and keep a linkage file mapping new ID
-to original study, stored separately and access-controlled. Without it, a case
-can never be re-linked to its report or its row in `research LSS 1.xlsx`.
-
-**Model updates: old results stay frozen.** A "re-evaluate" button writes a new
-row with the new model hash rather than overwriting. Both versions coexist; the
-clinician chooses when to move.
-
-**Do not install anything into the main Python environment while the campaign
-runs.** `run_ladder.py` spawns a fresh subprocess per run, so a torch downgrade
-mid-campaign would break every remaining run.
+Counted on test predictions: the full system grades **42 more of 7,310** targets
+correctly than baseline, one per seven patients. Typed edges rewrite 792
+predictions to net **+13**. Section 4.x states this explicitly. The contribution
+is the evaluation protocol, not the accuracy.
 
 ---
 
-## 3. Waiting on a decision from Polla
+## 2. Waiting on Polla
 
-1. **DONE 2026-08-27.** Tier 1 QC viewer built; correspondence verified over
-   9,542 projections at 93.6% within one slice, dev partition 94%. RQ2's null
-   is therefore interpretable. Outstanding: a reader must complete
-   `data/reports/roi_qc/roi_qc_checklist.csv` to produce the
-   inclusion/exclusion table Chapter 3 promised, and adjudicate the nine
-   studies in `geometry_exclusion_candidates.csv`.
-2. **QC sample: random or enriched?** Random gives an unbiased geometry error
-   rate; enriched finds problems faster but yields no rate. Recommendation:
-   random, with a stratified supplement.
-3. **Ask the two students for their TotalSpineSeg code and configuration?**
-   Their cohort is very likely the same Rizgary data (`data/rizgary_unpacked/`
-   is organised as bulge / extrusion / normal / protrusion -- their exact four
-   classes). Their pipeline may be directly reusable.
-4. **DONE 2026-08-27.** Attribution extended to E5-E7. Required per-node
-   backward passes (message passing was smearing gradient across the graph) and
-   a deliberate scalar for the ordinal head. E7's pooled figure is a prevalence
-   artefact; by grade it reaches 0.415 on Severe against E6's 0.448.
-5. **Which cases for radiologist review?** 300 sheets over 60 studies (20% of
-   the test partition) are now rendered, 1,474 targets. The binding constraint is
-   reader time, not sheet count. A stratified subset -- severe cases,
-   disagreements, confident errors -- would be more informative than working
-   through all of them.
+**Twelve placeholders print in bold in the PDF.** Everything else answerable has
+been cleared.
+
+- `thesis.tex`: candidate's registered name, awarding institution and
+  department, degree
+- `chapter1.tex` and `chapter3.tex`, three each: ethics/IRB approval reference
+  and date, consent or waiver basis, whether external cloud/GPU is permitted
+- `chapter1.tex`: final institutional thesis structure; Rizgary case-flow counts
+  (belongs to MSC1, blocked on de-identification)
+- `chapter1.tex`: pre-submission novelty re-check -- **left deliberately**, it is
+  a real outstanding task
+
+**One discrepancy I could not resolve.** Chapter 1 says the local inventory holds
+299 narrative reports and 294 matched cases. On disk `rizgary/reports` has 195
+`.docx` and the case folders resolve to 297 study numbers. MSC1 also says 299.
+Either reports live somewhere I have not looked, or the figure is stale. Not
+overwritten.
 
 ---
 
-## 4. Blockers, by severity
+## 3. Outstanding work, in priority order
 
-**RQ4 / E8 not executed.** Three separate obstacles, not one:
-- 16 Rizgary cases have conflicts between report-derived and spreadsheet labels,
-  awaiting reader adjudication. IDs: 6, 25, 53, 54, 60, 64, 82, 125, 149, 157,
-  162, 170, 172, 179, 193, 195.
-- De-identification is not solved (below).
-- **Rizgary has no localisation at all.** The manifest carries `disc_level` but
-  no x/y coordinates, so zero-shot transfer is blocked on missing model *input*,
-  not merely on admin. **A solution now exists** -- see
-  `thesis/chapter4/localisation_feasibility.md`. TotalSpineSeg identified 140 of
-  140 levels correctly across 28 RSNA test studies, and a per-condition constant
-  offset derives all 25 targets from the 5 disc centroids with 5.5-6.8 mm
-  scatter, placing 99-100% inside the model's 60 mm crop.
+1. **Hierarchical bootstrap** (both reviews). Resample seeds and patients jointly
+   for total inferential uncertainty. Moderate work, no new runs.
+2. **Adaptive 3-to-7 seed disclosure.** Cheap, and both reviews ask for it.
+3. **ROI reader QC pass.** Needs a radiologist. 300 sheets and a checklist are
+   rendered and waiting in `data/reports/roi_qc/`.
+4. **Adjudicate the nine geometry-exclusion studies.** Also a radiologist.
+5. **Retitling.** Both reviews suggest the title oversells what survived. This is
+   an institutional decision, not a technical one.
 
-  **But the decisive test was then run and it reversed that verdict.** Grading
-  on derived coordinates costs **-0.1636 QWK, 22.9% of performance**, on all
-  nine runs -- roughly nine times what the entire thesis contributes. The canal
-  survives (-0.05) and every lateral condition collapses (-0.14 to -0.25),
-  because a 6 mm error is harmless in the midline and disqualifying off it. See
-  `thesis/chapter4/derived_coordinate_cost.md`.
-
-  Consequence for RQ4: running transfer on derived coordinates would confound
-  domain shift with a localisation error an order of magnitude larger than any
-  effect the thesis measures. Chapter 3's verified-localisation control is
-  therefore necessary, not precautionary.
-
-**Two de-identification scripts exist and only one is broken.** Corrected
-2026-08-27; the earlier entry here named the wrong file.
-
-- `implementation/00_deidentify/deidentify_dicom.py` keys on `PatientID`, which
-  has 45 distinct values across 346 cases -- a site or scanner code, not a
-  patient identifier. It would merge roughly eight patients per pseudonym. Do
-  not use it.
-- `tools/deidentify_dicom.py` is sound. It keys on the case path, writes the
-  linkage file outside the project, strips private tags, keeps sex/age and
-  reduces StudyDate to the year. It deliberately does not remap UIDs, and says
-  so; revisit that before any publication.
-
-Its `--dry-run` currently fails because it looks for `Data/cases`, while the
-data is at `data/rizgary_unpacked/`. The path needs parameterising before use.
-
-**Burned-in pixel text: screened, and the screen is validated.** The header
-check inside `tools/deidentify_dicom.py` fires on `BurnedInAnnotation == "YES"`
-or modality SC/OT, and can therefore never fire on this cohort -- the tag is
-absent from every file and every object is MR Image Storage. That is false
-assurance, not assurance.
-
-`tools/detect_burned_in_text.py` screens the pixels instead, using the property
-that a scanner overlay occupies the same pixels in every slice while anatomy
-moves: the per-series minimum preserves text and suppresses anatomy. Across 57
-series the median bright-pixel count in the minimum image is **0** and nothing
-is flagged. `tools/burned_in_positive_control.py` confirms the screen is not
-merely inert -- the same series with text burned in scores 27.0 against 0.0
-clean.
-
-**PHI exposure, measured on 379 sampled files:** PatientName, PatientID,
-BirthDate, Sex, Age, StudyDate present in 100%; InstitutionName 99%; private
-vendor tags 100%; three Enhanced SR (structured report) objects found. The
-`BurnedInAnnotation` tag is **absent in every file**, which means the scanner
-declared nothing -- not that the pixels are clean. Burned-in text is the real
-exposure and needs an OCR or visual sweep. Use `dicognito` or RSNA CTP; do not
-hand-roll.
-
-**Smart App Control is enforcing on this machine**
-(`VerifiedAndReputablePolicyState = 1`). It blocks newly installed unsigned
-compiled extensions **in newly created venvs** -- both under Temp and under the
-user profile. The **main environment is unaffected**: `blosc2`, the exact
-package that failed in the venv, installs and imports fine there. So
-TotalSpineSeg can run natively; install into the main environment after the
-campaign, with torch pinned. WSL is not installed. Disabling Smart App Control
-is a system security setting and was not attempted.
-
-**TotalSpineSeg: installed and validated on RSNA (2026-08-28).** 140/140 levels
-correct across 28 studies. Three obstacles cost time and will recur: Smart App
-Control blocks the generated .exe wrappers, so invoke
-`totalspineseg.inference:main` directly; `auglab` pulls kornia 0.8.3 which
-dropped `kornia.core.Tensor`, breaking the nnU-Net trainer import while the
-pipeline still exits 0, so pin `kornia==0.7.4`; and the disc label values
-(92-95, 100) are not shipped as a table and must be derived from the package's
-labelling command, then verified. Still unmeasured on Kurdish clinical
-protocols.
-
-**No LaTeX toolchain on this machine.** `chapter4.tex` has never been compiled.
-Braces and environments balance and all `\ref` resolve, but it needs a real
-build before anyone trusts it.
-
-**Chapter 3 specifies the ladder as E0-E8.** Only E0-E7 were executed; E8 is the
-complete system under external transfer, i.e. RQ4. Recorded in Chapter 4.
+**Deliberately NOT doing before viva:** the cache-invalidating fixes (physical
+slice-neighbour selection, series-level normalisation, cross-sequence geometry
+for oblique acquisitions, an untouched final holdout). Each forces a full 70-run
+re-execution and a re-check of every number in five chapters, for a small
+expected effect on conclusions that are already nulls. They belong in future
+work as stated limitations.
 
 ---
 
-## 5. Why the QC viewer matters more than it looks
+## 4. Traps that have already cost time
 
-It is not primarily a figure generator. Contribution I rests entirely on
-"DICOM-defined anatomical correspondence", and **there is currently no
-data-grounded evidence that this correspondence is correct.** `geometry.py`
-records that the previous implementation never read `ImageOrientationPatient`
-and substituted textbook cosines chosen by a substring match on the series
-description, and that its validation -- a 3D round-trip returning 0.00000000 mm
--- was vacuous, because inverting a matrix returns the original point whatever
-the matrix contains.
+**Shell heredocs eat backslashes.** This has now corrupted LaTeX and broken
+regexes on at least five separate occasions in one session, including after
+being written down. Use the Write/Edit tools for anything containing
+backslashes. `python - <<'PYEOF'` is not safe either -- the quoting does not
+protect `\%` or `\label`.
 
-So RQ2's rejection carries an unexamined assumption: that ACSSL was given a fair
-test. Three outcomes:
+**Prose numbers go stale when tables regenerate.** Five separate batches of
+stale figures were found and fixed. The fix is structural: tables are now
+emitted as `.tex` fragments by `make_figures.py` and `\input` into the chapters.
+`table_steps` additionally warns if the ladder steps stop telescoping to E7-E0.
+Any number still typed into prose is a future defect.
 
-- Correspondence checks out -> RQ2's null becomes properly interpretable and much
-  harder to attack. Likely, and a real strengthening.
-- Correspondence is systematically off -> RQ2 is uninterpretable and must be
-  reported as such. Bad news, far better found now.
-- Left/right orientation wrong anywhere -> also bears on the lateralisation
-  observation and may explain the unexplained +12 px foraminal offset.
+**A clean compile is not a correct document.** The build reported 0 errors while
+the calibration table had two bolded "best" cells and a 91.9pt overfull box.
+Render the pages and look at them: `pdftoppm -png -r 110 -f N -l N thesis.pdf`.
 
-The honest validation is external, not a round-trip: different conditions at the
-same level are annotated on *different* sequences (canal on sagittal T2,
-subarticular on axial T2), so project one into the other's plane and check it
-lands a plausible distance from that plane's own annotations.
+**Under-powered results point toward the hypothesis.** Three seeds produced a
+clean 3/3 robustness effect at 72% of modality dropout's; seven seeds gave
+4/7 and t=-0.40. The per-seed bootstrap produced opposite significant signs on
+different seeds. Run the seeds before writing.
 
----
+**A flag can silently destroy the thing it tests.** `--force` regenerated the
+shared ACSSL representation that E4-vs-E3 exists to hold fixed. `cost_weight`
+0.25 and 1.0 would both have tagged as plain `E7` and overwritten the canonical
+runs. Check tagging before launching a sweep.
 
-## 6. The clinical system: fast vs not fast
-
-Full design in `SYSTEM_DESIGN.md`: four stages with file-shaped interfaces,
-SQLite schema, API surface, five frontend screens, build order and risks.
-
-**Buildable in about two days:** FastAPI backend, drag-and-drop frontend, job
-queue, SQLite schema, and the chain wired end to end -- `dicom_to_nifti` ->
-TotalSpineSeg -> model -> two-plane render. A working demo.
-
-**Does not compress, and none of it is typing speed:**
-
-- *De-identification verification.* Wiring `dicognito` is thirty minutes.
-  Verifying nothing leaks means sampling pixels, auditing private tags across
-  vendors, handling the SR objects. The failure mode is a data breach.
-- *Whether TotalSpineSeg works on this data.* Empirical, not codeable.
-- *The level to 25-target mapping.* Untested. May reveal that foraminal offsets
-  vary too much between patients to derive from disc centres at all.
-- *Real PACS exports.* RSNA is curated; hospital exports are not. Multi-frame,
-  missing tags, odd orientations, compressed transfer syntaxes. Each a
-  twenty-minute fix, discovered one at a time over weeks.
-- *Radiologist feedback cycles.* Runs at their availability.
-- *Ethics approval, hospital IT security review, hardware inside the network.*
-  Not doable at any speed by anyone here.
-
-**Architecture note that removes most of the difficulty:** localisation and
-grading are separate stages with a coordinate CSV between them -- the same shape
-as `train_label_coordinates.csv`. TotalSpineSeg is preprocessing, never part of
-the training loop or of inference, so it need not share an environment with the
-model. A human clicking five disc levels writes the same CSV, which is what makes
-the semi-automatic tier possible.
-
-**Important framing correction:** neither the baseline nor the proposal performs
-localisation. Both are *given* coordinates. A viewer offering "localisation by
-baseline vs by our proposal" is not possible; localisation would come from
-TotalSpineSeg identically for both. What differs is the **grading**.
+**Checkers can lie.** `latex_preflight` reported 268 false positives until it was
+calibrated against chapters known to compile. A test written as
+`not equal(...) or True` passes unconditionally.
 
 ---
 
-## 7. Traps that have already cost time
+## 5. Key commands
 
-- **Shell heredocs eat one level of backslash.** This corrupted `chapter1.tex`
-  three times -- `\ref` became CR+"ef", `\textbf` became TAB+"extbf", `\begin`
-  became BSP+"egin", leaving an `\end{description}` with no opener. Use the Write
-  or Edit tool for anything containing backslashes, never a heredoc.
-- **Per-seed bootstrap intervals reverse sign.** E4 vs E3 was +0.0270 (p=0.000)
-  on seed 42 and -0.0234 (p=0.000) on seed 43. Always use
-  `amog_stats.paired_bootstrap_diff_seeds`.
-- **Any routing claim needs the E1 control.** E2's 5/5 agreement between gate
-  weights and intervention looked like proof until E1, which has no router,
-  scored the same.
-- **Grad-CAM must hook the encoder that read the target.** Hooking `encoders[0]`
-  reads the sagittal T1 encoder on axially-graded targets and reports the
-  opposite sign.
-- **Never validate a geometric transform by round-trip.** See section 5.
-- **All three of the above initially pointed toward the hypothesis under test.**
+```bash
+cd thesis && ./build.sh                              # build the thesis
+python implementation/make_figures.py                # regenerate figures/tables
+python implementation/99_audit/test_components.py    # 122 behavioural tests
+python implementation/99_audit/check_refs.py         # refs/inputs/graphics
+python implementation/99_audit/latex_preflight.py    # common LaTeX faults
+```
 
 ---
 
-## 8. Suggested order of work
+## 6. Reviews
 
-1. Campaign finishes -> refresh every `[3-SEED]` figure in `chapter4.tex`.
-2. Install TotalSpineSeg into the main environment, torch pinned; run against
-   the four converted studies in the scratchpad; measure landmark error in mm
-   against RSNA coordinates. ~2 h. Decides whether localisation is viable.
-3. Tier 1 QC viewer. ~1 day. Discharges the Ch3 commitment and tests the
-   correspondence underpinning RQ2.
-4. Compile `chapter4.tex` somewhere with a LaTeX toolchain.
-5. Everything else -- clinical system, localisation paper, Rizgary transfer --
-   is post-submission or a student project.
+`thesisReview.md` (round 1 and 2) and `thesisReview2.md`. Round 2's verdict:
+*"a clearly defensible doctoral contribution... I would be comfortable sending
+this to viva"* once the type-shuffle is done (it is), Chapter 3 is faithful to
+the implementation (it is), the statistics get a final pass, and the
+placeholders go.
+
+**Treat `thesisReview2.md` with care.** It describes the code accurately but
+fabricates operational detail: it directs running a `run_ladder.py
+--type-shuffled` flag that does not exist, cites the wrong table numbers, and
+asks for removal of a header that is a LaTeX comment and never renders. Verify
+its findings before acting; most hold, none of its commands do.
